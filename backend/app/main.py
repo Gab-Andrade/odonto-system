@@ -8,6 +8,7 @@ from app import models  # noqa: F401 - registra todos os models
 from app.core.config import get_settings
 from app.core.db import get_engine
 from app.core.limits import BodySizeLimitMiddleware
+from app.modules.agenda.router import router as agenda_router
 from app.modules.auditoria.router import router as auditoria_router
 from app.modules.estoque.router import router as estoque_router
 from app.modules.identidade.router import router as identidade_router
@@ -53,6 +54,7 @@ def create_app() -> FastAPI:
     app.include_router(precificacao_router)
     app.include_router(estoque_router)
     app.include_router(pacientes_router)
+    app.include_router(agenda_router)
     return app
 
 

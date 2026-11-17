@@ -5,6 +5,7 @@ Ao criar um módulo novo com models.py, adicione o import aqui.
 
 from app.core.audit import AuditLog
 from app.core.models import Base
+from app.modules.agenda.models import Appointment, AppointmentEvent, Chair
 from app.modules.estoque.models import Material
 from app.modules.identidade.models import Clinic, ClinicMembership, User
 from app.modules.pacientes.models import Patient, PatientConsent
@@ -22,8 +23,11 @@ from app.modules.precificacao.models import (
 )
 
 __all__ = [
+    "Appointment",
+    "AppointmentEvent",
     "AuditLog",
     "Base",
+    "Chair",
     "Clinic",
     "ClinicMembership",
     "CostSheet",
