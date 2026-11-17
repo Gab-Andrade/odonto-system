@@ -20,6 +20,7 @@ Este guia explica, em linguagem simples, o que cada parte do sistema faz e quem 
 | [Tabelas de preço](precificacao.md) | Montar os preços da clínica por planilha ou por fórmula de custos, definir a quem cada tabela se aplica e consultar ou congelar o preço de um procedimento |
 | [Plano de tratamento e orçamento](tratamento.md) | Montar o plano de tratamento do paciente, dar desconto dentro do limite, registrar a aprovação total ou parcial e marcar os procedimentos realizados no odontograma |
 | [Financeiro](financeiro.md) | Parcelar o orçamento aprovado, registrar recebimentos e ver o extrato de cada paciente, e controlar as contas a pagar da clínica |
+| [Repasse de dentistas](repasse.md) | Definir quanto cada dentista recebe sobre o que os pacientes pagaram, ver a prévia, fechar o repasse até uma data e consultar os fechamentos |
 
 ## Perfis de acesso
 

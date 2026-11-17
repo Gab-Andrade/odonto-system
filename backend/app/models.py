@@ -32,6 +32,7 @@ from app.modules.prontuario.models import (
     Encounter,
     EncounterTransfer,
 )
+from app.modules.repasse.models import CommissionLine, CommissionRule, CommissionSettlement
 from app.modules.tratamento.models import (
     TreatmentPlan,
     TreatmentPlanItem,
@@ -50,6 +51,9 @@ __all__ = [
     "ClinicalNote",
     "ClinicalNoteSignature",
     "Clinic",
+    "CommissionLine",
+    "CommissionRule",
+    "CommissionSettlement",
     "ClinicMembership",
     "CostSheet",
     "CostSheetItem",

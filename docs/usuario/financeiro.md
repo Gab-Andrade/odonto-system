@@ -124,7 +124,7 @@ atualizado_em: 30ed9b3
 - **A taxa não muda o saldo do paciente.** A taxa só fica registrada, para a clínica saber quanto realmente entrou.
 - **A Recepção não vê as contas a pagar.** Esse controle fica com o Administrador e o Gestor.
 - **Dentista e ASB não acessam o financeiro.**
-- **Previsto:** a produção do dentista entrará no cálculo de repasse e no painel de gestão. Ainda não está disponível.
+- **Repasse:** o que o paciente paga aqui é a base do [repasse dos dentistas](repasse.md). A produção do dentista no painel de gestão ainda está prevista.
 
 ## Perguntas frequentes
 

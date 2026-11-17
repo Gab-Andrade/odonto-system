@@ -18,6 +18,7 @@ Cada módulo tem um documento próprio, gerado e atualizado pela skill `document
 | [odontograma](odontograma.md) | Legenda de marcações por clínica e histórico append-only por dente/face (FDI); odontograma reconstruído em qualquer data; leituras auditadas |
 | [tratamento](tratamento.md) | Plano de tratamento e orçamento: itens por dente/face, emissão com preço congelado (snapshots), validade, desconto com limite por papel, aprovação parcial e realização vinculada ao atendimento e ao odontograma |
 | [financeiro](financeiro.md) | Contas a receber (parcelamento do orçamento aprovado e avulsas), recebimentos append-only com estorno e taxa, extrato do paciente e contas a pagar; invariantes de valor em gatilhos do banco, registro manual sem gateway |
+| [repasse](repasse.md) | Comissão de dentistas sobre o recebido: regras por dentista/procedimento com vigência, prévia e fechamentos acumulados append-only |
 
 ## Fundação (válida para todos os módulos)
 
