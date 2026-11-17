@@ -361,13 +361,14 @@ def perform_item(
 ):
     try:
         plan, item = _plan_and_item(db, item_id)
-        marks = service.perform_item(db, user, plan, item, body.encounter_id)
+        marks, warnings = service.perform_item(db, user, plan, item, body.encounter_id)
     except service.TreatmentError as exc:
         raise _http(exc) from None
     _audit(db, user, "item_realizado", plan, request, item=str(item.id),
-           atendimento=str(body.encounter_id), odontograma=marks)  # fmt: skip
+           atendimento=str(body.encounter_id), odontograma=marks,
+           faltas_estoque=len(warnings))  # fmt: skip
     db.commit()
-    return _plan_out(db, plan)
+    return _plan_out(db, plan).model_copy(update={"warnings": warnings})
 
 
 @router.post("/itens/{item_id}/cancelar", response_model=PlanOut)

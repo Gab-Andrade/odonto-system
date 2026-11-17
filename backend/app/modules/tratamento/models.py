@@ -125,6 +125,8 @@ class TreatmentPlan(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
 class TreatmentPlanItem(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
     __tablename__ = "treatment_plan_items"
     __table_args__ = (
+        # Alvo da FK composta dos movimentos de estoque (migração 0015).
+        UniqueConstraint("id", "clinic_id", name="uq_treatment_plan_items_id_clinic"),
         ForeignKeyConstraint(
             ["plan_id", "patient_id", "clinic_id"],
             ["treatment_plans.id", "treatment_plans.patient_id", "treatment_plans.clinic_id"],

@@ -11,7 +11,7 @@ Cada módulo tem um documento próprio, gerado e atualizado pela skill `document
 | [identidade](identidade.md) | Clínicas, usuários, vínculos, login (JWT) e dependências de autenticação/papéis usadas por todos os módulos |
 | [auditoria](auditoria.md) | Consulta do log de auditoria (LGPD) da clínica |
 | [precificacao](precificacao.md) | Tabelas de preço versionadas com herança, atribuição por escopo, resolução com memória de cálculo, snapshots, importação de planilhas e tabelas calculadas por fórmula (fichas técnicas, variáveis; publicação com confirmação de erros de cálculo) |
-| [estoque](estoque.md) | Cadastro de materiais com custo unitário (visível só a admin/gestor), usado pela ficha técnica da precificação |
+| [estoque](estoque.md) | Materiais, lotes com validade, movimentos append-only, estoque mínimo, custo médio ponderado e baixa automática FEFO pela ficha técnica ao realizar item do plano; rastreio por paciente |
 | [pacientes](pacientes.md) | Cadastro de pacientes com busca por nome, CPF ou telefone, responsável de menores e consentimentos LGPD append-only; leituras auditadas |
 | [agenda](agenda.md) | Cadeiras, agendamentos e bloqueios sem conflito de dentista/cadeira (constraint de exclusão), máquina de status e histórico append-only |
 | [prontuario](prontuario.md) | Anamnese configurável (modelos versionados, respostas imutáveis, alertas) e atendimento com evolução clínica imutável, adendos, assinatura e transferência entre dentistas; toda leitura auditada, sem acesso da recepção |

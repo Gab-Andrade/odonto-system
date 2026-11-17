@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.context import CurrentUser
 from app.core.roles import Role
+from app.modules.estoque import lotes_service as stock_service
 from app.modules.identidade.service import active_role
 from app.modules.odontograma import regras as odonto
 from app.modules.odontograma import service as odonto_service
@@ -414,9 +415,10 @@ def perform_item(
     plan: TreatmentPlan,
     item: TreatmentPlanItem,
     encounter_id: uuid.UUID,
-) -> int:
-    """Marca o item como realizado no atendimento. Devolve quantos eventos foram para o
-    odontograma."""
+) -> tuple[int, list[str]]:
+    """Marca o item como realizado no atendimento: atualiza o odontograma e dá baixa dos
+    materiais da ficha técnica. Devolve (eventos no odontograma, avisos de falta de estoque).
+    Falta de material não impede o registro do procedimento."""
     if item.status is not ItemStatus.APROVADO:
         raise RuleViolation("Só item aprovado é realizado.")
     # Trava o atendimento: um fechamento concorrente espera e é visto aqui.
@@ -442,9 +444,16 @@ def perform_item(
             )
         except odonto_service.OdontogramError as exc:
             raise RuleViolation(f"Odontograma: {exc.message}") from None
+    _, shortages = stock_service.consume_for_procedure(
+        db, user, procedure_code=item.procedure_code, patient_id=item.patient_id,
+        plan_item_id=item.id,
+    )  # fmt: skip
+    warnings = [
+        f"Estoque insuficiente de {s.material_name}: faltou {s.missing}." for s in shortages
+    ]
     _refresh_plan_status(db, plan)
     db.flush()
-    return len(events)
+    return len(events), warnings
 
 
 def cancel_item(db: Session, plan: TreatmentPlan, item: TreatmentPlanItem, reason: str) -> None:

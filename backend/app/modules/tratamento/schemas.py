@@ -145,3 +145,6 @@ class PlanOut(PlanSummary):
     created_by: uuid.UUID | None
     items: list[ItemOut]
     totals: TotalsOut
+    warnings: list[str] = Field(
+        default_factory=list, description="Avisos da última ação (ex.: falta de estoque)."
+    )

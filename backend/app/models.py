@@ -6,7 +6,7 @@ Ao criar um módulo novo com models.py, adicione o import aqui.
 from app.core.audit import AuditLog
 from app.core.models import Base
 from app.modules.agenda.models import Appointment, AppointmentEvent, Chair
-from app.modules.estoque.models import Material
+from app.modules.estoque.models import Material, StockLot, StockMovement
 from app.modules.financeiro.models import Payable, Payment, Receivable
 from app.modules.identidade.models import Clinic, ClinicMembership, User
 from app.modules.odontograma.models import OdontogramEvent, ToothStatus
@@ -70,6 +70,8 @@ __all__ = [
     "PriceTableVersion",
     "PricingVariable",
     "Receivable",
+    "StockLot",
+    "StockMovement",
     "ToothStatus",
     "TreatmentPlan",
     "TreatmentPlanItem",

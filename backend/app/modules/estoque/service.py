@@ -62,6 +62,7 @@ def create_material(
     unit: str,
     category: str | None,
     unit_cost: Decimal,
+    min_quantity: Decimal | None = None,
 ) -> Material:
     _ensure_unique_name(db, name)
     material = Material(
@@ -70,6 +71,7 @@ def create_material(
         unit=unit,
         category=category,
         unit_cost=_cost(unit_cost),
+        min_quantity=_cost(min_quantity) if min_quantity is not None else None,
     )
     db.add(material)
     db.flush()
@@ -86,6 +88,9 @@ def update_material(db: Session, material: Material, changes: dict[str, Any]) ->
         material.category = changes["category"]
     if changes.get("unit_cost") is not None:
         material.unit_cost = _cost(changes["unit_cost"])
+    if "min_quantity" in changes:
+        value = changes["min_quantity"]
+        material.min_quantity = _cost(value) if value is not None else None
     if changes.get("active") is not None:
         material.active = changes["active"]
     db.flush()

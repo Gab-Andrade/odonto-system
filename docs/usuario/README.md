@@ -15,7 +15,7 @@ Este guia explica, em linguagem simples, o que cada parte do sistema faz e quem 
 | [Prontuário e anamnese](prontuario.md) | Montar o questionário inicial de cada paciente, registrar o atendimento e a evolução de cada consulta, e ver os alertas e o histórico clínico |
 | [Odontograma](odontograma.md) | Marcar e consultar o estado de cada dente e face do paciente, com histórico de todas as marcações e remoções |
 | [Agenda de consultas](agenda.md) | Marcar, remarcar e bloquear horários dos dentistas e das cadeiras, e registrar se o paciente veio, faltou ou cancelou |
-| [Estoque de materiais](estoque.md) | Cadastrar os materiais da clínica, com unidade de uso e custo, e desativar os que não são mais usados |
+| [Estoque de materiais](estoque.md) | Controlar os materiais por lote e validade, com alertas de estoque mínimo e de vencimento, e dar baixa automática nos procedimentos realizados |
 | [Histórico de ações](auditoria.md) | Ver quem fez o quê e quando, para segurança e para a LGPD |
 | [Tabelas de preço](precificacao.md) | Montar os preços da clínica por planilha ou por fórmula de custos, definir a quem cada tabela se aplica e consultar ou congelar o preço de um procedimento |
 | [Plano de tratamento e orçamento](tratamento.md) | Montar o plano de tratamento do paciente, dar desconto dentro do limite, registrar a aprovação total ou parcial e marcar os procedimentos realizados no odontograma |
