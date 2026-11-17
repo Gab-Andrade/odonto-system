@@ -8,26 +8,37 @@ from app.core import audit
 from app.core.context import CurrentUser
 from app.core.roles import Role
 from app.modules.identidade.deps import get_tenant_db, require_roles
-from app.modules.precificacao import importacao, service
+from app.modules.precificacao import formulas, importacao, service
 from app.modules.precificacao.schemas import (
     AssignmentCreate,
     AssignmentOut,
+    CalculationOut,
+    FormulaOut,
+    FormulaStep,
+    FormulaTestIn,
     ImportApplyIn,
     ImportApplyOut,
     ImportJobOut,
     ImportJobSummary,
     ImportValidateIn,
+    ItemCalcOut,
     ItemOut,
     ItemsReplace,
     ProfileCreate,
     ProfileOut,
     PublishIn,
+    RecalcOut,
     ResolutionOut,
     ResolveIn,
+    SheetIn,
+    SheetItemOut,
+    SheetOut,
     SnapshotOut,
     TableCreate,
     TableOut,
     TableUpdate,
+    VariableIn,
+    VariableOut,
     VersionOut,
     VersionUpdate,
 )
@@ -214,6 +225,7 @@ def replace_items(
     try:
         table = service.get_table(db, table_id)
         version = service.get_version(db, table, version_id)
+        service.ensure_manual_items(table)
         items = service.replace_items(db, user, version, [i.model_dump() for i in body.items])
     except service.PricingError as exc:
         raise _http(exc) from None
@@ -607,4 +619,253 @@ def delete_profile(
         details={"nome": name},
         request=request,
     )
+    db.commit()
+
+
+# ---------- Fórmulas e tabelas calculadas ----------
+# Tudo aqui expõe custos e margens: só administrador e gestor.
+
+
+@router.get("/formulas/padrao", response_model=FormulaOut)
+def default_formula(_: CurrentUser = Depends(require_roles(*MANAGE))):
+    """Fórmula padrão ("preço por dentro"), entradas do sistema e funções disponíveis."""
+    return FormulaOut(
+        formula=formulas.DEFAULT_FORMULA,
+        entradas_do_sistema=formulas.SYSTEM_INPUTS,
+        funcoes=formulas.FUNCTIONS,
+        variaveis_sugeridas=formulas.DEFAULT_VARIABLES,
+    )
+
+
+@router.post("/formulas/testar", response_model=CalculationOut)
+def try_formula(
+    body: FormulaTestIn,
+    user: CurrentUser = Depends(require_roles(*MANAGE)),
+    db: Session = Depends(get_tenant_db),
+):
+    """Calcula um procedimento com a fórmula informada, sem gravar nada."""
+    try:
+        calc = service.try_formula(
+            db,
+            procedure_code=body.procedure_code,
+            steps=[s.model_dump() for s in body.formula] if body.formula else None,
+            dentist_id=body.dentist_id,
+            user=user,
+        )
+    except service.PricingError as exc:
+        raise _http(exc) from None
+    return CalculationOut(
+        procedure_code=calc.procedure_code,
+        description=calc.description,
+        price=calc.price,
+        trace=calc.trace,
+    )
+
+
+@router.get("/tabelas/{table_id}/versoes/{version_id}/formula", response_model=list[FormulaStep])
+def get_formula(
+    table_id: uuid.UUID,
+    version_id: uuid.UUID,
+    _: CurrentUser = Depends(require_roles(*MANAGE)),
+    db: Session = Depends(get_tenant_db),
+):
+    try:
+        table = service.get_table(db, table_id)
+        version = service.get_version(db, table, version_id)
+    except service.PricingError as exc:
+        raise _http(exc) from None
+    if version.formula is None:
+        raise HTTPException(status_code=404, detail="Esta tabela não é calculada.")
+    return version.formula
+
+
+@router.post("/tabelas/{table_id}/versoes/{version_id}/recalcular", response_model=RecalcOut)
+def recalculate(
+    table_id: uuid.UUID,
+    version_id: uuid.UUID,
+    request: Request,
+    user: CurrentUser = Depends(require_roles(*MANAGE)),
+    db: Session = Depends(get_tenant_db),
+):
+    """Gera os preços do rascunho a partir das fichas técnicas, custos e variáveis."""
+    try:
+        table = service.get_table(db, table_id)
+        version = service.get_version(db, table, version_id)
+        report = service.recalculate(db, user, table, version)
+    except service.PricingError as exc:
+        raise _http(exc) from None
+    audit.record(
+        db, user, "precificacao.versao_recalculada",
+        entity_type="price_table_version", entity_id=version.id,
+        details={"calculados": report["calculados"], "erros": len(report["erros"])},
+        request=request,
+    )  # fmt: skip
+    db.commit()
+    return RecalcOut(versao=VersionOut.model_validate(version), **report)
+
+
+@router.get(
+    "/tabelas/{table_id}/versoes/{version_id}/itens/{item_id}/calculo",
+    response_model=ItemCalcOut,
+)
+def item_calculation(
+    table_id: uuid.UUID,
+    version_id: uuid.UUID,
+    item_id: uuid.UUID,
+    _: CurrentUser = Depends(require_roles(*MANAGE)),
+    db: Session = Depends(get_tenant_db),
+):
+    """Memória de cálculo de um item (custos, variáveis e passos da fórmula)."""
+    try:
+        table = service.get_table(db, table_id)
+        version = service.get_version(db, table, version_id)
+        return service.get_item(db, version, item_id)
+    except service.PricingError as exc:
+        raise _http(exc) from None
+
+
+# ---------- Fichas técnicas ----------
+
+
+def _sheet_out(db: Session, sheet, items=None) -> SheetOut:
+    out = SheetOut.model_validate(sheet)
+    if items is None:
+        items = service.sheet_items(db, sheet)
+    out.items = [SheetItemOut.model_validate(i) for i in items]
+    return out
+
+
+@router.get("/fichas", response_model=list[SheetOut])
+def list_sheets(
+    _: CurrentUser = Depends(require_roles(*MANAGE)), db: Session = Depends(get_tenant_db)
+):
+    grouped = service.items_by_sheet(db)  # uma consulta para os itens de todas as fichas
+    return [_sheet_out(db, s, grouped.get(s.id, [])) for s in service.list_sheets(db)]
+
+
+@router.post("/fichas", response_model=SheetOut, status_code=status.HTTP_201_CREATED)
+def create_sheet(
+    body: SheetIn,
+    request: Request,
+    user: CurrentUser = Depends(require_roles(*MANAGE)),
+    db: Session = Depends(get_tenant_db),
+):
+    data = body.model_dump()
+    try:
+        sheet = service.save_sheet(db, user, None, **data)
+    except service.PricingError as exc:
+        raise _http(exc) from None
+    audit.record(
+        db, user, "precificacao.ficha_criada",
+        entity_type="cost_sheet", entity_id=sheet.id,
+        details={"procedimento": sheet.procedure_code}, request=request,
+    )  # fmt: skip
+    db.commit()
+    return _sheet_out(db, sheet)
+
+
+@router.get("/fichas/{sheet_id}", response_model=SheetOut)
+def get_sheet(
+    sheet_id: uuid.UUID,
+    _: CurrentUser = Depends(require_roles(*MANAGE)),
+    db: Session = Depends(get_tenant_db),
+):
+    try:
+        return _sheet_out(db, service.get_sheet(db, sheet_id))
+    except service.PricingError as exc:
+        raise _http(exc) from None
+
+
+@router.put("/fichas/{sheet_id}", response_model=SheetOut)
+def replace_sheet(
+    sheet_id: uuid.UUID,
+    body: SheetIn,
+    request: Request,
+    user: CurrentUser = Depends(require_roles(*MANAGE)),
+    db: Session = Depends(get_tenant_db),
+):
+    """Substitui a ficha inteira (tempo e materiais)."""
+    try:
+        sheet = service.save_sheet(db, user, service.get_sheet(db, sheet_id), **body.model_dump())
+    except service.PricingError as exc:
+        raise _http(exc) from None
+    audit.record(
+        db, user, "precificacao.ficha_alterada",
+        entity_type="cost_sheet", entity_id=sheet.id,
+        details={"procedimento": sheet.procedure_code}, request=request,
+    )  # fmt: skip
+    db.commit()
+    return _sheet_out(db, sheet)
+
+
+@router.delete("/fichas/{sheet_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_sheet(
+    sheet_id: uuid.UUID,
+    request: Request,
+    user: CurrentUser = Depends(require_roles(*MANAGE)),
+    db: Session = Depends(get_tenant_db),
+):
+    try:
+        sheet = service.get_sheet(db, sheet_id)
+    except service.PricingError as exc:
+        raise _http(exc) from None
+    code = sheet.procedure_code
+    service.delete_sheet(db, sheet)
+    audit.record(
+        db, user, "precificacao.ficha_removida",
+        entity_type="cost_sheet", entity_id=sheet_id, details={"procedimento": code},
+        request=request,
+    )  # fmt: skip
+    db.commit()
+
+
+# ---------- Variáveis ----------
+
+
+@router.get("/variaveis", response_model=list[VariableOut])
+def list_variables(
+    _: CurrentUser = Depends(require_roles(*MANAGE)), db: Session = Depends(get_tenant_db)
+):
+    return service.list_variables(db)
+
+
+@router.put("/variaveis", response_model=VariableOut)
+def set_variable(
+    body: VariableIn,
+    request: Request,
+    user: CurrentUser = Depends(require_roles(*MANAGE)),
+    db: Session = Depends(get_tenant_db),
+):
+    """Cria ou atualiza o valor (padrão da clínica, ou do dentista se dentist_id vier)."""
+    try:
+        variable = service.set_variable(db, user, **body.model_dump())
+    except service.PricingError as exc:
+        raise _http(exc) from None
+    audit.record(
+        db, user, "precificacao.variavel_definida",
+        entity_type="pricing_variable", entity_id=variable.id,
+        details=body.model_dump(mode="json"), request=request,
+    )  # fmt: skip
+    db.commit()
+    return variable
+
+
+@router.delete("/variaveis/{variable_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_variable(
+    variable_id: uuid.UUID,
+    request: Request,
+    user: CurrentUser = Depends(require_roles(*MANAGE)),
+    db: Session = Depends(get_tenant_db),
+):
+    try:
+        variable = service.get_variable(db, variable_id)
+    except service.PricingError as exc:
+        raise _http(exc) from None
+    details = {"key": variable.key, "dentist_id": str(variable.dentist_id or "")}
+    service.delete_variable(db, variable)
+    audit.record(
+        db, user, "precificacao.variavel_removida",
+        entity_type="pricing_variable", entity_id=variable_id, details=details,
+        request=request,
+    )  # fmt: skip
     db.commit()

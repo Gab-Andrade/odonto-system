@@ -52,6 +52,11 @@ class TableStatus(StrEnum):
     ARQUIVADA = "arquivada"
 
 
+class TableKind(StrEnum):
+    FIXA = "fixa"  # preços digitados ou importados
+    CALCULADA = "calculada"  # preços gerados por fórmula a partir de custos
+
+
 class VersionStatus(StrEnum):
     RASCUNHO = "rascunho"
     PUBLICADA = "publicada"
@@ -93,6 +98,11 @@ class PriceTable(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
     status: Mapped[TableStatus] = mapped_column(
         _enum(TableStatus), default=TableStatus.ATIVA, server_default=TableStatus.ATIVA.value
     )
+    kind: Mapped[TableKind] = mapped_column(
+        _enum(TableKind), default=TableKind.FIXA, server_default=TableKind.FIXA.value
+    )
+    # Tabela calculada: de quem são as variáveis usadas (pró-labore, margem...). Vazio = clínica.
+    calc_dentist_id: Mapped[uuid.UUID | None] = mapped_column()
 
 
 class PriceTableVersion(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
@@ -131,6 +141,12 @@ class PriceTableVersion(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
     published_by: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )
+    # Tabela calculada: passos da fórmula ({"nome", "expressao"}) e quando os itens foram gerados.
+    formula: Mapped[list[dict[str, str]] | None] = mapped_column(JSONB)
+    calculated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Hash dos insumos usados no cálculo (fórmula, variáveis, fichas, custos). Publicar
+    # confere se continuam iguais, para não publicar preço calculado com custo antigo.
+    calc_inputs_hash: Mapped[str | None] = mapped_column(String(64))
 
 
 class PriceItem(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
@@ -155,6 +171,8 @@ class PriceItem(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
     price: Mapped[Decimal] = mapped_column(Numeric(12, 2))
     # Colunas extras da planilha que a clínica quis manter (ex.: "Tempo", "Observação").
     custom_fields: Mapped[dict[str, str] | None] = mapped_column(JSONB)
+    # Tabela calculada: memória de cálculo do item (entradas, materiais, passos).
+    calc_trace: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
 
 class PriceAssignment(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
@@ -281,3 +299,66 @@ class ImportJob(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
     created_by: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )
+
+
+class CostSheet(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
+    """Ficha técnica: o que um procedimento consome (tempo e materiais)."""
+
+    __tablename__ = "cost_sheets"
+    __table_args__ = (
+        UniqueConstraint("id", "clinic_id", name="uq_cost_sheets_id_clinic"),
+        UniqueConstraint("clinic_id", "procedure_code", name="uq_cost_sheets_clinic_code"),
+        CheckConstraint("duration_minutes > 0", name="duration_positive"),
+    )
+
+    procedure_code: Mapped[str] = mapped_column(String(40))
+    description: Mapped[str] = mapped_column(String(300))
+    category: Mapped[str | None] = mapped_column(String(100))
+    duration_minutes: Mapped[int] = mapped_column(Integer)
+
+
+class CostSheetItem(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
+    __tablename__ = "cost_sheet_items"
+    __table_args__ = (
+        UniqueConstraint(
+            "clinic_id", "sheet_id", "material_id", name="uq_cost_sheet_items_sheet_material"
+        ),
+        ForeignKeyConstraint(
+            ["sheet_id", "clinic_id"],
+            ["cost_sheets.id", "cost_sheets.clinic_id"],
+            name="fk_cost_sheet_items_sheet_same_clinic",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["material_id", "clinic_id"],
+            ["materials.id", "materials.clinic_id"],
+            name="fk_cost_sheet_items_material_same_clinic",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint("quantity > 0", name="quantity_positive"),
+    )
+
+    sheet_id: Mapped[uuid.UUID] = mapped_column()
+    material_id: Mapped[uuid.UUID] = mapped_column()
+    quantity: Mapped[Decimal] = mapped_column(Numeric(12, 4))
+
+
+class PricingVariable(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
+    """Variável de fórmula. Sem dentist_id: valor padrão da clínica; com: valor do dentista,
+    que tem prioridade sobre o padrão nas tabelas calculadas daquele dentista."""
+
+    __tablename__ = "pricing_variables"
+    __table_args__ = (
+        UniqueConstraint(
+            "clinic_id",
+            "key",
+            "dentist_id",
+            name="uq_pricing_variables_key_dentist",
+            postgresql_nulls_not_distinct=True,
+        ),
+    )
+
+    key: Mapped[str] = mapped_column(String(50))
+    label: Mapped[str | None] = mapped_column(String(120))
+    value: Mapped[Decimal] = mapped_column(Numeric(14, 4))
+    dentist_id: Mapped[uuid.UUID | None] = mapped_column()

@@ -11,6 +11,8 @@ Resolução do preço de um procedimento:
 3. A primeira que encontrar vence. A memória de cálculo registra todas as tentativas.
 """
 
+import hashlib
+import json
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
@@ -24,9 +26,12 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.context import CurrentUser
 from app.core.roles import Role
+from app.modules.estoque import service as estoque
 from app.modules.identidade.service import active_role
-from app.modules.precificacao import importacao
+from app.modules.precificacao import formulas, importacao
 from app.modules.precificacao.models import (
+    CostSheet,
+    CostSheetItem,
     ImportJob,
     ImportProfile,
     ImportStatus,
@@ -35,7 +40,9 @@ from app.modules.precificacao.models import (
     PriceSnapshot,
     PriceTable,
     PriceTableVersion,
+    PricingVariable,
     ScopeType,
+    TableKind,
     TableStatus,
     VersionStatus,
 )
@@ -130,9 +137,21 @@ def create_table(
     description: str | None,
     parent_table_id: uuid.UUID | None,
     adjustment_pct: Decimal | None,
+    kind: TableKind = TableKind.FIXA,
+    calc_dentist_id: uuid.UUID | None = None,
 ) -> tuple[PriceTable, PriceTableVersion]:
-    """Cria a tabela e já abre a versão 1 como rascunho."""
+    """Cria a tabela e já abre a versão 1 como rascunho.
+
+    Tabela calculada começa com a fórmula padrão ("preço por dentro") e não herda de outra.
+    """
     _ensure_unique_name(db, name)
+    if kind == TableKind.CALCULADA:
+        if parent_table_id is not None or adjustment_pct is not None:
+            raise RuleViolation("Tabela calculada não herda de outra: os preços vêm da fórmula.")
+        if calc_dentist_id is not None:
+            ensure_dentist(db, user, calc_dentist_id)
+    elif calc_dentist_id is not None:
+        raise RuleViolation("Dentista de referência só se aplica a tabelas calculadas.")
     if parent_table_id is not None:
         parent = get_table(db, parent_table_id)
         if parent.status != TableStatus.ATIVA:
@@ -145,6 +164,8 @@ def create_table(
         name=name,
         description=description,
         parent_table_id=parent_table_id,
+        kind=kind,
+        calc_dentist_id=calc_dentist_id,
     )
     db.add(table)
     db.flush()
@@ -153,6 +174,9 @@ def create_table(
         table_id=table.id,
         version=1,
         adjustment_pct=adjustment_pct,
+        formula=[dict(s) for s in formulas.DEFAULT_FORMULA]
+        if kind == TableKind.CALCULADA
+        else None,
     )
     db.add(draft)
     db.flush()
@@ -252,6 +276,11 @@ def create_draft(db: Session, user: CurrentUser, table: PriceTable) -> PriceTabl
         table_id=table.id,
         version=next_number,
         adjustment_pct=base.adjustment_pct if base else None,
+        formula=base.formula
+        if base
+        else ([dict(s) for s in formulas.DEFAULT_FORMULA] if _is_calculated(table) else None),
+        calculated_at=base.calculated_at if base else None,
+        calc_inputs_hash=base.calc_inputs_hash if base else None,
     )
     db.add(draft)
     db.flush()
@@ -266,6 +295,7 @@ def create_draft(db: Session, user: CurrentUser, table: PriceTable) -> PriceTabl
                     category=item.category,
                     custom_fields=item.custom_fields,
                     price=item.price,
+                    calc_trace=item.calc_trace,
                 )
             )
         db.flush()
@@ -280,8 +310,30 @@ def update_draft(
         if changes["adjustment_pct"] is not None and table.parent_table_id is None:
             raise RuleViolation("Ajuste percentual só se aplica a tabelas que herdam de outra.")
         version.adjustment_pct = changes["adjustment_pct"]
+    if changes.get("formula") is not None:
+        if not _is_calculated(table):
+            raise RuleViolation("Fórmula só se aplica a tabelas calculadas.")
+        try:
+            compiled = formulas.compile_formula(changes["formula"])
+        except formulas.FormulaError as exc:
+            raise RuleViolation(exc.message) from None
+        version.formula = compiled.steps
+        # Os itens foram gerados com a fórmula anterior: é preciso recalcular.
+        version.calculated_at = None
+        version.calc_inputs_hash = None
     db.flush()
     return version
+
+
+def _is_calculated(table: PriceTable) -> bool:
+    return table.kind == TableKind.CALCULADA
+
+
+def ensure_manual_items(table: PriceTable) -> None:
+    if _is_calculated(table):
+        raise RuleViolation(
+            "Tabela calculada: os preços vêm da fórmula. Ajuste custos e variáveis e recalcule."
+        )
 
 
 def list_items(db: Session, version: PriceTableVersion) -> list[PriceItem]:
@@ -316,6 +368,14 @@ def publish(
     _ensure_draft(version)
     if table.status != TableStatus.ATIVA:
         raise RuleViolation("Tabela arquivada não pode publicar versões.")
+    if _is_calculated(table):
+        if version.calculated_at is None:
+            raise RuleViolation("Recalcule os preços antes de publicar.")
+        if version.calc_inputs_hash != _inputs_fingerprint(version, _cost_inputs(db, table)):
+            raise RuleViolation(
+                "Custos, fichas técnicas ou variáveis mudaram desde o último cálculo. "
+                "Recalcule antes de publicar."
+            )
     if table.parent_table_id is None and not list_items(db, version):
         raise RuleViolation("A versão não tem itens.")
 
@@ -656,6 +716,7 @@ def create_import(
     table = get_table(db, table_id)
     if table.status != TableStatus.ATIVA:
         raise RuleViolation("Tabela arquivada não recebe importações.")
+    ensure_manual_items(table)
     try:
         parsed = importacao.parse_file(filename, content, sheet)
     except importacao.SpreadsheetError as exc:
@@ -847,3 +908,356 @@ def create_profile(
 def delete_profile(db: Session, profile: ImportProfile) -> None:
     db.delete(profile)
     db.flush()
+
+
+# ---------- Fichas técnicas ----------
+
+
+def list_sheets(db: Session) -> list[CostSheet]:
+    return list(db.scalars(select(CostSheet).order_by(CostSheet.procedure_code)))
+
+
+def get_sheet(db: Session, sheet_id: uuid.UUID) -> CostSheet:
+    sheet = db.get(CostSheet, sheet_id)
+    if sheet is None:
+        raise NotFound("Ficha técnica não encontrada.")
+    return sheet
+
+
+def sheet_items(db: Session, sheet: CostSheet) -> list[CostSheetItem]:
+    return list(db.scalars(select(CostSheetItem).where(CostSheetItem.sheet_id == sheet.id)))
+
+
+def items_by_sheet(db: Session) -> dict[uuid.UUID, list[CostSheetItem]]:
+    grouped: dict[uuid.UUID, list[CostSheetItem]] = {}
+    for item in db.scalars(select(CostSheetItem).order_by(CostSheetItem.created_at)):
+        grouped.setdefault(item.sheet_id, []).append(item)
+    return grouped
+
+
+def _validate_materials(db: Session, items: list[dict[str, Any]]) -> None:
+    ids = [i["material_id"] for i in items]
+    if len(ids) != len(set(ids)):
+        raise RuleViolation("O mesmo material aparece mais de uma vez na ficha.")
+    found = estoque.material_costs(db, ids)  # só enxerga materiais desta clínica
+    missing = [str(i) for i in ids if i not in found]
+    if missing:
+        raise NotFound(f"Material não encontrado: {', '.join(missing)}.")
+    inactive = [m.name for m in found.values() if not m.active]
+    if inactive:
+        raise RuleViolation(f"Material inativo: {', '.join(sorted(inactive))}.")
+
+
+def save_sheet(
+    db: Session,
+    user: CurrentUser,
+    sheet: CostSheet | None,
+    *,
+    procedure_code: str,
+    description: str,
+    category: str | None,
+    duration_minutes: int,
+    items: list[dict[str, Any]],
+) -> CostSheet:
+    """Cria (sheet=None) ou substitui uma ficha técnica inteira."""
+    duplicate = db.scalar(select(CostSheet.id).where(CostSheet.procedure_code == procedure_code))
+    if duplicate is not None and (sheet is None or duplicate != sheet.id):
+        raise RuleViolation(f"Já existe ficha técnica para o procedimento '{procedure_code}'.")
+    _validate_materials(db, items)
+
+    if sheet is None:
+        sheet = CostSheet(
+            clinic_id=user.clinic_id,
+            procedure_code=procedure_code,
+            description=description,
+            duration_minutes=duration_minutes,
+        )
+        db.add(sheet)
+    sheet.procedure_code = procedure_code
+    sheet.description = description
+    sheet.category = category
+    sheet.duration_minutes = duration_minutes
+    db.flush()
+    db.execute(delete(CostSheetItem).where(CostSheetItem.sheet_id == sheet.id))
+    db.add_all(
+        CostSheetItem(
+            clinic_id=user.clinic_id,
+            sheet_id=sheet.id,
+            material_id=i["material_id"],
+            quantity=i["quantity"],
+        )
+        for i in items
+    )
+    db.flush()
+    return sheet
+
+
+def delete_sheet(db: Session, sheet: CostSheet) -> None:
+    db.delete(sheet)
+    db.flush()
+
+
+# ---------- Variáveis ----------
+
+
+def list_variables(db: Session) -> list[PricingVariable]:
+    return list(
+        db.scalars(
+            select(PricingVariable).order_by(
+                PricingVariable.key, PricingVariable.dentist_id.nulls_first()
+            )
+        )
+    )
+
+
+def get_variable(db: Session, variable_id: uuid.UUID) -> PricingVariable:
+    variable = db.get(PricingVariable, variable_id)
+    if variable is None:
+        raise NotFound("Variável não encontrada.")
+    return variable
+
+
+def set_variable(
+    db: Session,
+    user: CurrentUser,
+    *,
+    key: str,
+    value: Decimal,
+    label: str | None,
+    dentist_id: uuid.UUID | None,
+) -> PricingVariable:
+    """Cria ou atualiza o valor da variável (padrão da clínica ou de um dentista)."""
+    if not formulas.NAME_RE.match(key):
+        raise RuleViolation("Nome de variável inválido. Use letras minúsculas, números e _.")
+    if key in formulas.RESERVED_NAMES:
+        raise RuleViolation(f"'{key}' é calculado pelo sistema e não pode ser uma variável.")
+    if dentist_id is not None:
+        ensure_dentist(db, user, dentist_id)
+    stmt = select(PricingVariable).where(PricingVariable.key == key)
+    stmt = stmt.where(
+        PricingVariable.dentist_id.is_(None)
+        if dentist_id is None
+        else PricingVariable.dentist_id == dentist_id
+    )
+    variable = db.scalar(stmt)
+    if variable is None:
+        variable = PricingVariable(
+            clinic_id=user.clinic_id, key=key, dentist_id=dentist_id, value=value
+        )
+        db.add(variable)
+    variable.value = value
+    if label is not None:
+        variable.label = label
+    db.flush()
+    return variable
+
+
+def delete_variable(db: Session, variable: PricingVariable) -> None:
+    db.delete(variable)
+    db.flush()
+
+
+def variables_for(db: Session, dentist_id: uuid.UUID | None) -> dict[str, tuple[Decimal, str]]:
+    """Valores das variáveis no contexto: o do dentista prevalece sobre o da clínica."""
+    stmt = select(PricingVariable).where(
+        PricingVariable.dentist_id.is_(None)
+        if dentist_id is None
+        else or_(PricingVariable.dentist_id.is_(None), PricingVariable.dentist_id == dentist_id)
+    )
+    result: dict[str, tuple[Decimal, str]] = {}
+    for var in db.scalars(stmt):
+        if var.dentist_id is None:
+            result.setdefault(var.key, (var.value, "clínica"))
+        else:
+            result[var.key] = (var.value, "dentista")
+    return result
+
+
+# ---------- Cálculo por fórmula ----------
+
+
+@dataclass
+class Calculation:
+    procedure_code: str
+    description: str
+    category: str | None
+    price: Decimal
+    trace: dict[str, Any]
+
+
+def _compile(steps: list[dict[str, Any]] | None) -> formulas.CompiledFormula:
+    try:
+        return formulas.compile_formula(steps or formulas.DEFAULT_FORMULA)
+    except formulas.FormulaError as exc:
+        raise RuleViolation(exc.message) from None
+
+
+def _calculate(
+    sheet: CostSheet,
+    items: list[CostSheetItem],
+    costs: dict[uuid.UUID, Any],
+    compiled: formulas.CompiledFormula,
+    variables: dict[str, tuple[Decimal, str]],
+) -> Calculation:
+    materials = []
+    material_total = Decimal(0)
+    for item in items:
+        cost = costs[item.material_id]
+        subtotal = item.quantity * cost.unit_cost
+        material_total += subtotal
+        materials.append(
+            {
+                "material": cost.name,
+                "unidade": cost.unit,
+                "quantidade": str(item.quantity.normalize()),
+                "custo_unitario": str(cost.unit_cost),
+                "subtotal": str(subtotal.quantize(formulas.CENTS, rounding=ROUND_HALF_UP)),
+            }
+        )
+    system = {
+        "custo_materiais": material_total,
+        "tempo_minutos": Decimal(sheet.duration_minutes),
+        "tempo_horas": Decimal(sheet.duration_minutes) / Decimal(60),
+    }
+    inputs = {k: v for k, (v, _) in variables.items()} | system
+    result = formulas.run_formula(compiled, inputs)  # FormulaError sobe para quem chamou
+
+    used = sorted(compiled.inputs)
+    entries = {
+        name: {
+            "valor": formulas.display_value(inputs[name]),
+            "origem": "ficha técnica" if name in system else variables[name][1],
+        }
+        for name in used
+    }
+    trace = {
+        "entradas": entries,
+        "materiais": materials,
+        "passos": result.steps,
+        "preco": str(result.price),
+    }
+    return Calculation(sheet.procedure_code, sheet.description, sheet.category, result.price, trace)
+
+
+def try_formula(
+    db: Session,
+    *,
+    procedure_code: str,
+    steps: list[dict[str, Any]] | None,
+    dentist_id: uuid.UUID | None,
+    user: CurrentUser,
+) -> Calculation:
+    """Calcula um procedimento sem gravar nada (o "testar" do editor de fórmulas)."""
+    if dentist_id is not None:
+        ensure_dentist(db, user, dentist_id)
+    sheet = db.scalar(select(CostSheet).where(CostSheet.procedure_code == procedure_code))
+    if sheet is None:
+        raise NotFound(f"Não há ficha técnica para o procedimento '{procedure_code}'.")
+    items = sheet_items(db, sheet)
+    costs = estoque.material_costs(db, [i.material_id for i in items])
+    try:
+        return _calculate(sheet, items, costs, _compile(steps), variables_for(db, dentist_id))
+    except formulas.FormulaError as exc:
+        raise RuleViolation(exc.message) from None
+
+
+def recalculate(
+    db: Session, user: CurrentUser, table: PriceTable, version: PriceTableVersion
+) -> dict[str, Any]:
+    """Gera os itens do rascunho de uma tabela calculada a partir das fichas técnicas.
+
+    Procedimentos com erro (ex.: variável sem valor) ficam de fora e aparecem no relatório.
+    """
+    _ensure_draft(version)
+    if not _is_calculated(table):
+        raise RuleViolation("Só tabelas calculadas podem ser recalculadas.")
+    if table.calc_dentist_id is not None:
+        # O dentista de referência pode ter saído da clínica depois da criação da tabela.
+        ensure_dentist(db, user, table.calc_dentist_id)
+    compiled = _compile(version.formula)
+    inputs = _cost_inputs(db, table)
+    sheets, by_sheet, costs, variables = (
+        inputs.sheets,
+        inputs.by_sheet,
+        inputs.costs,
+        inputs.variables,
+    )
+    missing = sorted(compiled.inputs - set(variables) - set(formulas.SYSTEM_INPUTS))
+    if missing:
+        raise RuleViolation(f"Cadastre as variáveis: {', '.join(missing)}.")
+    if not sheets:
+        raise RuleViolation("Cadastre fichas técnicas antes de recalcular.")
+
+    calculated: list[dict[str, Any]] = []
+    errors: list[dict[str, str]] = []
+    for sheet in sheets:
+        try:
+            calc = _calculate(sheet, by_sheet.get(sheet.id, []), costs, compiled, variables)
+        except formulas.FormulaError as exc:
+            errors.append({"procedimento": sheet.procedure_code, "erro": exc.message})
+            continue
+        calculated.append(
+            {
+                "procedure_code": calc.procedure_code,
+                "description": calc.description,
+                "category": calc.category,
+                "price": calc.price,
+                "calc_trace": calc.trace,
+            }
+        )
+    replace_items(db, user, version, calculated)
+    version.calculated_at = datetime.now(UTC)
+    version.calc_inputs_hash = _inputs_fingerprint(version, inputs)
+    db.flush()
+    return {"calculados": len(calculated), "erros": errors}
+
+
+@dataclass
+class _CostInputs:
+    sheets: list[CostSheet]
+    by_sheet: dict[uuid.UUID, list[CostSheetItem]]
+    costs: dict[uuid.UUID, Any]
+    variables: dict[str, tuple[Decimal, str]]
+
+
+def _cost_inputs(db: Session, table: PriceTable) -> _CostInputs:
+    by_sheet = items_by_sheet(db)
+    material_ids = {i.material_id for items in by_sheet.values() for i in items}
+    return _CostInputs(
+        sheets=list_sheets(db),
+        by_sheet=by_sheet,
+        costs=estoque.material_costs(db, material_ids),
+        variables=variables_for(db, table.calc_dentist_id),
+    )
+
+
+def _inputs_fingerprint(version: PriceTableVersion, inputs: _CostInputs) -> str:
+    payload = {
+        "formula": version.formula,
+        "variaveis": sorted((k, str(v)) for k, (v, _) in inputs.variables.items()),
+        "fichas": sorted(
+            (
+                s.procedure_code,
+                s.description,
+                s.category or "",
+                s.duration_minutes,
+                sorted(
+                    (
+                        str(i.material_id),
+                        str(i.quantity),
+                        str(inputs.costs[i.material_id].unit_cost),
+                    )
+                    for i in inputs.by_sheet.get(s.id, [])
+                ),
+            )
+            for s in inputs.sheets
+        ),
+    }
+    return hashlib.sha256(json.dumps(payload, ensure_ascii=False).encode()).hexdigest()
+
+
+def get_item(db: Session, version: PriceTableVersion, item_id: uuid.UUID) -> PriceItem:
+    item = db.get(PriceItem, item_id)
+    if item is None or item.version_id != version.id:
+        raise NotFound("Item não encontrado.")
+    return item

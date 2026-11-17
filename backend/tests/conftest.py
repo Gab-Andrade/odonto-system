@@ -61,7 +61,8 @@ def clean_db(owner_engine):
     with owner_engine.begin() as conn:
         conn.execute(
             text(
-                "TRUNCATE import_jobs, import_profiles, price_snapshots, price_assignments, "
+                "TRUNCATE cost_sheet_items, cost_sheets, pricing_variables, materials, "
+                "import_jobs, import_profiles, price_snapshots, price_assignments, "
                 "price_items, price_table_versions, "
                 "price_tables, audit_logs, clinic_memberships, users, clinics "
                 "RESTART IDENTITY CASCADE"

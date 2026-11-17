@@ -6,7 +6,13 @@ from typing import Annotated, Any
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
-from app.modules.precificacao.models import ImportStatus, ScopeType, TableStatus, VersionStatus
+from app.modules.precificacao.models import (
+    ImportStatus,
+    ScopeType,
+    TableKind,
+    TableStatus,
+    VersionStatus,
+)
 
 # Limites alinhados às colunas Numeric(12,2) e Numeric(7,4).
 Money = Annotated[Decimal, Field(ge=0, max_digits=12, decimal_places=2)]
@@ -28,6 +34,14 @@ class TableCreate(BaseModel):
     adjustment_pct: Percent | None = Field(
         default=None, description="Ajuste sobre a tabela-pai, em %. Ex.: 15 = +15%."
     )
+    kind: TableKind = Field(
+        default=TableKind.FIXA,
+        description="'fixa': preços digitados/importados. 'calculada': gerados por fórmula.",
+    )
+    calc_dentist_id: uuid.UUID | None = Field(
+        default=None,
+        description="Tabela calculada: usa as variáveis deste dentista (senão, as da clínica).",
+    )
 
 
 class TableUpdate(BaseModel):
@@ -47,6 +61,8 @@ class TableOut(BaseModel):
     description: str | None
     parent_table_id: uuid.UUID | None
     status: TableStatus
+    kind: TableKind
+    calc_dentist_id: uuid.UUID | None
     created_at: datetime
 
 
@@ -64,10 +80,21 @@ class VersionOut(BaseModel):
     valid_from: date | None
     published_at: datetime | None
     published_by: uuid.UUID | None
+    calculated_at: datetime | None
+
+
+class FormulaStep(BaseModel):
+    nome: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
+    expressao: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)
+    ]
 
 
 class VersionUpdate(BaseModel):
     adjustment_pct: Percent | None = None
+    formula: list[FormulaStep] | None = Field(
+        default=None, max_length=30, description="Só para tabelas calculadas."
+    )
 
 
 class ItemIn(BaseModel):
@@ -238,3 +265,97 @@ class ProfileOut(BaseModel):
     column_map: ColumnMap
     extra_columns: list[str]
     created_at: datetime
+
+
+# ---------- Fórmulas, fichas técnicas e variáveis ----------
+
+
+class FormulaOut(BaseModel):
+    formula: list[FormulaStep]
+    entradas_do_sistema: dict[str, str]
+    funcoes: dict[str, str]
+    variaveis_sugeridas: dict[str, str]
+
+
+class SheetItemIn(BaseModel):
+    material_id: uuid.UUID
+    quantity: Annotated[Decimal, Field(gt=0, max_digits=12, decimal_places=4)]
+
+
+class SheetIn(BaseModel):
+    procedure_code: ProcedureCode
+    description: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=300)
+    ]
+    category: str | None = Field(default=None, max_length=100)
+    duration_minutes: int = Field(gt=0, le=1440, description="Tempo do procedimento.")
+    items: list[SheetItemIn] = Field(default_factory=list, max_length=100)
+
+
+class SheetItemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    material_id: uuid.UUID
+    quantity: Decimal
+
+
+class SheetOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    procedure_code: str
+    description: str
+    category: str | None
+    duration_minutes: int
+    items: list[SheetItemOut] = Field(default_factory=list)
+    updated_at: datetime
+
+
+class VariableIn(BaseModel):
+    key: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
+    value: Annotated[Decimal, Field(max_digits=14, decimal_places=4)]
+    label: str | None = Field(default=None, max_length=120)
+    dentist_id: uuid.UUID | None = Field(
+        default=None, description="Vazio: valor padrão da clínica. Preenchido: valor do dentista."
+    )
+
+
+class VariableOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    key: str
+    label: str | None
+    value: Decimal
+    dentist_id: uuid.UUID | None
+    updated_at: datetime
+
+
+class FormulaTestIn(BaseModel):
+    procedure_code: ProcedureCode
+    formula: list[FormulaStep] | None = Field(
+        default=None, max_length=30, description="Vazio: usa a fórmula padrão."
+    )
+    dentist_id: uuid.UUID | None = None
+
+
+class CalculationOut(BaseModel):
+    procedure_code: str
+    description: str
+    price: Decimal
+    trace: dict[str, Any]
+
+
+class RecalcOut(BaseModel):
+    versao: VersionOut
+    calculados: int
+    erros: list[dict[str, str]]
+
+
+class ItemCalcOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    procedure_code: str
+    price: Decimal
+    calc_trace: dict[str, Any] | None
