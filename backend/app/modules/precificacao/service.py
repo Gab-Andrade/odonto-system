@@ -72,6 +72,14 @@ class RuleViolation(PricingError):
     pass
 
 
+class CalcErrorsNotConfirmed(RuleViolation):
+    """Publicar deixaria procedimentos de fora (erro no recálculo) sem confirmação."""
+
+    def __init__(self, message: str, errors: list[dict[str, str]]):
+        super().__init__(message)
+        self.errors = errors
+
+
 class PriceNotFound(PricingError):
     def __init__(self, message: str, trace: list[dict[str, Any]]):
         super().__init__(message)
@@ -281,6 +289,9 @@ def create_draft(db: Session, user: CurrentUser, table: PriceTable) -> PriceTabl
         else ([dict(s) for s in formulas.DEFAULT_FORMULA] if _is_calculated(table) else None),
         calculated_at=base.calculated_at if base else None,
         calc_inputs_hash=base.calc_inputs_hash if base else None,
+        # Os itens copiados são os mesmos da base, então os procedimentos que ficaram de fora
+        # também: publicar o novo rascunho sem recalcular pede confirmação de novo.
+        calc_errors=base.calc_errors if base else None,
     )
     db.add(draft)
     db.flush()
@@ -321,6 +332,7 @@ def update_draft(
         # Os itens foram gerados com a fórmula anterior: é preciso recalcular.
         version.calculated_at = None
         version.calc_inputs_hash = None
+        version.calc_errors = None
     db.flush()
     return version
 
@@ -364,7 +376,14 @@ def publish(
     table: PriceTable,
     version: PriceTableVersion,
     valid_from: date | None,
+    *,
+    confirm_errors: bool = False,
 ) -> PriceTableVersion:
+    """Publica o rascunho.
+
+    Em tabela calculada cujo último recálculo teve erros, exige `confirm_errors`: esses
+    procedimentos não estão nos itens e, na resolução, cairiam para a próxima tabela.
+    """
     _ensure_draft(version)
     if table.status != TableStatus.ATIVA:
         raise RuleViolation("Tabela arquivada não pode publicar versões.")
@@ -382,6 +401,15 @@ def publish(
     start = valid_from or today()
     last = _last_published(db, table.id)
     check_valid_from(start, today(), last.valid_from if last else None)
+    # Por último, para não pedir confirmação de algo que outra regra ainda bloquearia. O hash
+    # já foi conferido acima, então os erros guardados correspondem aos insumos atuais.
+    if version.calc_errors and not confirm_errors:
+        raise CalcErrorsNotConfirmed(
+            f"{len(version.calc_errors)} procedimento(s) tiveram erro no último recálculo e "
+            "ficarão fora desta tabela; no orçamento, o preço deles virá da próxima tabela da "
+            "prioridade. Corrija e recalcule, ou publique com confirmar_erros.",
+            version.calc_errors,
+        )
 
     version.status = VersionStatus.PUBLICADA
     version.valid_from = start
@@ -1208,6 +1236,7 @@ def recalculate(
     replace_items(db, user, version, calculated)
     version.calculated_at = datetime.now(UTC)
     version.calc_inputs_hash = _inputs_fingerprint(version, inputs)
+    version.calc_errors = errors
     db.flush()
     return {"calculados": len(calculated), "erros": errors}
 

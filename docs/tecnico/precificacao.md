@@ -1,6 +1,6 @@
 ---
 modulo: precificacao
-atualizado_em: 6363519
+atualizado_em: 59c8187
 ---
 # Precificação
 
@@ -41,6 +41,7 @@ Fora do módulo:
 Tabelas calculadas (migração `0005_precificacao_formulas.py`):
 - `price_tables.kind` (`fixa`/`calculada`). CHECKs: `calculated_has_no_parent` (calculada não herda) e `calc_dentist_only_calculated`.
 - A fórmula fica em `price_table_versions.formula` (JSONB), então mudar a fórmula também gera histórico por versão. `calculated_at` e `calc_inputs_hash` registram quando e com quais insumos os itens foram gerados. `price_items.calc_trace` guarda a memória de cálculo de cada item.
+- `price_table_versions.calc_errors` (JSONB, migração `0006_precificacao_erros_calculo.py`): procedimentos que falharam no último recálculo. Nulo = nunca calculada; lista vazia = calculada sem erros. CHECK `calc_errors_only_when_calculated` (só há erros se `calculated_at` existe).
 - `cost_sheets` não tem FK para `price_items`: a ligação é só pelo `procedure_code` (texto).
 - `cost_sheet_items` aponta para `materials` com FK composta e `RESTRICT`. `uq_pricing_variables_key_dentist` usa `NULLS NOT DISTINCT` (uma variável padrão por chave) e o CHECK `key_format` exige minúsculas, números e `_`.
 
@@ -68,7 +69,7 @@ Prefixo `/precificacao`. `MANAGE` = admin, gestor. `READ` = admin, gestor, denti
 | PATCH | `/tabelas/{id}/versoes/{vid}` | MANAGE | Altera o ajuste % do rascunho |
 | GET | `/tabelas/{id}/versoes/{vid}/itens` | READ | Lista itens |
 | PUT | `/tabelas/{id}/versoes/{vid}/itens` | MANAGE | Substitui todos os itens do rascunho |
-| POST | `/tabelas/{id}/versoes/{vid}/publicar` | MANAGE | Publica o rascunho com `valid_from` |
+| POST | `/tabelas/{id}/versoes/{vid}/publicar` | MANAGE | Publica o rascunho com `valid_from`; em tabela calculada com erros no último recálculo exige `confirmar_erros` no corpo |
 | GET | `/tabelas/{id}/versoes/{vid}/exportar` | READ | Baixa a versão em .xlsx, no formato aceito pela importação |
 | GET | `/atribuicoes` | READ | Lista atribuições por prioridade |
 | POST | `/atribuicoes` | MANAGE | Cria atribuição |
@@ -98,6 +99,7 @@ Tudo que expõe custo e margem (fórmulas, fichas, variáveis, cálculo do item)
 Códigos fora do padrão:
 - Violação de regra de negócio (`RuleViolation`) responde 409 com `detail` em texto. `NotFound` responde 404 (`router.py:_http`). Erros de leitura da planilha (`SpreadsheetError`, `MappingError`) são convertidos em `RuleViolation`, logo também 409 (incluindo arquivo grande demais ou formato inválido).
 - `/resolver` e `/snapshots` respondem 404 com **corpo próprio** `{"detail", "trace"}` quando nenhuma tabela resolve (`router.py:_not_found`). O mesmo status 404 também é usado para tabela, versão ou snapshot inexistente, sem `trace`. Para diferenciar, o cliente precisa olhar a presença de `trace`.
+- `publicar` sem `confirmar_erros` numa versão com `calc_errors` responde 409 com corpo próprio `{"detail", "erros"}` (`router.py:publish` captura `service.CalcErrorsNotConfirmed` antes de `_http`). Os outros 409 de publicação (ex.: "Recalcule") vêm sem `erros`; o cliente distingue pela presença da chave.
 - Tabela de outra clínica aparece como 404, pois o RLS a esconde.
 
 ## Regras de negócio e invariantes
@@ -120,7 +122,9 @@ Tabelas calculadas (`service.py:recalculate`, `_calculate`, `publish`; `formulas
 - Fórmula = lista de passos `{nome, expressao}` avaliados em ordem; o último chama-se `preco`, só ele; nomes reservados (`SYSTEM_INPUTS`, `FUNCTIONS`) são proibidos como variável ou passo (`formulas.compile_formula`, `service.set_variable`). Entradas do sistema por procedimento: `custo_materiais`, `tempo_minutos`, `tempo_horas`.
 - Segurança: expressão passa por `ast` com lista branca (números, nomes, `+ - * /`, uma comparação, `min`, `max`, `arredondar`, `se`). Nada de `eval`. Limites: 500 caracteres, 200 nós, 30 passos, valores até `MAX_INTERMEDIATE` (1e15). Contas em `Decimal` com precisão 34, preço final em centavos `ROUND_HALF_UP`; negativo ou acima de `MAX_PRICE` é erro.
 - Variáveis: `variables_for` usa só as da clínica se `calc_dentist_id` for nulo; senão, as da clínica com as do dentista sobrescrevendo por chave.
-- `recalculate` exige rascunho, que todas as variáveis usadas pela fórmula existam e que haja ao menos uma ficha. Erro de cálculo em uma ficha (ex.: divisão por zero) **não aborta**: o procedimento fica fora dos itens e entra em `erros`. Substitui todos os itens do rascunho e grava `calculated_at` e `calc_inputs_hash`.
+- `recalculate` exige rascunho, que todas as variáveis usadas pela fórmula existam e que haja ao menos uma ficha. Erro de cálculo em uma ficha (ex.: divisão por zero) **não aborta**: o procedimento fica fora dos itens e entra em `erros`. Substitui todos os itens do rascunho e grava `calculated_at`, `calc_inputs_hash` e `calc_errors` (a mesma lista devolvida em `erros`).
+- Publicar com erros: `publish` levanta `CalcErrorsNotConfirmed` se `calc_errors` não for vazio e `confirm_errors` for falso. A checagem vem por último, depois de rascunho, itens, hash e `valid_from`, então hash velho (“Recalcule”) bloqueia antes e confirmar não o contorna. Motivo: o procedimento com erro não está em `price_items` e, na resolução, cai para a próxima tabela. A auditoria de `versao_publicada` registra `erros_confirmados` (códigos).
+- `create_draft` copia também `calc_errors` (os itens copiados são os mesmos); `update_draft` com nova fórmula zera `calc_errors` junto com `calculated_at` e o hash.
 - `calc_inputs_hash` (`_inputs_fingerprint`) cobre fórmula, valores das variáveis, fichas (tempo, descrição, categoria) e quantidade e custo unitário de cada material. `publish` recusa se não houve recálculo ou se o hash atual difere: preço calculado nunca é publicado com custo velho. `update_draft` com nova fórmula zera `calculated_at` e o hash.
 - `create_draft` copia itens, fórmula, `calculated_at` e hash da última publicada. Se custos mudaram desde então, o novo rascunho já nasce impossível de publicar até recalcular.
 - Dentista de referência: validado na criação e **de novo em cada `recalculate`** (pode ter saído da clínica).
@@ -146,7 +150,7 @@ Importação (`service.py` seção "Importação de planilhas"; leitura e valida
 
 - Todos os endpoints usam `get_tenant_db`. O módulo nunca filtra `clinic_id` em consultas. `get_table`, `get_assignment`, `get_snapshot`, `get_import` e `get_profile` dependem do RLS para devolver 404 em dados de outra clínica.
 - O router faz `audit.record` e depois `db.commit()`. O service só faz `flush`.
-- Ações auditadas: `precificacao.tabela_criada`, `tabela_alterada`, `versao_criada`, `versao_alterada`, `itens_substituidos` (details só com a quantidade), `versao_publicada`, `atribuicao_criada`, `atribuicao_removida`, `snapshot_criado`, `importacao_criada` (arquivo, sha256, linhas), `importacao_validada`, `importacao_aplicada`, `perfil_criado`, `perfil_removido`, `versao_recalculada` (quantidade calculada e de erros), `ficha_criada`, `ficha_alterada`, `ficha_removida`, `variavel_definida`, `variavel_removida`. `/resolver`, o download do modelo, a exportação, `/formulas/testar` e `/formulas/padrao` não auditam.
+- Ações auditadas: `precificacao.tabela_criada`, `tabela_alterada`, `versao_criada`, `versao_alterada`, `itens_substituidos` (details só com a quantidade), `versao_publicada` (details trazem `valid_from` e, se publicada com erros confirmados, `erros_confirmados`), `atribuicao_criada`, `atribuicao_removida`, `snapshot_criado`, `importacao_criada` (arquivo, sha256, linhas), `importacao_validada`, `importacao_aplicada`, `perfil_criado`, `perfil_removido`, `versao_recalculada` (quantidade calculada e de erros), `ficha_criada`, `ficha_alterada`, `ficha_removida`, `variavel_definida`, `variavel_removida`. `/resolver`, o download do modelo, a exportação, `/formulas/testar` e `/formulas/padrao` não auditam.
 - Fichas, variáveis e recálculo leem os dados do módulo `estoque` pela sessão de tenant, então materiais de outra clínica aparecem como inexistentes.
 - Em `tabela_alterada` e `versao_alterada`, `details` guarda os valores como `str`.
 
@@ -169,6 +173,7 @@ Importação (`service.py` seção "Importação de planilhas"; leitura e valida
 | Fórmula editável como passos de texto avaliados por `ast` com lista branca | A clínica ajusta a regra de preço sem deploy, sem abrir `eval`. Tudo em `Decimal` para não haver diferença de centavos. |
 | Hash dos insumos conferido na publicação | Evita publicar preço calculado com custo, ficha ou variável desatualizados. |
 | Fórmula guardada na versão | Mudar a fórmula gera histórico, como o ajuste %. |
+| Erros do recálculo guardados na versão e publicação com confirmação explícita | Antes o procedimento com erro sumia sem aviso na publicação. Persistir `calc_errors` permite exigir `confirmar_erros` e a tela listar o que ficará de fora. |
 | Variável por dentista sobrescreve a da clínica | Cada dentista pode ter pró-labore e margem próprios numa tabela calculada dele. |
 
 ## Como estender
@@ -200,7 +205,7 @@ Importação (`service.py` seção "Importação de planilhas"; leitura e valida
 - `ensure_dentist` aceita `admin`, por isso `scope_id` de dentista pode ser um admin.
 - Várias respostas 404 compartilham status (ver API). Há uma diferença de corpo. Erros de planilha respondem 409, não 400/413/422.
 - `PATCH` de tabela com `status` nulo é ignorado em silêncio.
-- Procedimento cuja ficha dá erro no recálculo some da tabela calculada (só aparece em `erros` da resposta). Na resolução, isso faz o preço cair silenciosamente para a próxima tabela candidata, e o `trace` só mostra "procedimento ausente na tabela".
+- Procedimento cuja ficha dá erro no recálculo some da tabela calculada (aparece em `erros` da resposta e em `calc_errors`, e a publicação exige `confirmar_erros`). Depois de confirmada, a versão publicada continua sem o item. Na resolução, isso faz o preço cair silenciosamente para a próxima tabela candidata, e o `trace` só mostra "procedimento ausente na tabela".
 - `calc_trace` do item não é copiado para o snapshot: o `trace` do snapshot de tabela calculada mostra "item da tabela" com o valor, sem as entradas do cálculo. A memória de cálculo só existe na versão (`/calculo`).
 - Fichas se ligam a itens só por `procedure_code`. Excluir variável ou ficha não valida o uso em fórmulas; o efeito aparece no hash (bloqueia publicar até recalcular) ou como erro no recálculo.
 - `_inputs_fingerprint` não inclui o `active` do material nem a unidade; só custo e quantidade.

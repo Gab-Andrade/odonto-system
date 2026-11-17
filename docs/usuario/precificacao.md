@@ -1,6 +1,6 @@
 ---
 modulo: precificacao
-atualizado_em: 6363519
+atualizado_em: 59c8187
 ---
 # Tabelas de preço
 
@@ -85,12 +85,14 @@ Só o Administrador e o Gestor podem fazer isso. *Tela em construção.*
 ### Publicar uma versão
 1. Escolha o rascunho.
 2. Escolha a data em que os preços começam a valer. Se não escolher, vale a partir de hoje. A data não pode ser no passado nem anterior à última versão publicada. Pode ser uma data futura, para agendar um reajuste.
-3. Publique.
+3. Publique. Se a tabela calculada tiver procedimentos com erro, o sistema mostra a lista e pede confirmação antes de publicar.
 
 Regras:
 - Tabela arquivada não publica versões.
 - Tabela que não herda de outra precisa ter pelo menos um procedimento.
 - Tabela calculada precisa estar recalculada com os custos atuais. Se um custo, ficha técnica ou variável mudou depois do último cálculo, o sistema bloqueia a publicação e pede para recalcular.
+- Tabela calculada cujo último recálculo deixou procedimentos de fora por erro: a publicação só acontece com a sua confirmação explícita. O sistema mostra a lista desses procedimentos. Se você confirmar, a versão é publicada sem eles, e no orçamento o preço deles virá da próxima tabela da prioridade. Se possível, corrija a ficha técnica ou as variáveis e recalcule antes de confirmar.
+- Um rascunho aberto a partir de uma versão com esses erros herda a lista. Se você publicar sem recalcular, a confirmação é pedida de novo.
 
 Depois de publicada, a versão não pode mais ser alterada. Ela passa a valer nos novos cálculos e orçamentos, a partir da data escolhida.
 
@@ -299,7 +301,7 @@ Administrador, Gestor, Dentista e Recepção podem congelar preços. *Tela em co
 - Se a soma de impostos, taxa de cartão e margem chegar a 100%, o cálculo não tem solução. O procedimento aparece com erro no relatório.
 - Preço máximo aceito: R$ 9.999.999.999,99.
 - Por enquanto, o sistema não confere se o convênio informado existe. Confira o convênio antes de atribuir uma tabela a ele.
-- Criar, alterar, publicar, importar, atribuir, remover e congelar preços fica registrado no [Histórico de ações](auditoria.md), com quem fez e quando. O mesmo vale para fichas técnicas, variáveis, fórmulas e recálculos.
+- Criar, alterar, publicar, importar, atribuir, remover e congelar preços fica registrado no [Histórico de ações](auditoria.md), com quem fez e quando. O mesmo vale para fichas técnicas, variáveis, fórmulas e recálculos. Quando você publica confirmando procedimentos de fora, o registro traz a lista deles.
 - Se o seu perfil não puder fazer uma ação, o sistema não faz e informa que seu perfil não tem permissão.
 - Previsto, ainda não disponível:
   - Repasse e comissão de dentistas (percentual ou valor fixo por procedimento), usando estas mesmas tabelas.
@@ -331,3 +333,6 @@ Esses dados são só do Administrador e do Gestor. Dentista e Recepção veem ap
 
 **Por que um procedimento ficou de fora do recálculo?**
 Ele aparece no relatório com o motivo. O mais comum é um cálculo impossível, como divisão por zero, ou um valor fora do limite permitido. Confira a ficha técnica e as variáveis, e recalcule.
+
+**Por que o sistema pediu confirmação para publicar?**
+Porque a tabela calculada tem procedimentos que deram erro no último recálculo. Eles ficariam sem preço nesta tabela. Veja a lista. Se for possível, corrija e recalcule. Se preferir publicar assim mesmo, confirme.

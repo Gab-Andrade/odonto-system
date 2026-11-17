@@ -10,7 +10,7 @@ Cada módulo tem um documento próprio, gerado e atualizado pela skill `document
 |---|---|
 | [identidade](identidade.md) | Clínicas, usuários, vínculos, login (JWT) e dependências de autenticação/papéis usadas por todos os módulos |
 | [auditoria](auditoria.md) | Consulta do log de auditoria (LGPD) da clínica |
-| [precificacao](precificacao.md) | Tabelas de preço versionadas com herança, atribuição por escopo, resolução com memória de cálculo, snapshots, importação de planilhas e tabelas calculadas por fórmula (fichas técnicas, variáveis) |
+| [precificacao](precificacao.md) | Tabelas de preço versionadas com herança, atribuição por escopo, resolução com memória de cálculo, snapshots, importação de planilhas e tabelas calculadas por fórmula (fichas técnicas, variáveis; publicação com confirmação de erros de cálculo) |
 | [estoque](estoque.md) | Cadastro de materiais com custo unitário (visível só a admin/gestor), usado pela ficha técnica da precificação |
 
 ## Fundação (válida para todos os módulos)

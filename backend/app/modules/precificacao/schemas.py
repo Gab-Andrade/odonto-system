@@ -133,6 +133,13 @@ class ItemOut(BaseModel):
 
 class PublishIn(BaseModel):
     valid_from: date | None = Field(default=None, description="Padrão: hoje.")
+    confirmar_erros: bool = Field(
+        default=False,
+        description=(
+            "Tabela calculada: publica mesmo que o último recálculo tenha deixado "
+            "procedimentos de fora por erro."
+        ),
+    )
 
 
 # ---------- Atribuições ----------

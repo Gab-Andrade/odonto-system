@@ -126,6 +126,10 @@ class PriceTableVersion(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
             unique=True,
             postgresql_where=text("status = 'rascunho'"),
         ),
+        CheckConstraint(
+            "calc_errors IS NULL OR calculated_at IS NOT NULL",
+            name="calc_errors_only_when_calculated",
+        ),
     )
 
     table_id: Mapped[uuid.UUID] = mapped_column()
@@ -147,6 +151,9 @@ class PriceTableVersion(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
     # Hash dos insumos usados no cálculo (fórmula, variáveis, fichas, custos). Publicar
     # confere se continuam iguais, para não publicar preço calculado com custo antigo.
     calc_inputs_hash: Mapped[str | None] = mapped_column(String(64))
+    # Procedimentos que falharam no último recálculo ({"procedimento", "erro"}). Ficam fora
+    # dos itens; publicar com erros exige confirmação. Nulo enquanto não houve cálculo.
+    calc_errors: Mapped[list[dict[str, str]] | None] = mapped_column(JSONB)
 
 
 class PriceItem(UUIDPkMixin, TenantMixin, TimestampMixin, Base):

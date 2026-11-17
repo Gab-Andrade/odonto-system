@@ -533,3 +533,88 @@ def test_formula_errors_per_procedure_do_not_abort_recalc(client, make_clinic):
     report = client.post(f"{_vurl(table, draft)}/recalcular", headers=h).json()
     assert report["calculados"] == 1
     assert report["erros"] == [{"procedimento": "PROF", "erro": "preco: Divisão por zero."}]
+
+
+# ---------- publicação com erros de cálculo ----------
+
+DIV_BY_ZERO_ON_PROF = [{"nome": "preco", "expressao": "100 / (custo_materiais - 0.8)"}]
+PROF_ERROR = {"procedimento": "PROF", "erro": "preco: Divisão por zero."}
+
+
+def test_publish_with_calc_errors_requires_confirmation(client, make_clinic):
+    _, h = _admin(client, make_clinic)
+    _setup_costs(client, h)
+    table, draft = _calc_table(client, h)
+    client.patch(_vurl(table, draft), json={"formula": DIV_BY_ZERO_ON_PROF}, headers=h)
+    client.post(f"{_vurl(table, draft)}/recalcular", headers=h)
+
+    resp = client.post(f"{_vurl(table, draft)}/publicar", json={}, headers=h)
+    assert resp.status_code == 409
+    assert resp.json()["erros"] == [PROF_ERROR]
+    assert "confirmar_erros" in resp.json()["detail"]
+    assert (
+        client.get(f"/precificacao/tabelas/{table['id']}/versoes", headers=h).json()[0]["status"]
+        == "rascunho"
+    )
+
+    resp = client.post(f"{_vurl(table, draft)}/publicar", json={"confirmar_erros": True}, headers=h)
+    assert resp.status_code == 200, resp.text
+    logs = client.get("/auditoria?limit=100", headers=h).json()
+    published = next(r for r in logs if r["action"] == "precificacao.versao_publicada")
+    assert published["details"]["erros_confirmados"] == ["PROF"]
+
+    # O procedimento com erro não está na tabela: a resolução segue para a próxima.
+    client.post(
+        "/precificacao/atribuicoes",
+        json={"table_id": table["id"], "scope_type": "clinica"},
+        headers=h,
+    )
+    assert (
+        client.post(
+            "/precificacao/resolver", json={"procedure_code": "PROF"}, headers=h
+        ).status_code
+        == 404
+    )
+
+
+def test_new_draft_copies_calc_errors_and_formula_change_clears_them(client, make_clinic):
+    _, h = _admin(client, make_clinic)
+    _setup_costs(client, h)
+    table, draft = _calc_table(client, h)
+    client.patch(_vurl(table, draft), json={"formula": DIV_BY_ZERO_ON_PROF}, headers=h)
+    client.post(f"{_vurl(table, draft)}/recalcular", headers=h)
+    client.post(f"{_vurl(table, draft)}/publicar", json={"confirmar_erros": True}, headers=h)
+
+    # Novo rascunho copia itens e erros: publicar sem recalcular pede confirmação de novo.
+    v2 = client.post(f"/precificacao/tabelas/{table['id']}/versoes", headers=h).json()
+    tomorrow = (date.today() + timedelta(days=2)).isoformat()
+    resp = client.post(f"{_vurl(table, v2)}/publicar", json={"valid_from": tomorrow}, headers=h)
+    assert resp.status_code == 409 and resp.json()["erros"] == [PROF_ERROR]
+
+    # Mudar a fórmula limpa os erros junto com o cálculo: o bloqueio passa a ser "recalcule".
+    formula = [{"nome": "preco", "expressao": "custo_materiais * 10"}]
+    client.patch(_vurl(table, v2), json={"formula": formula}, headers=h)
+    resp = client.post(f"{_vurl(table, v2)}/publicar", json={"valid_from": tomorrow}, headers=h)
+    assert resp.status_code == 409 and "erros" not in resp.json()
+    assert "Recalcule" in resp.json()["detail"]
+
+    # Recalcular sem erros libera a publicação sem confirmação.
+    assert client.post(f"{_vurl(table, v2)}/recalcular", headers=h).json()["erros"] == []
+    resp = client.post(f"{_vurl(table, v2)}/publicar", json={"valid_from": tomorrow}, headers=h)
+    assert resp.status_code == 200, resp.text
+
+
+def test_stale_inputs_block_before_asking_to_confirm_errors(client, make_clinic):
+    _, h = _admin(client, make_clinic)
+    ids = _setup_costs(client, h)
+    table, draft = _calc_table(client, h)
+    client.patch(_vurl(table, draft), json={"formula": DIV_BY_ZERO_ON_PROF}, headers=h)
+    client.post(f"{_vurl(table, draft)}/recalcular", headers=h)
+    client.patch(f"/estoque/materiais/{ids['luva']}", json={"unit_cost": "1.00"}, headers=h)
+
+    # Erros guardados seriam de insumos velhos: confirmar não basta, é preciso recalcular.
+    resp = client.post(f"{_vurl(table, draft)}/publicar", json={"confirmar_erros": True}, headers=h)
+    assert resp.status_code == 409 and "Recalcule" in resp.json()["detail"]
+    # Luva a 1,00: PROF deixa de dividir por zero.
+    assert client.post(f"{_vurl(table, draft)}/recalcular", headers=h).json()["erros"] == []
+    assert client.post(f"{_vurl(table, draft)}/publicar", json={}, headers=h).status_code == 200

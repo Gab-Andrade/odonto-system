@@ -254,17 +254,28 @@ def publish(
     try:
         table = service.get_table(db, table_id)
         version = service.publish(
-            db, user, table, service.get_version(db, table, version_id), body.valid_from
+            db,
+            user,
+            table,
+            service.get_version(db, table, version_id),
+            body.valid_from,
+            confirm_errors=body.confirmar_erros,
         )
+    except service.CalcErrorsNotConfirmed as exc:
+        # 409 com a lista dos procedimentos que ficariam de fora, para a tela confirmar.
+        return JSONResponse(status_code=409, content={"detail": exc.message, "erros": exc.errors})
     except service.PricingError as exc:
         raise _http(exc) from None
+    details: dict[str, object] = {"valid_from": str(version.valid_from)}
+    if version.calc_errors:
+        details["erros_confirmados"] = [e["procedimento"] for e in version.calc_errors]
     audit.record(
         db,
         user,
         "precificacao.versao_publicada",
         entity_type="price_table_version",
         entity_id=version.id,
-        details={"valid_from": str(version.valid_from)},
+        details=details,
         request=request,
     )
     db.commit()
