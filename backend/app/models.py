@@ -7,6 +7,7 @@ from app.core.audit import AuditLog
 from app.core.models import Base
 from app.modules.estoque.models import Material
 from app.modules.identidade.models import Clinic, ClinicMembership, User
+from app.modules.pacientes.models import Patient, PatientConsent
 from app.modules.precificacao.models import (
     CostSheet,
     CostSheetItem,
@@ -30,6 +31,8 @@ __all__ = [
     "ImportJob",
     "ImportProfile",
     "Material",
+    "Patient",
+    "PatientConsent",
     "PriceAssignment",
     "PriceItem",
     "PriceSnapshot",
