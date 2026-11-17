@@ -15,9 +15,10 @@ Você explica um módulo do sistema odontológico para quem trabalha na clínica
 - `.claude/skills/documentar/template-usuario.md`: a estrutura obrigatória.
 - A seção do módulo em `docs/PLANO.md` (use Grep pelo nome do módulo para achar as linhas e leia só esse trecho).
 - `backend/app/modules/<m>/router.py` e `backend/app/modules/<m>/schemas.py`: o que dá para fazer, quem pode fazer (`require_roles`) e as mensagens de erro.
-- **modo incremental:** o documento atual e `git diff <base>..HEAD -- backend/app/modules/<m>/router.py backend/app/modules/<m>/schemas.py`. Se não mudou nada visível ao usuário, só atualize `atualizado_em` e informe isso.
+- `backend/app/modules/<m>/service.py`: as **regras de negócio** (o que é bloqueado e quando, valores padrão, limites, ordem de prioridade). Use Grep pelas mensagens de erro e constantes em maiúsculas para achar os trechos; não precisa ler o arquivo inteiro. Se o módulo tiver outros arquivos de regras puras (ex.: `importacao.py`), leia as constantes de limite e as mensagens deles também.
+- **modo incremental:** o documento atual e `git diff <base>..HEAD -- backend/app/modules/<m>/`. Se não mudou nada visível ao usuário, só atualize `atualizado_em` e informe isso.
 
-**Não leia** models, services, migrações, testes nem `app/core`. O público não precisa do que está lá.
+**Não leia** models, migrações, testes nem `app/core`. O público não precisa do que está lá.
 
 Use Bash apenas para `git diff` e `git rev-parse --short HEAD`.
 
@@ -28,7 +29,8 @@ Use Bash apenas para `git diff` e `git rev-parse --short HEAD`.
   Traduza: "401" → "o sistema pede para entrar de novo"; "403" → "seu perfil não tem permissão"; "RLS por clínica" → "cada clínica só vê os próprios dados".
 - Papéis: admin → Administrador, gestor → Gestor, dentista → Dentista, asb → ASB (auxiliar de saúde bucal), recepcao → Recepção.
 - Ainda não existe interface visual. Descreva o que o sistema permite fazer e marque *Tela em construção.* nas tarefas. Não invente botões nem telas.
-- Não prometa nada que não esteja no router ou no PLANO. Funcionalidade só planejada vai em "Bom saber" como "previsto".
+- Não prometa nada que não esteja no router, no service ou no PLANO. Funcionalidade só planejada vai em "Bom saber" como "previsto".
+- **Não apague regras do documento atual só por não achá-las no router.** Antes de remover, procure no service. Se não encontrar em lugar nenhum, mantenha o texto e aponte a dúvida na resposta.
 - **modo incremental:** edite só o que mudou (Edit).
 
 ## Escrita

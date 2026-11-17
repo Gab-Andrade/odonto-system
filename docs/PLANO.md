@@ -33,6 +33,7 @@ Módulos principais:
 3. Gestão financeira, estoque e **precificação configurável**
 4. Inteligência clínica (alertas, análise preditiva, raio-X)
 5. Interface dedicada para tablet
+6. **Painel do gestor** (acompanhamento da clínica e da equipe — seção 4.8)
 
 Dois módulos ficaram de fora do levantamento inicial e foram incorporados porque ligam os demais:
 
@@ -178,6 +179,51 @@ Django + DRF foi considerado. FastAPI venceu porque o núcleo do sistema é uma 
 - Modo "cadeira": tela focada no paciente em atendimento, com odontograma, evolução e plano.
 - Funciona em modo claro e escuro, com contraste adequado para o ambiente clínico.
 
+### 4.8 Painel do gestor
+
+> Um só painel que escala: no consultório de um dentista, é o "como está meu consultório hoje";
+> numa clínica com vários dentistas e unidades, é onde o dono acompanha a equipe.
+> A diferença é o nível de detalhe, não a ferramenta.
+
+**Princípios**
+
+- **Funciona sem configurar nada.** Os indicadores saem dos dados que a clínica já registra (agenda, orçamentos, financeiro, estoque). Metas são opcionais.
+- **Começa pelo que pede ação**, não por gráficos: o que está atrasado, pendente ou acabando.
+- **Escala por camadas.** Clínica pequena vê a visão geral. Com mais de um dentista ou unidade, aparecem os filtros e comparativos por profissional e por unidade.
+- **Cada um vê o seu.** Admin e gestor veem a clínica inteira. O dentista vê "meu desempenho" (só os próprios números), o que também serve ao dono-dentista de um consultório pequeno.
+
+**Visão geral (todas as clínicas, inclusive as pequenas)**
+
+- Agenda do dia: atendimentos, confirmações pendentes, horários vagos.
+- Faturamento do mês: realizado × previsto × meta (se houver).
+- Orçamentos: emitidos, aprovados, aguardando resposta há mais de N dias.
+- Pacientes para retorno (recall) e tratamentos parados.
+- Contas a receber em atraso.
+- Estoque: itens abaixo do mínimo e lotes perto do vencimento.
+
+**Equipe (clínicas com vários profissionais)**
+
+- Produção por dentista: procedimentos realizados e valor produzido.
+- Conversão de orçamentos e ticket médio por dentista.
+- Ocupação da agenda (por dentista e por cadeira) e faltas de pacientes.
+- Tempo real × tempo previsto por procedimento (vem da ficha técnica da precificação).
+- Margem por procedimento e por dentista (vem da precificação por custo).
+- Repasse/comissão a pagar no período.
+- Pendências clínicas: evoluções sem assinatura, prontuários incompletos.
+- Comparativo entre unidades.
+
+**Cuidados**
+
+- **Acompanhamento, não vigilância.** O painel mostra indicadores de operação e resultado. A trilha de "quem fez o quê" continua na auditoria (LGPD), com acesso restrito. A equipe deve saber quais números são acompanhados.
+- **Números explicáveis.** Todo indicador mostra de onde veio (ex.: "produção = procedimentos realizados no período, pelo preço congelado do orçamento").
+- **Dados de pacientes agregados.** O painel não expõe dados clínicos individuais. Para ver um paciente, o gestor abre o prontuário, e esse acesso fica auditado.
+
+**Como se encaixa na arquitetura**
+
+- Módulo `painel` somente leitura, que consome os services dos outros módulos. Não tem tabelas próprias, exceto metas e preferências do painel.
+- Agregações em SQL. Se houver *views*, elas são criadas com `security_invoker = true`: por padrão, uma view do PostgreSQL roda com os privilégios do dono e **ignora o RLS**. *Materialized views* não aplicam RLS e ficam fora; cache, se necessário, vai para Redis com chave por clínica.
+- Entra em versões: v1 com a visão geral assim que agenda, orçamento e financeiro existirem (Fase 3); a parte de equipe evolui junto com repasse e precificação por custo; alertas e tendências chegam com a inteligência clínica (Fase 5).
+
 ---
 
 ## 5. Precificação — módulo-chave
@@ -320,7 +366,8 @@ odonto-system/
 │  │  │  ├─ estoque/
 │  │  │  ├─ precificacao/
 │  │  │  ├─ imagens/
-│  │  │  └─ inteligencia/
+│  │  │  ├─ inteligencia/
+│  │  │  └─ painel/       # painel do gestor (somente leitura)
 │  │  │     (cada módulo: models.py, schemas.py, service.py, router.py)
 │  │  └─ workers/         # tarefas Celery
 │  ├─ alembic/
@@ -340,9 +387,9 @@ odonto-system/
 | **0 – Fundação** | Monorepo, Docker Compose, auth + RBAC, multi-tenant com RLS, auditoria, CI |
 | **1 – Precificação** | Tabelas versionadas, importação CSV/Excel com mapeamento e diff, cadeia de prioridade, fórmulas com memória de cálculo, exportação |
 | **2 – MVP clínico** | Pacientes, anamnese configurável, evolução clínica, agenda, odontograma 2D, legenda personalizável |
-| **3 – Gestão** | Plano de tratamento → orçamento → financeiro; estoque por lote; ficha técnica; repasse de dentistas |
+| **3 – Gestão** | Plano de tratamento → orçamento → financeiro; estoque por lote; ficha técnica; repasse de dentistas; **painel do gestor v1** (visão geral e "meu desempenho") |
 | **4 – Odontograma 3D** | Biblioteca GLB (FDI, decídua/permanente/mista, 0–4 sisos), sincronizada com o 2D |
-| **5 – Inteligência** | Raio-X/DICOM no prontuário, alertas por regra + WhatsApp, painéis analíticos |
+| **5 – Inteligência** | Raio-X/DICOM no prontuário, alertas por regra + WhatsApp, painel do gestor com equipe completa, metas, alertas e tendências |
 | **6 – IA** | Previsão de faltas e abandono, apoio à análise de raio-X |
 
 **Próximo passo concreto:** validar o modelo de dados central antes das telas: Paciente, Atendimento, Evolução, EventoOdontograma, StatusLegenda, ItemPlanoTratamento e as entidades de precificação da seção 5.7.
@@ -374,5 +421,9 @@ odonto-system/
 | 2026-11-16 | Toda restrição de unicidade de tabela de clínica inclui `clinic_id`: a checagem de unicidade também ignora o RLS e, sem isso, uma clínica poderia sondar a existência de registros de outra pela mensagem de erro. |
 | 2026-11-16 | Precificação: herança com ajuste percentual na versão (não na tabela), arredondamento em centavos (meio para cima) a cada nível; "dentista" de uma atribuição pode ser membro com papel dentista ou admin (dono-dentista). |
 | 2026-11-16 | Precificação: herança resolvida na consulta (não materializada). A imutabilidade de versões publicadas fica no service; no banco, só `price_snapshots` é protegida, porque o snapshot copia valores e memória de cálculo. |
+| 2026-11-16 | Importação de planilhas: `.csv` e `.xlsx` (sem `.xls`), processamento síncrono (até 2 MB / 5.000 linhas, sem fila). O arquivo não é guardado: as linhas lidas ficam no banco com nome e hash para auditoria, e são descartadas depois de aplicadas. |
+| 2026-11-16 | Importação grava só no rascunho, nunca publica. Antes de gravar, confere uma impressão digital do rascunho/versão de referência; se mudou desde a validação, exige validar de novo. Job e tabela travados (`FOR UPDATE`) durante a aplicação. |
+| 2026-11-16 | Corpo de requisição limitado a 3 MB na própria aplicação (o Starlette grava uploads em disco antes da rota); o proxy em produção também deve limitar. |
+| 2026-11-16 | Painel do gestor: um só painel para clínica pequena e grande, escalando por camadas; dentista vê só os próprios números. Módulo somente leitura; views com `security_invoker = true` e sem materialized views, para não contornar o RLS. |
 | 2026-11-16 | Violação de constraint por concorrência (`IntegrityError`) responde 409 em toda a API, via handler global. |
 | 2026-11-16 | Redis e object storage entram no compose só quando a Fase 1 precisar. Escolha do storage S3 local em aberto: a MinIO deixou de distribuir imagens da edição comunitária, então avaliar alternativas (ex.: Garage, SeaweedFS). |
