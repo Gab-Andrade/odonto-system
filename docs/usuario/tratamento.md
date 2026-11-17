@@ -114,7 +114,7 @@ atualizado_em: f320bfa
 - **Procedimento realizado não é cancelado.** Ele fica registrado no atendimento em que foi feito.
 - **O odontograma só muda pelo procedimento realizado.** Quando um procedimento é realizado, a marca de "a fazer" some e a marca de "feito" aparece no dente.
 - **Leitura é registrada.** Cada vez que alguém abre um plano, a ação fica no histórico, por causa da LGPD.
-- **Previsto:** a aprovação gerar cobranças, parcelas e pagamentos. Isso ainda não está disponível e vem na próxima etapa do sistema financeiro.
+- **Cobrança:** depois da aprovação, a recepção parcela o orçamento (entrada e parcelas) no [Financeiro](financeiro.md). Se um procedimento aprovado for cancelado depois, refaça o parcelamento.
 
 ## Perguntas frequentes
 

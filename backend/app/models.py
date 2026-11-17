@@ -7,6 +7,7 @@ from app.core.audit import AuditLog
 from app.core.models import Base
 from app.modules.agenda.models import Appointment, AppointmentEvent, Chair
 from app.modules.estoque.models import Material
+from app.modules.financeiro.models import Payable, Payment, Receivable
 from app.modules.identidade.models import Clinic, ClinicMembership, User
 from app.modules.odontograma.models import OdontogramEvent, ToothStatus
 from app.modules.pacientes.models import Patient, PatientConsent
@@ -60,12 +61,15 @@ __all__ = [
     "OdontogramEvent",
     "Patient",
     "PatientConsent",
+    "Payable",
+    "Payment",
     "PriceAssignment",
     "PriceItem",
     "PriceSnapshot",
     "PriceTable",
     "PriceTableVersion",
     "PricingVariable",
+    "Receivable",
     "ToothStatus",
     "TreatmentPlan",
     "TreatmentPlanItem",

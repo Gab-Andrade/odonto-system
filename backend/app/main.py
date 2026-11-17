@@ -11,6 +11,7 @@ from app.core.limits import BodySizeLimitMiddleware
 from app.modules.agenda.router import router as agenda_router
 from app.modules.auditoria.router import router as auditoria_router
 from app.modules.estoque.router import router as estoque_router
+from app.modules.financeiro.router import router as financeiro_router
 from app.modules.identidade.router import router as identidade_router
 from app.modules.odontograma.router import router as odontograma_router
 from app.modules.pacientes.router import router as pacientes_router
@@ -63,6 +64,7 @@ def create_app() -> FastAPI:
     app.include_router(atendimento_router)
     app.include_router(odontograma_router)
     app.include_router(tratamento_router)
+    app.include_router(financeiro_router)
     return app
 
 

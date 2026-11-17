@@ -19,6 +19,7 @@ Este guia explica, em linguagem simples, o que cada parte do sistema faz e quem 
 | [Histórico de ações](auditoria.md) | Ver quem fez o quê e quando, para segurança e para a LGPD |
 | [Tabelas de preço](precificacao.md) | Montar os preços da clínica por planilha ou por fórmula de custos, definir a quem cada tabela se aplica e consultar ou congelar o preço de um procedimento |
 | [Plano de tratamento e orçamento](tratamento.md) | Montar o plano de tratamento do paciente, dar desconto dentro do limite, registrar a aprovação total ou parcial e marcar os procedimentos realizados no odontograma |
+| [Financeiro](financeiro.md) | Parcelar o orçamento aprovado, registrar recebimentos e ver o extrato de cada paciente, e controlar as contas a pagar da clínica |
 
 ## Perfis de acesso
 
