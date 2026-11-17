@@ -16,6 +16,7 @@ from app.modules.financeiro.router import router as financeiro_router
 from app.modules.identidade.router import router as identidade_router
 from app.modules.odontograma.router import router as odontograma_router
 from app.modules.pacientes.router import router as pacientes_router
+from app.modules.painel.router import router as painel_router
 from app.modules.precificacao.router import router as precificacao_router
 from app.modules.prontuario.atendimento_router import router as atendimento_router
 from app.modules.prontuario.router import router as prontuario_router
@@ -69,6 +70,7 @@ def create_app() -> FastAPI:
     app.include_router(tratamento_router)
     app.include_router(financeiro_router)
     app.include_router(repasse_router)
+    app.include_router(painel_router)
     return app
 
 
