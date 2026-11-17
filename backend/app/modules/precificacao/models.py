@@ -219,6 +219,8 @@ class PriceAssignment(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
 class PriceSnapshot(UUIDPkMixin, TenantMixin, Base):
     __tablename__ = "price_snapshots"
     __table_args__ = (
+        # Alvo da FK composta dos itens de orçamento (migração 0013).
+        UniqueConstraint("id", "clinic_id", name="uq_price_snapshots_id_clinic"),
         ForeignKeyConstraint(
             ["table_id", "clinic_id"],
             ["price_tables.id", "price_tables.clinic_id"],

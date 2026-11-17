@@ -16,6 +16,7 @@ Cada módulo tem um documento próprio, gerado e atualizado pela skill `document
 | [agenda](agenda.md) | Cadeiras, agendamentos e bloqueios sem conflito de dentista/cadeira (constraint de exclusão), máquina de status e histórico append-only |
 | [prontuario](prontuario.md) | Anamnese configurável (modelos versionados, respostas imutáveis, alertas) e atendimento com evolução clínica imutável, adendos, assinatura e transferência entre dentistas; toda leitura auditada, sem acesso da recepção |
 | [odontograma](odontograma.md) | Legenda de marcações por clínica e histórico append-only por dente/face (FDI); odontograma reconstruído em qualquer data; leituras auditadas |
+| [tratamento](tratamento.md) | Plano de tratamento e orçamento: itens por dente/face, emissão com preço congelado (snapshots), validade, desconto com limite por papel, aprovação parcial e realização vinculada ao atendimento e ao odontograma |
 
 ## Fundação (válida para todos os módulos)
 

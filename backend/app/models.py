@@ -31,6 +31,11 @@ from app.modules.prontuario.models import (
     Encounter,
     EncounterTransfer,
 )
+from app.modules.tratamento.models import (
+    TreatmentPlan,
+    TreatmentPlanItem,
+    TreatmentSettings,
+)
 
 __all__ = [
     "AnamnesisResponse",
@@ -62,5 +67,8 @@ __all__ = [
     "PriceTableVersion",
     "PricingVariable",
     "ToothStatus",
+    "TreatmentPlan",
+    "TreatmentPlanItem",
+    "TreatmentSettings",
     "User",
 ]
