@@ -14,6 +14,7 @@ from app.modules.estoque.lotes_router import router as estoque_lotes_router
 from app.modules.estoque.router import router as estoque_router
 from app.modules.financeiro.router import router as financeiro_router
 from app.modules.identidade.router import router as identidade_router
+from app.modules.odontograma.biblioteca_router import router as odontograma_3d_router
 from app.modules.odontograma.router import router as odontograma_router
 from app.modules.pacientes.router import router as pacientes_router
 from app.modules.painel.router import router as painel_router
@@ -67,6 +68,7 @@ def create_app() -> FastAPI:
     app.include_router(prontuario_router)
     app.include_router(atendimento_router)
     app.include_router(odontograma_router)
+    app.include_router(odontograma_3d_router)
     app.include_router(tratamento_router)
     app.include_router(financeiro_router)
     app.include_router(repasse_router)

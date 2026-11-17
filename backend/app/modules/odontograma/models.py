@@ -48,6 +48,11 @@ class StatusScope(StrEnum):
     FACE = "face"
 
 
+class Display3D(StrEnum):
+    COLORIR = "colorir"  # pinta a face ou o dente com a cor do item
+    OCULTAR = "ocultar"  # esconde o dente no modelo 3D (ex.: ausente)
+
+
 class EventAction(StrEnum):
     MARCAR = "marcar"
     REMOVER = "remover"
@@ -77,6 +82,9 @@ class ToothStatus(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
     kind: Mapped[StatusKind] = mapped_column(_enum(StatusKind))
     scope: Mapped[StatusScope] = mapped_column(_enum(StatusScope))
     sort_order: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    display_3d: Mapped[Display3D] = mapped_column(
+        _enum(Display3D), default=Display3D.COLORIR, server_default="colorir"
+    )
     active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
 
 

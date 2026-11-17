@@ -16,6 +16,7 @@ from app.modules.odontograma import arcada, regras
 from app.modules.odontograma.models import (
     ArchConfig,
     Dentition,
+    Display3D,
     EventAction,
     OdontogramEvent,
     StatusScope,
@@ -74,6 +75,7 @@ def ensure_default_legend(db: Session, clinic_id: uuid.UUID) -> None:
             "kind": kind,
             "scope": scope,
             "sort_order": i * 10,
+            "display_3d": "ocultar" if code in regras.HIDDEN_IN_3D else "colorir",
         }
         for i, (code, name, color, kind, scope) in enumerate(regras.DEFAULT_LEGEND)
     ]
@@ -103,6 +105,7 @@ def create_status(db: Session, user: CurrentUser, data: dict[str, Any]) -> Tooth
     ensure_default_legend(db, user.clinic_id)
     if db.scalar(select(ToothStatus.id).where(ToothStatus.code == data["code"])) is not None:
         raise RuleViolation("Já existe um item da legenda com este código.")
+    _check_display(data["scope"], data.get("display_3d", Display3D.COLORIR))
     status = ToothStatus(clinic_id=user.clinic_id, **data)
     db.add(status)
     db.flush()
@@ -123,10 +126,16 @@ def update_status(db: Session, status: ToothStatus, changes: dict[str, Any]) -> 
         raise RuleViolation(
             "Tipo e escopo não mudam depois de usados; crie outro item e desative este."
         )
+    _check_display(changes.get("scope", status.scope), changes.get("display_3d", status.display_3d))
     for name in changed:
         setattr(status, name, changes[name])
     db.flush()
     return sorted(changed)
+
+
+def _check_display(scope: StatusScope, display: Display3D) -> None:
+    if Display3D(display) is Display3D.OCULTAR and StatusScope(scope) is not StatusScope.DENTE:
+        raise RuleViolation("Só item de dente inteiro pode ocultar o dente no 3D.")
 
 
 # ---------- marcações ----------

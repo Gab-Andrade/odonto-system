@@ -18,11 +18,13 @@ from app.core import audit
 from app.core.context import CurrentUser
 from app.core.roles import Role
 from app.modules.identidade.deps import get_tenant_db, require_roles
-from app.modules.odontograma import arcada, regras, service
+from app.modules.odontograma import arcada, malha3d, regras, service, visualizacao
 from app.modules.odontograma.models import OdontogramEvent, ToothStatus
 from app.modules.odontograma.schemas import (
     ArchIn,
     ArchOut,
+    ChangeOut,
+    ComparisonOut,
     EventOut,
     EventsIn,
     MarkOut,
@@ -31,6 +33,7 @@ from app.modules.odontograma.schemas import (
     StatusOut,
     StatusUpdate,
     ToothOut,
+    VisualizationOut,
 )
 
 router = APIRouter(prefix="/odontograma", tags=["odontograma"])
@@ -261,3 +264,92 @@ def record_arch(
     db.commit()
     arch = service.Arch(config.dentition.value, arcada.sort_teeth(config.teeth), config)
     return _arch_out(patient.id, arch)
+
+
+# ---------- visualização 2D/3D e comparação ----------
+
+
+@router.get("/pacientes/{patient_id}/visualizacao", response_model=VisualizationOut)
+def visualization(
+    patient_id: uuid.UUID,
+    request: Request,
+    em: AwareDatetime | None = Query(None, description="Como estava neste momento."),
+    user: CurrentUser = Depends(require_roles(*READ)),
+    db: Session = Depends(get_tenant_db),
+):
+    """Arcada + marcações prontas para desenhar: a mesma resposta serve ao 2D e ao 3D."""
+    try:
+        patient = service.get_patient(db, patient_id)
+    except service.OdontogramError as exc:
+        raise _http(exc) from None
+    at: datetime = em or service.now()
+    arch = service.effective_arch(db, patient, at)
+    marks = service.current_marks(db, patient, at)
+    statuses = {s.id: s for s in service.list_statuses(db)}
+    deciduous_arch = arch.dentition == arcada.DECIDUA
+    teeth = [
+        t | {"placement": malha3d.placement_dict(t["tooth"], deciduous_arch)}
+        for t in visualizacao.build(arch.teeth, marks, statuses)
+    ]
+    used = {status_id for _, _, status_id in marks}
+    audit.record(
+        db, user, "odontograma.lido", entity_type="patient", entity_id=patient.id,
+        details={"visualizacao": True} | ({"em": em.isoformat()} if em else {}),
+        request=request,
+    )  # fmt: skip
+    db.commit()
+    return VisualizationOut(
+        patient_id=patient.id,
+        at=at,
+        arch=_arch_out(patient.id, arch),
+        library_version=malha3d.VERSION,
+        arch_model_url="/odontograma/3d/arcada.glb?dentes=" + ",".join(map(str, arch.teeth)),
+        teeth=teeth,
+        legend=[s for s in statuses.values() if s.id in used],
+    )
+
+
+@router.get("/pacientes/{patient_id}/comparacao", response_model=ComparisonOut)
+def compare(
+    patient_id: uuid.UUID,
+    request: Request,
+    de: AwareDatetime = Query(description="Início (antes)."),
+    ate: AwareDatetime | None = Query(None, description="Fim (depois); vazio: agora."),
+    user: CurrentUser = Depends(require_roles(*READ)),
+    db: Session = Depends(get_tenant_db),
+):
+    """O que mudou no odontograma entre dois momentos (antes e depois do tratamento)."""
+    try:
+        patient = service.get_patient(db, patient_id)
+    except service.OdontogramError as exc:
+        raise _http(exc) from None
+    until: datetime = ate or service.now()
+    if de > until:
+        raise HTTPException(status_code=422, detail="O início precisa ser antes do fim.")
+    added, removed = visualizacao.diff(
+        service.current_marks(db, patient, de), service.current_marks(db, patient, until)
+    )
+    statuses = {s.id: s for s in service.list_statuses(db)}
+
+    def change(key: regras.Key) -> ChangeOut:
+        tooth, face, status_id = key
+        return ChangeOut(
+            tooth=tooth,
+            face=face,
+            face_label=regras.face_label(tooth, face) if face else None,
+            mark=visualizacao.mark(statuses[status_id]),
+        )
+
+    audit.record(
+        db, user, "odontograma.comparado", entity_type="patient", entity_id=patient.id,
+        details={"de": de.isoformat(), "ate": until.isoformat()}, request=request,
+    )  # fmt: skip
+    db.commit()
+    return ComparisonOut(
+        patient_id=patient.id,
+        since=de,
+        until=until,
+        added=[change(k) for k in added],
+        removed=[change(k) for k in removed],
+        teeth_changed=arcada.sort_teeth({k[0] for k in added + removed}),
+    )

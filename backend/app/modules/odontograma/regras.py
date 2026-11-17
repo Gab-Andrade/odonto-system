@@ -88,6 +88,9 @@ def check_batch(current: set[Key], changes: list[Event]) -> None:
             raise OdontogramRuleError(f"Não há essa marcação para remover ({where}).")
 
 
+# Itens da legenda padrão que escondem o dente no modelo 3D (os demais colorem).
+HIDDEN_IN_3D = frozenset({"ausente"})
+
 # Legenda padrão criada para cada clínica (código, nome, cor, tipo, escopo).
 # Cores: vermelho = patologia, laranja = planejado, azul = realizado.
 DEFAULT_LEGEND: tuple[tuple[str, str, str, str, str], ...] = (

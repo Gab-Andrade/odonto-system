@@ -5,7 +5,13 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints
 
 from app.modules.odontograma import regras
-from app.modules.odontograma.models import Dentition, EventAction, StatusKind, StatusScope
+from app.modules.odontograma.models import (
+    Dentition,
+    Display3D,
+    EventAction,
+    StatusKind,
+    StatusScope,
+)
 
 
 def _tooth(value: int) -> int:
@@ -32,6 +38,9 @@ class StatusCreate(BaseModel):
     kind: StatusKind
     scope: StatusScope
     sort_order: int = Field(0, ge=0, le=10_000)
+    display_3d: Display3D = Field(
+        Display3D.COLORIR, description="No 3D: colorir, ou ocultar o dente (só dente inteiro)."
+    )
 
 
 class StatusUpdate(BaseModel):
@@ -40,6 +49,7 @@ class StatusUpdate(BaseModel):
     kind: StatusKind | None = Field(None, description="Só enquanto o item não foi usado.")
     scope: StatusScope | None = Field(None, description="Só enquanto o item não foi usado.")
     sort_order: int | None = Field(None, ge=0, le=10_000)
+    display_3d: Display3D | None = None
     active: bool | None = None
 
 
@@ -53,6 +63,7 @@ class StatusOut(BaseModel):
     kind: StatusKind
     scope: StatusScope
     sort_order: int
+    display_3d: Display3D
     active: bool
 
 
@@ -139,3 +150,79 @@ class ArchOut(BaseModel):
     notes: str | None = None
     recorded_by: uuid.UUID | None = None
     created_at: datetime | None = None
+
+
+# ---------- biblioteca 3D ----------
+
+
+class PlacementOut(BaseModel):
+    translation: list[float] = Field(description="Posição do colo na arcada (mm).")
+    rotation: list[float] = Field(description="Quatérnio x, y, z, w (glTF).")
+    mesial_x: int = Field(description="+1: mesial em +X no dente isolado; -1: em -X.")
+
+
+class LibraryToothOut(BaseModel):
+    fdi: int
+    deciduous: bool
+    kind: str = Field(description="incisivo, canino, pre_molar ou molar.")
+    nodes: list[str]
+    face_labels: dict[str, str]
+    placement: PlacementOut = Field(description="Na arcada permanente ou mista.")
+    placement_deciduous_arch: PlacementOut | None = Field(
+        None, description="Na arcada só de decíduos (menor)."
+    )
+
+
+class LibraryOut(BaseModel):
+    version: str
+    units: str
+    conventions: dict[str, str]
+    teeth: list[LibraryToothOut]
+
+
+# ---------- visualização 2D/3D ----------
+
+
+class FaceViewOut(BaseModel):
+    face: str = Field(description="Face gravada (M, D, O, V, L).")
+    node: str = Field(description="Nó da malha no .glb (ex.: 11_V).")
+    color: str | None = Field(description="Cor a pintar; null = cor natural do dente.")
+    marks: list[MarkOut] = Field(description="Marcações da face, da mais importante à menor.")
+
+
+class ToothViewOut(BaseModel):
+    tooth: int
+    deciduous: bool
+    in_arch: bool = Field(description="false: marcado, mas fora da arcada do paciente.")
+    hidden: bool = Field(description="Ocultar no 3D (item de dente inteiro com `ocultar`).")
+    node: str = Field(description="Nó do dente no .glb (ex.: dente_11).")
+    color: str | None = Field(description="Cor do item mais importante do dente inteiro.")
+    whole: list[MarkOut]
+    faces: dict[str, FaceViewOut] = Field(description="As cinco faces, pelo rótulo clínico.")
+    placement: PlacementOut = Field(description="Posição na arcada deste paciente.")
+
+
+class VisualizationOut(BaseModel):
+    patient_id: uuid.UUID
+    at: datetime
+    arch: ArchOut
+    library_version: str
+    arch_model_url: str = Field(description="GLB da arcada do paciente (sem dado pessoal).")
+    teeth: list[ToothViewOut] = Field(description="Na ordem de leitura do odontograma.")
+    legend: list[StatusOut] = Field(description="Itens da legenda presentes nas marcações.")
+
+
+class ChangeOut(BaseModel):
+    tooth: int
+    face: str | None
+    face_label: str | None
+    mark: MarkOut
+
+
+class ComparisonOut(BaseModel):
+    patient_id: uuid.UUID
+    since: datetime
+    until: datetime
+    added: list[ChangeOut] = Field(description="Marcações que entraram no período.")
+    removed: list[ChangeOut] = Field(description="Marcações que saíram no período.")
+    teeth_changed: list[int]
