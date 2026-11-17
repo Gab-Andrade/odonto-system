@@ -9,6 +9,7 @@ auditada (o acesso ao paciente continua pelo prontuário, que é).
 
 import uuid
 from datetime import date
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
@@ -100,7 +101,7 @@ def my_performance(
     month = _month(mes)
     me = user.user_id
     prod = service.production(db, month, me)
-    mine = prod[0] if prod else service.Production(me, 0, service.fin_rules.money(0))
+    mine = prod[0] if prod else service.Production(me, 0, service.fin_rules.money(Decimal("0")))
     settlement = service.last_settlement(db, me)
     return MyPerformanceOut(
         dentist_id=me,

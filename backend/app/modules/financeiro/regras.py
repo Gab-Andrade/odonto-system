@@ -14,7 +14,7 @@ class FinanceRuleError(ValueError):
 
 
 def money(value: Decimal) -> Decimal:
-    return value.quantize(CENT, rounding=ROUND_HALF_UP)
+    return Decimal(value).quantize(CENT, rounding=ROUND_HALF_UP)
 
 
 def add_months(start: date, months: int) -> date:
