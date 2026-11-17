@@ -31,6 +31,7 @@ from sqlalchemy import (
     func,
     true,
 )
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.models import Base, TenantMixin, TimestampMixin, UUIDPkMixin
@@ -115,6 +116,42 @@ class OdontogramEvent(UUIDPkMixin, TenantMixin, Base):
         ForeignKey("users.id", ondelete="SET NULL")
     )
     # clock_timestamp() (ver migração 0011): ordena os eventos de verdade.
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.clock_timestamp()
+    )
+
+
+class Dentition(StrEnum):
+    PERMANENTE = "permanente"
+    DECIDUA = "decidua"
+    MISTA = "mista"
+
+
+class ArchConfig(UUIDPkMixin, TenantMixin, Base):
+    """Composição da arcada do paciente (append-only; a mais recente é a vigente).
+
+    Ver `arcada.py`. Sem registro, a arcada é sugerida pela idade (não gravada).
+    """
+
+    __tablename__ = "dental_arch_configs"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["patient_id", "clinic_id"],
+            ["patients.id", "patients.clinic_id"],
+            name="fk_dental_arch_configs_patient_same_clinic",
+            ondelete="RESTRICT",
+        ),
+        Index("ix_dental_arch_configs_patient", "patient_id", "created_at"),
+    )
+
+    patient_id: Mapped[uuid.UUID] = mapped_column()
+    dentition: Mapped[Dentition] = mapped_column(_enum(Dentition))
+    teeth: Mapped[list[int]] = mapped_column(ARRAY(SmallInteger))
+    notes: Mapped[str | None] = mapped_column(String(500))
+    recorded_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    # clock_timestamp(), como em odontogram_events: a ordem define a vigente.
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.clock_timestamp()
     )

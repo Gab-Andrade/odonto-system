@@ -1,16 +1,21 @@
 """Regras do odontograma. O commit e a auditoria ficam com o router."""
 
 import uuid
-from datetime import UTC, datetime
+from dataclasses import dataclass
+from datetime import UTC, date, datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.context import CurrentUser
-from app.modules.odontograma import regras
+from app.modules.odontograma import arcada, regras
 from app.modules.odontograma.models import (
+    ArchConfig,
+    Dentition,
     EventAction,
     OdontogramEvent,
     StatusScope,
@@ -218,3 +223,71 @@ def history(
         .offset(offset)
     )
     return list(db.scalars(query))
+
+
+# ---------- arcada ----------
+
+
+@dataclass(frozen=True)
+class Arch:
+    """Arcada vigente: a registrada mais recente ou, sem registro, a sugerida pela idade."""
+
+    dentition: str
+    teeth: list[int]
+    config: ArchConfig | None
+
+    @property
+    def source(self) -> str:
+        return "registrada" if self.config else "padrao"
+
+
+def today() -> date:
+    return datetime.now(ZoneInfo(get_settings().clinic_timezone)).date()
+
+
+def effective_arch(db: Session, patient: Patient, at: datetime | None = None) -> Arch:
+    query = select(ArchConfig).where(ArchConfig.patient_id == patient.id)
+    if at is not None:
+        query = query.where(ArchConfig.created_at <= at)
+    config = db.scalars(
+        query.order_by(ArchConfig.created_at.desc(), ArchConfig.id.desc()).limit(1)
+    ).first()
+    if config is not None:
+        return Arch(config.dentition.value, arcada.sort_teeth(config.teeth), config)
+    ref = today() if at is None else at.astimezone(ZoneInfo(get_settings().clinic_timezone)).date()
+    dentition, teeth = arcada.default_for(patient.birth_date, ref)
+    return Arch(dentition, teeth, None)
+
+
+def record_arch(
+    db: Session, user: CurrentUser, patient: Patient, data: dict[str, Any]
+) -> ArchConfig:
+    if not patient.active:
+        raise RuleViolation("Paciente inativo: reative o cadastro antes.")
+    dentition = Dentition(data["dentition"]).value
+    try:
+        if data.get("teeth") is not None:
+            if data.get("third_molars") is not None:
+                raise arcada.ArchRuleError(
+                    "Informe os terceiros molares dentro da lista de dentes, não à parte."
+                )
+            teeth = arcada.validate(dentition, data["teeth"])
+        else:
+            molars = data.get("third_molars")
+            if molars is None and dentition == arcada.PERMANENTE:
+                molars = arcada.THIRD_MOLARS
+            teeth = arcada.preset(dentition, molars)
+    except arcada.ArchRuleError as exc:
+        raise RuleViolation(str(exc)) from None
+    config = ArchConfig(
+        clinic_id=user.clinic_id,
+        patient_id=patient.id,
+        dentition=dentition,
+        teeth=teeth,
+        notes=data.get("notes"),
+        recorded_by=user.user_id,
+    )
+    db.add(config)
+    db.flush()
+    db.refresh(config)
+    return config

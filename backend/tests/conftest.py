@@ -64,7 +64,7 @@ def clean_db(owner_engine):
                 "TRUNCATE commission_lines, commission_settlements, commission_rules, "
                 "stock_movements, stock_lots, payments, receivables, payables, "
                 "treatment_plan_items, treatment_plans, treatment_settings, "
-                "odontogram_events, tooth_statuses, "
+                "dental_arch_configs, odontogram_events, tooth_statuses, "
                 "clinical_note_signatures, encounter_transfers, clinical_notes, encounters, "
                 "anamnesis_responses, anamnesis_template_versions, anamnesis_templates, "
                 "appointment_events, appointments, chairs, patient_consents, patients, "

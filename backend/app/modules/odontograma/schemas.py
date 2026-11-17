@@ -1,11 +1,11 @@
 import uuid
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints
 
 from app.modules.odontograma import regras
-from app.modules.odontograma.models import EventAction, StatusKind, StatusScope
+from app.modules.odontograma.models import Dentition, EventAction, StatusKind, StatusScope
 
 
 def _tooth(value: int) -> int:
@@ -104,3 +104,38 @@ class OdontogramOut(BaseModel):
     patient_id: uuid.UUID
     at: datetime = Field(description="Momento a que o odontograma se refere.")
     teeth: list[ToothOut] = Field(description="Só dentes com alguma marcação.")
+
+
+# ---------- arcada ----------
+
+ThirdMolar = Literal[18, 28, 38, 48]
+
+
+class ArchIn(BaseModel):
+    dentition: Dentition
+    third_molars: list[ThirdMolar] | None = Field(
+        None,
+        description=(
+            "Só na permanente, sem `teeth`. Omitido na permanente: os quatro (32 dentes)."
+        ),
+    )
+    teeth: list[Tooth] | None = Field(
+        None,
+        max_length=52,
+        description="Composição explícita (ex.: mista fora do padrão). Sem ela, usa o padrão.",
+    )
+    notes: Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)] | None = None
+
+
+class ArchOut(BaseModel):
+    patient_id: uuid.UUID
+    source: Literal["registrada", "padrao"] = Field(
+        description="`padrao`: nada registrado; sugerida pela idade do paciente."
+    )
+    dentition: Dentition
+    teeth: list[int] = Field(description="Na ordem de leitura: 18→11, 21→28, 48→41, 31→38.")
+    third_molars: list[int]
+    id: uuid.UUID | None = None
+    notes: str | None = None
+    recorded_by: uuid.UUID | None = None
+    created_at: datetime | None = None

@@ -18,9 +18,11 @@ from app.core import audit
 from app.core.context import CurrentUser
 from app.core.roles import Role
 from app.modules.identidade.deps import get_tenant_db, require_roles
-from app.modules.odontograma import regras, service
+from app.modules.odontograma import arcada, regras, service
 from app.modules.odontograma.models import OdontogramEvent, ToothStatus
 from app.modules.odontograma.schemas import (
+    ArchIn,
+    ArchOut,
     EventOut,
     EventsIn,
     MarkOut,
@@ -195,3 +197,67 @@ def history(
     )  # fmt: skip
     db.commit()
     return out
+
+
+# ---------- arcada ----------
+
+
+def _arch_out(patient_id: uuid.UUID, arch: service.Arch) -> ArchOut:
+    c = arch.config
+    return ArchOut(
+        patient_id=patient_id,
+        source=arch.source,
+        dentition=arch.dentition,
+        teeth=arch.teeth,
+        third_molars=[t for t in arch.teeth if t in arcada.THIRD_MOLARS],
+        id=c.id if c else None,
+        notes=c.notes if c else None,
+        recorded_by=c.recorded_by if c else None,
+        created_at=c.created_at if c else None,
+    )
+
+
+@router.get("/pacientes/{patient_id}/arcada", response_model=ArchOut)
+def get_arch(
+    patient_id: uuid.UUID,
+    request: Request,
+    em: AwareDatetime | None = Query(None, description="Arcada vigente neste momento."),
+    user: CurrentUser = Depends(require_roles(*READ)),
+    db: Session = Depends(get_tenant_db),
+):
+    try:
+        patient = service.get_patient(db, patient_id)
+    except service.OdontogramError as exc:
+        raise _http(exc) from None
+    arch = service.effective_arch(db, patient, em)
+    audit.record(
+        db, user, "odontograma.arcada_lida", entity_type="patient", entity_id=patient.id,
+        details={"em": em.isoformat()} if em else None, request=request,
+    )  # fmt: skip
+    db.commit()
+    return _arch_out(patient.id, arch)
+
+
+@router.post(
+    "/pacientes/{patient_id}/arcada", response_model=ArchOut, status_code=status.HTTP_201_CREATED
+)
+def record_arch(
+    patient_id: uuid.UUID,
+    body: ArchIn,
+    request: Request,
+    user: CurrentUser = Depends(require_roles(*MARK)),
+    db: Session = Depends(get_tenant_db),
+):
+    try:
+        patient = service.get_patient(db, patient_id)
+        config = service.record_arch(db, user, patient, body.model_dump())
+    except service.OdontogramError as exc:
+        raise _http(exc) from None
+    audit.record(
+        db, user, "odontograma.arcada_registrada", entity_type="patient", entity_id=patient.id,
+        details={"denticao": config.dentition.value, "dentes": len(config.teeth)},
+        request=request,
+    )  # fmt: skip
+    db.commit()
+    arch = service.Arch(config.dentition.value, arcada.sort_teeth(config.teeth), config)
+    return _arch_out(patient.id, arch)

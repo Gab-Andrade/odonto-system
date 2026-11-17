@@ -9,7 +9,7 @@ from app.modules.agenda.models import Appointment, AppointmentEvent, Chair
 from app.modules.estoque.models import Material, StockLot, StockMovement
 from app.modules.financeiro.models import Payable, Payment, Receivable
 from app.modules.identidade.models import Clinic, ClinicMembership, User
-from app.modules.odontograma.models import OdontogramEvent, ToothStatus
+from app.modules.odontograma.models import ArchConfig, OdontogramEvent, ToothStatus
 from app.modules.pacientes.models import Patient, PatientConsent
 from app.modules.precificacao.models import (
     CostSheet,
@@ -43,6 +43,7 @@ __all__ = [
     "AnamnesisResponse",
     "AnamnesisTemplate",
     "AnamnesisTemplateVersion",
+    "ArchConfig",
     "Appointment",
     "AppointmentEvent",
     "AuditLog",
