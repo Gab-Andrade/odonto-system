@@ -2,11 +2,23 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    model_validator,
+)
 
-from app.modules.prontuario import anamnese
+from app.modules.prontuario import anamnese, evolucao
 from app.modules.prontuario.anamnese import QuestionType
-from app.modules.prontuario.models import VersionStatus
+from app.modules.prontuario.models import (
+    EncounterStatus,
+    NoteKind,
+    SignatureMethod,
+    VersionStatus,
+)
 
 
 def _text(max_length: int):
@@ -145,3 +157,78 @@ class PatientAlert(AlertOut):
     template_name: str
     response_id: uuid.UUID
     answered_at: datetime
+
+
+# ---------- atendimento e evolução ----------
+
+NoteContent = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=evolucao.MAX_CONTENT)
+]
+
+
+class EncounterCreate(BaseModel):
+    patient_id: uuid.UUID
+    appointment_id: uuid.UUID | None = Field(
+        None, description="Agendamento de origem (vira atendido). Vazio para encaixe/urgência."
+    )
+    started_at: AwareDatetime | None = Field(
+        None, description="Padrão: agora. Pode ser até 7 dias para trás."
+    )
+
+
+class NoteCreate(BaseModel):
+    content: NoteContent
+    performed_at: AwareDatetime | None = Field(
+        None, description="Data do ato clínico (padrão: agora; até 7 dias para trás)."
+    )
+
+
+class AddendumCreate(BaseModel):
+    content: NoteContent
+
+
+class EncounterOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    patient_id: uuid.UUID
+    dentist_id: uuid.UUID
+    appointment_id: uuid.UUID | None
+    status: EncounterStatus
+    started_at: datetime
+    closed_at: datetime | None
+    closed_by: uuid.UUID | None
+    created_at: datetime
+
+
+class EncounterSummary(EncounterOut):
+    notes: int
+
+
+class SignatureOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    method: SignatureMethod
+    signer_id: uuid.UUID
+    content_hash: str
+    signed_at: datetime
+
+
+class NoteOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    encounter_id: uuid.UUID
+    patient_id: uuid.UUID
+    kind: NoteKind
+    amends_id: uuid.UUID | None
+    author_id: uuid.UUID
+    content: str
+    performed_at: datetime = Field(description="Data do ato clínico.")
+    created_at: datetime = Field(description="Data real do registro.")
+    content_hash: str
+    signatures: list[SignatureOut] = []
+
+
+class EncounterDetail(EncounterOut):
+    notes: list[NoteOut]

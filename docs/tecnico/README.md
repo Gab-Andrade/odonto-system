@@ -14,7 +14,7 @@ Cada módulo tem um documento próprio, gerado e atualizado pela skill `document
 | [estoque](estoque.md) | Cadastro de materiais com custo unitário (visível só a admin/gestor), usado pela ficha técnica da precificação |
 | [pacientes](pacientes.md) | Cadastro de pacientes com busca por nome, CPF ou telefone, responsável de menores e consentimentos LGPD append-only; leituras auditadas |
 | [agenda](agenda.md) | Cadeiras, agendamentos e bloqueios sem conflito de dentista/cadeira (constraint de exclusão), máquina de status e histórico append-only |
-| [prontuario](prontuario.md) | Anamnese configurável: modelos versionados (rascunho/publicada), respostas imutáveis por paciente e alertas clínicos; toda leitura auditada, sem acesso da recepção |
+| [prontuario](prontuario.md) | Anamnese configurável (modelos versionados, respostas imutáveis, alertas) e atendimento com evolução clínica imutável, adendos e assinatura; toda leitura auditada, sem acesso da recepção |
 
 ## Fundação (válida para todos os módulos)
 

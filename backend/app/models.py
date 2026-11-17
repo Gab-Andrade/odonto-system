@@ -25,6 +25,9 @@ from app.modules.prontuario.models import (
     AnamnesisResponse,
     AnamnesisTemplate,
     AnamnesisTemplateVersion,
+    ClinicalNote,
+    ClinicalNoteSignature,
+    Encounter,
 )
 
 __all__ = [
@@ -36,10 +39,13 @@ __all__ = [
     "AuditLog",
     "Base",
     "Chair",
+    "ClinicalNote",
+    "ClinicalNoteSignature",
     "Clinic",
     "ClinicMembership",
     "CostSheet",
     "CostSheetItem",
+    "Encounter",
     "ImportJob",
     "ImportProfile",
     "Material",

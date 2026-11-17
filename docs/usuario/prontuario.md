@@ -1,22 +1,117 @@
 ---
 modulo: prontuario
-atualizado_em: 4346a5f
+atualizado_em: 1982acb
 ---
-# Prontuário e anamnese
+# Prontuário: anamnese, atendimento e evolução
 
-> Guarda a anamnese de cada paciente, o questionário inicial que a clínica monta do seu jeito, e os alertas que as respostas geram, como alergias ou uso de remédios. As anotações de cada atendimento (evolução clínica) virão depois.
+> Guarda a ficha clínica do paciente: a anamnese (questionário inicial, com alertas como alergias e uso de remédios), o registro de cada atendimento e a evolução clínica, que é o texto do que foi feito em cada consulta. Nada do que foi registrado é apagado. Correções entram como complemento.
 
 ## Quem usa
 
 | Perfil | O que pode fazer |
 |---|---|
-| Administrador | Montar e publicar os modelos de anamnese, preencher anamneses e ver as respostas e os alertas dos pacientes. |
-| Gestor | Montar e publicar os modelos de anamnese e ver as respostas e os alertas dos pacientes. Não preenche anamneses. |
-| Dentista | Preencher anamneses e ver as respostas e os alertas dos pacientes. Não altera os modelos. |
-| ASB | Preencher anamneses e ver as respostas e os alertas dos pacientes. Não altera os modelos. |
-| Recepção | Não vê o conteúdo das anamneses nem os alertas. |
+| Administrador | Montar e publicar os modelos de anamnese. Preencher anamneses. Abrir atendimentos, registrar evoluções, fechar e fazer adendos, desde que seja o dentista do atendimento ou o autor da evolução. Ver anamneses, atendimentos e evoluções. |
+| Gestor | Montar e publicar os modelos de anamnese. Ver anamneses, atendimentos e evoluções. Não preenche anamneses nem atende. |
+| Dentista | Preencher anamneses. Abrir atendimentos, registrar evoluções, fechar o atendimento e fazer adendos. Ver anamneses, atendimentos e evoluções. Não altera os modelos. |
+| ASB | Preencher anamneses. Ver anamneses, atendimentos e evoluções. Não abre atendimentos nem registra evoluções. Não altera os modelos. |
+| Recepção | Não vê o conteúdo do prontuário: anamneses, alertas, atendimentos nem evoluções. |
 
 ## O que dá para fazer
+
+### Abrir um atendimento
+
+Quem pode: Dentista e Administrador.
+
+1. Escolha o paciente. Ele precisa estar ativo.
+2. Se o atendimento vem de um horário da agenda, informe esse agendamento. Para encaixe ou urgência, deixe em branco.
+3. Informe o horário de início, se for diferente de agora. Pode ser até 7 dias para trás, nunca no futuro.
+
+- Quem abre o atendimento passa a ser o dentista responsável por ele.
+- **Substituição:** você pode abrir um atendimento a partir do horário de outro dentista. Nesse caso, o atendimento fica no seu nome.
+- Ao abrir a partir de um horário da agenda, o horário passa a aparecer como "atendido". A agenda só aceita isso depois que o horário de início já chegou.
+- Cada horário da agenda tem no máximo um atendimento. Só consultas podem ser usadas, e elas precisam ser do mesmo paciente.
+
+*Tela em construção.*
+
+### Registrar a evolução do atendimento
+
+Quem pode: Dentista e Administrador, somente no atendimento que eles abriram.
+
+1. Abra o atendimento.
+2. Escreva o que foi feito. O texto é obrigatório e pode ter até 20.000 caracteres.
+3. Informe a data do ato clínico, se for diferente de agora. Pode ser até 7 dias para trás, nunca no futuro.
+4. Salve.
+
+- Cada evolução guarda duas datas: a do ato clínico (quando aconteceu) e a do registro (quando foi gravada). Assim, um registro feito hoje sobre um atendimento de ontem fica claro.
+- Não dá para registrar evolução em atendimento fechado. Nesse caso, faça um adendo.
+- Quem não é o dentista do atendimento não registra nele.
+- Ao salvar, a evolução recebe a sua assinatura simples (veja em Bom saber).
+
+*Tela em construção.*
+
+### Fazer um adendo (corrigir ou complementar uma evolução)
+
+Quem pode: somente o autor da evolução (Dentista ou Administrador).
+
+1. Abra a evolução.
+2. Escreva o complemento ou a correção. O texto pode ter até 20.000 caracteres.
+3. Salve.
+
+- O adendo entra como um registro novo, ligado à evolução. O texto original continua como foi escrito.
+- Dá para fazer adendo a qualquer tempo, inclusive depois que o atendimento foi fechado.
+- A data do adendo é a data em que você o fez. Não aceita data retroativa.
+- Não dá para fazer adendo sobre outro adendo. O complemento é sempre feito sobre a evolução.
+
+*Tela em construção.*
+
+### Fechar o atendimento
+
+Quem pode: o dentista do atendimento (Dentista ou Administrador que o abriu).
+
+1. Abra o atendimento.
+2. Feche quando terminar.
+
+- Pode fechar sem evolução, por exemplo quando o paciente veio e nada foi feito.
+- Depois de fechado, não entram novas evoluções. Para complementar, use adendo.
+- O sistema grava quem fechou e quando.
+- Hoje o sistema não tem opção para reabrir um atendimento fechado.
+
+*Tela em construção.*
+
+### Ver um atendimento
+
+Quem pode: Administrador, Gestor, Dentista e ASB.
+
+- Veja a data de início, o dentista responsável, se veio de um horário da agenda e a situação (aberto ou fechado).
+- Veja todas as evoluções e adendos do atendimento, na ordem em que foram registrados.
+- Cada evolução e cada adendo mostra o autor, a data do ato clínico, a data do registro e as assinaturas.
+
+Cada vez que você abre um atendimento, o sistema registra a ação no Histórico de ações. O registro não guarda o texto clínico.
+
+*Tela em construção.*
+
+### Ver os atendimentos de um paciente
+
+Quem pode: Administrador, Gestor, Dentista e ASB.
+
+- Veja a lista de atendimentos do paciente, do mais recente para o mais antigo. Cada um mostra quantas evoluções tem.
+- A lista vem em páginas de 100 atendimentos. Cada pedido aceita até 500.
+
+Cada consulta a essa lista fica registrada no Histórico de ações, sem o texto clínico.
+
+*Tela em construção.*
+
+### Ver a linha do tempo de evoluções de um paciente
+
+Quem pode: Administrador, Gestor, Dentista e ASB.
+
+- Veja evoluções e adendos do paciente, do mais recente para o mais antigo, pela data do ato clínico.
+- Adendos aparecem como registros próprios, ligados à evolução que complementam.
+- A lista vem em páginas de 100. Cada pedido aceita até 500.
+
+Cada consulta a essa linha do tempo fica registrada no Histórico de ações, sem o texto clínico.
+
+*Tela em construção.*
 
 ### Criar um modelo de anamnese
 
@@ -115,6 +210,12 @@ Cada vez que você lista, abre ou consulta os alertas de um paciente, o sistema 
 
 ## Bom saber
 
+- **Evolução não se apaga nem se altera.** Se houve erro ou faltou algo, faça um adendo. Quem ler vê o texto original e o complemento, cada um com a sua data.
+- **Assinatura simples em cada registro.** Cada evolução e cada adendo é assinado, na hora, por quem o escreveu. O sistema guarda quem assinou, quando, e um código calculado sobre o texto. Se o texto for mudado depois, o código deixa de bater. A assinatura digital ICP-Brasil, exigida para prontuário eletrônico, está prevista.
+- **Datas retroativas.** Atendimento, evolução e horário de início aceitam data de até 7 dias atrás. Mais antigo que isso, o sistema recusa. Data no futuro também é recusada, com uma pequena folga para relógios levemente adiantados.
+- **Um atendimento por horário da agenda.** Cada horário de consulta tem no máximo um atendimento.
+- **Substituição.** Quem abre o atendimento fica responsável por ele, mesmo que o horário fosse de outro dentista.
+- **Paciente inativo.** Não é possível abrir atendimento para paciente inativo. Reative o cadastro antes.
 - **Anamnese não se altera nem se apaga.** Se houve erro, preencha a anamnese de novo. A nova passa a ser a atual, e a anterior fica no histórico.
 - **Versão publicada não se altera.** Para mudar um modelo, crie um novo rascunho e publique.
 - **Cada anamnese guarda a versão em que foi respondida.** Mudanças posteriores no modelo não alteram o que já foi respondido.
@@ -125,16 +226,31 @@ Cada vez que você lista, abre ou consulta os alertas de um paciente, o sistema 
   - Escolha de uma ou de várias opções: se a clínica escolheu opções de alerta, gera alerta só com elas. Se não escolheu, qualquer resposta gera.
   - Texto, número e data: qualquer resposta preenchida gera alerta.
   - Só perguntas marcadas como alerta geram alertas.
-- **Sigilo:** a Recepção não tem acesso às anamneses nem aos alertas. Cada clínica só vê os próprios modelos e anamneses. Um modelo ou uma anamnese de outra clínica aparece como "não encontrado".
-- **Registro de ações (LGPD):** toda leitura de anamnese ou de alertas de paciente e toda gravação fica no Histórico de ações, com quem fez e quando. Os registros não guardam as respostas.
-- **Previsto:** a evolução clínica (anotações de cada atendimento) e os anexos, como PDF e imagens. A evolução não poderá ser apagada: correções entram como complemento, sem alterar o texto original.
+- **Sigilo:** a Recepção não tem acesso ao prontuário. Cada clínica só vê os próprios modelos, anamneses, atendimentos e evoluções. Algo de outra clínica aparece como "não encontrado".
+- **Registro de ações (LGPD):** toda leitura de anamnese, alerta, atendimento ou evolução de paciente fica no Histórico de ações, com quem fez e quando. Abrir, registrar, fazer adendo e fechar também ficam registrados. Os registros não guardam o texto clínico nem as respostas.
+- **Previsto:** assinatura digital ICP-Brasil e anexos, como PDF e imagens.
 
 ## Perguntas frequentes
+
+**Por que não consigo registrar uma evolução?**
+Confira se o atendimento está aberto, se você é o dentista que o abriu e se a data do ato clínico está dentro de 7 dias. Se o atendimento já foi fechado, use adendo.
+
+**Errei uma evolução. Posso apagá-la?**
+Não. Faça um adendo com a correção. O texto original continua visível, com a data em que foi escrito.
+
+**Esqueci de registrar a evolução de ontem. Posso?**
+Sim, se o atendimento ainda estiver aberto ou se você abrir um atendimento novo com a data de ontem. Informe a data do ato clínico. O limite é de 7 dias para trás.
+
+**Posso fechar um atendimento sem evolução?**
+Sim. Use isso quando o paciente veio e nada foi feito.
+
+**O paciente veio para substituir outro dentista. Posso atendê-lo?**
+Sim. Abra o atendimento a partir do horário, se houver. O atendimento fica no seu nome.
 
 **Por que não consigo preencher a anamnese de um paciente?**
 Confira se o paciente está ativo, se o modelo está ativo e se ele tem uma versão publicada. Se a tela estava aberta enquanto o modelo mudou, recarregue a página.
 
-**Errei uma resposta. Como corrijo?**
+**Errei uma resposta da anamnese. Como corrijo?**
 Preencha a anamnese de novo. A nova resposta vira a atual, e a anterior continua no histórico.
 
 **Por que não consigo publicar o rascunho?**

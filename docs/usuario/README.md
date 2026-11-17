@@ -12,7 +12,7 @@ Este guia explica, em linguagem simples, o que cada parte do sistema faz e quem 
 |---|---|
 | [Acesso e login](identidade.md) | Entrar no sistema, escolher a clínica e entender os perfis de acesso |
 | [Cadastro de pacientes](pacientes.md) | Guardar a ficha de cada paciente, buscar pacientes e registrar os consentimentos para o uso dos dados |
-| [Prontuário e anamnese](prontuario.md) | Montar o questionário inicial de cada paciente, preenchê-lo e ver os alertas que ele gera |
+| [Prontuário e anamnese](prontuario.md) | Montar o questionário inicial de cada paciente, registrar o atendimento e a evolução de cada consulta, e ver os alertas e o histórico clínico |
 | [Agenda de consultas](agenda.md) | Marcar, remarcar e bloquear horários dos dentistas e das cadeiras, e registrar se o paciente veio, faltou ou cancelou |
 | [Estoque de materiais](estoque.md) | Cadastrar os materiais da clínica, com unidade de uso e custo, e desativar os que não são mais usados |
 | [Histórico de ações](auditoria.md) | Ver quem fez o quê e quando, para segurança e para a LGPD |

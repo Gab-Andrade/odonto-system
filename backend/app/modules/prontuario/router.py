@@ -41,7 +41,12 @@ MANAGE = (Role.ADMIN, Role.GESTOR)
 
 
 def _http(exc: service.ProntuarioError) -> HTTPException:
-    code = status.HTTP_404_NOT_FOUND if isinstance(exc, service.NotFound) else 409
+    if isinstance(exc, service.NotFound):
+        code = status.HTTP_404_NOT_FOUND
+    elif isinstance(exc, service.Forbidden):
+        code = status.HTTP_403_FORBIDDEN
+    else:
+        code = status.HTTP_409_CONFLICT
     return HTTPException(status_code=code, detail=exc.message)
 
 

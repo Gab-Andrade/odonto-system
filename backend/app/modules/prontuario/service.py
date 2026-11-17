@@ -1,4 +1,4 @@
-"""Regras da anamnese. O commit e a auditoria ficam com o router."""
+"""Regras da anamnese (e erros comuns do prontuário). Commit e auditoria ficam com o router."""
 
 import uuid
 from dataclasses import dataclass
@@ -34,6 +34,10 @@ class NotFound(ProntuarioError):
 
 class RuleViolation(ProntuarioError):
     pass
+
+
+class Forbidden(ProntuarioError):
+    """Papel permitido, mas a pessoa não é a autora (ex.: evolução de outro dentista)."""
 
 
 def get_patient(db: Session, patient_id: uuid.UUID) -> Patient:
