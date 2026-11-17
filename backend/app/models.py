@@ -8,6 +8,7 @@ from app.core.models import Base
 from app.modules.agenda.models import Appointment, AppointmentEvent, Chair
 from app.modules.estoque.models import Material
 from app.modules.identidade.models import Clinic, ClinicMembership, User
+from app.modules.odontograma.models import OdontogramEvent, ToothStatus
 from app.modules.pacientes.models import Patient, PatientConsent
 from app.modules.precificacao.models import (
     CostSheet,
@@ -49,6 +50,7 @@ __all__ = [
     "ImportJob",
     "ImportProfile",
     "Material",
+    "OdontogramEvent",
     "Patient",
     "PatientConsent",
     "PriceAssignment",
@@ -57,5 +59,6 @@ __all__ = [
     "PriceTable",
     "PriceTableVersion",
     "PricingVariable",
+    "ToothStatus",
     "User",
 ]

@@ -15,6 +15,7 @@ Cada módulo tem um documento próprio, gerado e atualizado pela skill `document
 | [pacientes](pacientes.md) | Cadastro de pacientes com busca por nome, CPF ou telefone, responsável de menores e consentimentos LGPD append-only; leituras auditadas |
 | [agenda](agenda.md) | Cadeiras, agendamentos e bloqueios sem conflito de dentista/cadeira (constraint de exclusão), máquina de status e histórico append-only |
 | [prontuario](prontuario.md) | Anamnese configurável (modelos versionados, respostas imutáveis, alertas) e atendimento com evolução clínica imutável, adendos e assinatura; toda leitura auditada, sem acesso da recepção |
+| [odontograma](odontograma.md) | Legenda de marcações por clínica e histórico append-only por dente/face (FDI); odontograma reconstruído em qualquer data; leituras auditadas |
 
 ## Fundação (válida para todos os módulos)
 
