@@ -364,4 +364,7 @@ odonto-system/
 | 2026-11-16 | Repasse de dentistas reaproveita o mecanismo de tabelas da precificação. |
 | 2026-11-16 | Fundação: a aplicação conecta com role sem `BYPASSRLS` e sem ser dona das tabelas; migrações rodam com o role dono. |
 | 2026-11-16 | Papel e vínculo do usuário são conferidos no banco a cada requisição (revogação imediata), não só no JWT. |
+| 2026-11-16 | Referências entre tabelas da mesma clínica usam FK composta `(id, clinic_id)`: a checagem de FK do PostgreSQL ignora o RLS e, com FK simples, permitiria apontar para registro de outra clínica. |
+| 2026-11-16 | Precificação: herança com ajuste percentual na versão (não na tabela), arredondamento em centavos (meio para cima) a cada nível; "dentista" de uma atribuição pode ser membro com papel dentista ou admin (dono-dentista). |
+| 2026-11-16 | Violação de constraint por concorrência (`IntegrityError`) responde 409 em toda a API, via handler global. |
 | 2026-11-16 | Redis e object storage entram no compose só quando a Fase 1 precisar. Escolha do storage S3 local em aberto: a MinIO deixou de distribuir imagens da edição comunitária, então avaliar alternativas (ex.: Garage, SeaweedFS). |

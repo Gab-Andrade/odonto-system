@@ -60,7 +60,11 @@ def clean_db(owner_engine):
 
     with owner_engine.begin() as conn:
         conn.execute(
-            text("TRUNCATE audit_logs, clinic_memberships, users, clinics RESTART IDENTITY CASCADE")
+            text(
+                "TRUNCATE price_snapshots, price_assignments, price_items, price_table_versions, "
+                "price_tables, audit_logs, clinic_memberships, users, clinics "
+                "RESTART IDENTITY CASCADE"
+            )
         )
     yield
 
@@ -111,3 +115,28 @@ def make_clinic(db_session):
         return clinic, user, password
 
     return _make
+
+
+@pytest.fixture
+def add_member(db_session):
+    """Cria um usuário e vincula a uma clínica existente. Retorna (user, password)."""
+    from app.core.security import hash_password
+    from app.modules.identidade.models import ClinicMembership, User
+
+    password = "senha-forte-123"
+    counter = {"n": 0}
+
+    def _add(clinic, role):
+        counter["n"] += 1
+        user = User(
+            email=f"membro{counter['n']}-{clinic.slug}@exemplo.com",
+            full_name=f"Membro {counter['n']}",
+            password_hash=hash_password(password),
+        )
+        db_session.add(user)
+        db_session.flush()
+        db_session.add(ClinicMembership(user_id=user.id, clinic_id=clinic.id, role=role))
+        db_session.commit()
+        return user, password
+
+    return _add

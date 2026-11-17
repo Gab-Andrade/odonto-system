@@ -23,6 +23,10 @@ class Settings(BaseSettings):
 
     cors_origins: list[str] = ["http://localhost:5173"]
 
+    # Fuso usado para "hoje" em regras de vigência. Vira configuração por clínica
+    # quando houver clínicas em mais de um fuso.
+    clinic_timezone: str = "America/Sao_Paulo"
+
     @model_validator(mode="after")
     def _check_production(self) -> "Settings":
         if self.environment == "production":

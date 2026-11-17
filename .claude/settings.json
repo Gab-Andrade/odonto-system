@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./backend/.ruff_cache/**)",
+      "Read(./backend/.pytest_cache/**)",
+      "Read(./backend/**/__pycache__/**)",
+      "Read(./backend/*.egg-info/**)",
+      "Read(./backend/.venv/**)"
+    ]
+  }
+}

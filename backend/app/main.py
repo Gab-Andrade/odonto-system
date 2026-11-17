@@ -1,12 +1,15 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 
 from app import models  # noqa: F401 - registra todos os models
 from app.core.config import get_settings
 from app.core.db import get_engine
 from app.modules.auditoria.router import router as auditoria_router
 from app.modules.identidade.router import router as identidade_router
+from app.modules.precificacao.router import router as precificacao_router
 
 
 def create_app() -> FastAPI:
@@ -21,6 +24,16 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    @app.exception_handler(IntegrityError)
+    async def _integrity_conflict(request: Request, exc: IntegrityError):
+        # Requisições simultâneas podem passar pelas checagens do service e esbarrar numa
+        # constraint do banco (nome duplicado, segundo rascunho...). Isso é conflito, não 500.
+        # A sessão é descartada (rollback) ao sair da dependência.
+        return JSONResponse(
+            status_code=409,
+            content={"detail": "Conflito com dados existentes. Atualize e tente novamente."},
+        )
+
     @app.get("/health", tags=["infra"])
     def health():
         return {"status": "ok"}
@@ -33,6 +46,7 @@ def create_app() -> FastAPI:
 
     app.include_router(identidade_router)
     app.include_router(auditoria_router)
+    app.include_router(precificacao_router)
     return app
 
 
