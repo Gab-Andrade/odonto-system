@@ -362,3 +362,6 @@ odonto-system/
 | 2026-11-16 | Escaneamento intraoral 3D movido para stand-by (pós-plataforma). |
 | 2026-11-16 | Precificação como módulo-chave: tabelas versionadas, importação CSV/Excel, atribuição por dentista, fórmulas configuráveis sem código. |
 | 2026-11-16 | Repasse de dentistas reaproveita o mecanismo de tabelas da precificação. |
+| 2026-11-16 | Fundação: a aplicação conecta com role sem `BYPASSRLS` e sem ser dona das tabelas; migrações rodam com o role dono. |
+| 2026-11-16 | Papel e vínculo do usuário são conferidos no banco a cada requisição (revogação imediata), não só no JWT. |
+| 2026-11-16 | Redis e object storage entram no compose só quando a Fase 1 precisar. Escolha do storage S3 local em aberto: a MinIO deixou de distribuir imagens da edição comunitária, então avaliar alternativas (ex.: Garage, SeaweedFS). |

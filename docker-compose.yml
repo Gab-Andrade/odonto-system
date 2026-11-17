@@ -1,0 +1,43 @@
+# Ambiente de desenvolvimento.
+#   docker compose up --build
+# API: http://localhost:8000/docs
+#
+# Redis (filas Celery) e object storage S3 entram quando o primeiro módulo
+# precisar deles (importação de planilhas da precificação).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: odonto
+      POSTGRES_USER: odonto
+      POSTGRES_PASSWORD: odonto
+      APP_DB_PASSWORD: odonto_app
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+      - ./docker/postgres/roles.sql:/opt/odonto/roles.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odonto -d odonto"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://odonto_app:odonto_app@postgres:5432/odonto
+      MIGRATIONS_DATABASE_URL: postgresql+psycopg://odonto:odonto@postgres:5432/odonto
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
