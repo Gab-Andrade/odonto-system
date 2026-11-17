@@ -10,7 +10,7 @@ Cada módulo tem um documento próprio, gerado e atualizado pela skill `document
 |---|---|
 | [identidade](identidade.md) | Clínicas, usuários, vínculos, login (JWT) e dependências de autenticação/papéis usadas por todos os módulos |
 | [auditoria](auditoria.md) | Consulta do log de auditoria (LGPD) da clínica |
-| [precificacao](precificacao.md) | Tabelas de preço versionadas com herança, atribuição por escopo, resolução com memória de cálculo e snapshots |
+| [precificacao](precificacao.md) | Tabelas de preço versionadas com herança, atribuição por escopo, resolução com memória de cálculo, snapshots e importação de planilhas |
 
 ## Fundação (válida para todos os módulos)
 
