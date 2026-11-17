@@ -115,8 +115,8 @@ def test_search_by_name_cpf_and_phone(client, make_clinic):
     assert ids("JOSÉ") == {jose["id"]}
     assert ids("111.444.777-35") == {jose["id"]}
     assert ids("3333-44") == {jose["id"]}  # trecho do telefone
-    assert ids("_50%") == set(ids("mariana"))  # curingas do LIKE são escapados
-    assert len(ids("%")) == 0
+    assert ids("_50%") == ids("mariana") != set()  # curingas do LIKE são escapados
+    assert ids("%") == ids("mariana")  # "%" literal, não curinga (que traria os 3)
     assert len(ids(None)) == 3
 
     row = client.get("/pacientes", params={"busca": "ana souza"}, headers=h).json()[0]
