@@ -15,6 +15,9 @@ dependencies = [
     "pyjwt>=2.10",
     "pwdlib[argon2]>=0.2",
     "tzdata>=2024.1",  # base de fusos para zoneinfo (o Windows não traz)
+    "python-multipart>=0.0.12",  # upload de arquivos
+    "openpyxl>=3.1",  # leitura e geração de .xlsx
+    "defusedxml>=0.7",  # o openpyxl usa automaticamente: protege contra XML malicioso
 ]
 
 [project.optional-dependencies]

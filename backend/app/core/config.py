@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     # quando houver clínicas em mais de um fuso.
     clinic_timezone: str = "America/Sao_Paulo"
 
+    # Tamanho máximo do corpo de qualquer requisição (o maior caso é o upload de planilha,
+    # limitado a 2 MB; a folga cobre o envelope multipart).
+    max_request_bytes: int = 3 * 1024 * 1024
+
     @model_validator(mode="after")
     def _check_production(self) -> "Settings":
         if self.environment == "production":

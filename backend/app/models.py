@@ -7,6 +7,8 @@ from app.core.audit import AuditLog
 from app.core.models import Base
 from app.modules.identidade.models import Clinic, ClinicMembership, User
 from app.modules.precificacao.models import (
+    ImportJob,
+    ImportProfile,
     PriceAssignment,
     PriceItem,
     PriceSnapshot,
@@ -19,6 +21,8 @@ __all__ = [
     "Base",
     "Clinic",
     "ClinicMembership",
+    "ImportJob",
+    "ImportProfile",
     "PriceAssignment",
     "PriceItem",
     "PriceSnapshot",

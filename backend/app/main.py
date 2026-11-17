@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from app import models  # noqa: F401 - registra todos os models
 from app.core.config import get_settings
 from app.core.db import get_engine
+from app.core.limits import BodySizeLimitMiddleware
 from app.modules.auditoria.router import router as auditoria_router
 from app.modules.identidade.router import router as identidade_router
 from app.modules.precificacao.router import router as precificacao_router
@@ -16,6 +17,7 @@ def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(title="Odonto System API", version="0.1.0")
 
+    app.add_middleware(BodySizeLimitMiddleware, max_bytes=settings.max_request_bytes)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,

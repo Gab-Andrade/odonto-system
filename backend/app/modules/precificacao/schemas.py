@@ -6,7 +6,7 @@ from typing import Annotated, Any
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
-from app.modules.precificacao.models import ScopeType, TableStatus, VersionStatus
+from app.modules.precificacao.models import ImportStatus, ScopeType, TableStatus, VersionStatus
 
 # Limites alinhados às colunas Numeric(12,2) e Numeric(7,4).
 Money = Annotated[Decimal, Field(ge=0, max_digits=12, decimal_places=2)]
@@ -77,6 +77,7 @@ class ItemIn(BaseModel):
     ]
     category: str | None = Field(default=None, max_length=100)
     price: Money
+    custom_fields: dict[str, Annotated[str, StringConstraints(max_length=500)]] | None = None
 
 
 class ItemsReplace(BaseModel):
@@ -100,6 +101,7 @@ class ItemOut(BaseModel):
     description: str
     category: str | None
     price: Decimal
+    custom_fields: dict[str, str] | None
 
 
 class PublishIn(BaseModel):
@@ -159,4 +161,80 @@ class SnapshotOut(ResolutionOut):
     dentist_id: uuid.UUID | None
     insurer_id: uuid.UUID | None
     created_by: uuid.UUID | None
+    created_at: datetime
+
+
+# ---------- Importação ----------
+
+ColumnMap = dict[str, str | None]
+
+
+class ImportJobOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    table_id: uuid.UUID
+    status: ImportStatus
+    filename: str
+    file_size: int
+    detected: dict[str, Any]
+    headers: list[str]
+    column_map: ColumnMap | None
+    extra_columns: list[str] | None
+    report: dict[str, Any] | None
+    applied_version_id: uuid.UUID | None
+    created_at: datetime
+    amostra: list[dict[str, Any]] = Field(
+        default_factory=list, description="Primeiras linhas lidas, para conferir o mapeamento."
+    )
+
+
+class ImportJobSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    table_id: uuid.UUID
+    status: ImportStatus
+    filename: str
+    created_at: datetime
+
+
+class ImportValidateIn(BaseModel):
+    column_map: ColumnMap | None = Field(
+        default=None,
+        description="Campo → nome da coluna. Vazio: usa o perfil ou a sugestão automática.",
+        examples=[{"procedure_code": "Código", "description": "Procedimento", "price": "Valor"}],
+    )
+    extra_columns: list[Annotated[str, StringConstraints(max_length=255)]] | None = Field(
+        default=None, max_length=50, description="Colunas a guardar como campos extras do item."
+    )
+    profile_id: uuid.UUID | None = None
+
+
+class ImportApplyIn(BaseModel):
+    ignorar_erros: bool = Field(
+        default=False, description="Aplica só as linhas válidas, descartando as com erro."
+    )
+
+
+class ImportApplyOut(BaseModel):
+    importacao: ImportJobSummary
+    versao: VersionOut
+
+
+class ProfileCreate(BaseModel):
+    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
+    column_map: ColumnMap
+    extra_columns: list[Annotated[str, StringConstraints(max_length=255)]] = Field(
+        default_factory=list, max_length=50
+    )
+
+
+class ProfileOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    name: str
+    column_map: ColumnMap
+    extra_columns: list[str]
     created_at: datetime

@@ -1,19 +1,26 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
+from fastapi.responses import JSONResponse, Response
 from sqlalchemy.orm import Session
 
 from app.core import audit
 from app.core.context import CurrentUser
 from app.core.roles import Role
 from app.modules.identidade.deps import get_tenant_db, require_roles
-from app.modules.precificacao import service
+from app.modules.precificacao import importacao, service
 from app.modules.precificacao.schemas import (
     AssignmentCreate,
     AssignmentOut,
+    ImportApplyIn,
+    ImportApplyOut,
+    ImportJobOut,
+    ImportJobSummary,
+    ImportValidateIn,
     ItemOut,
     ItemsReplace,
+    ProfileCreate,
+    ProfileOut,
     PublishIn,
     ResolutionOut,
     ResolveIn,
@@ -392,3 +399,212 @@ def get_snapshot(
         return service.get_snapshot(db, snapshot_id)
     except service.PricingError as exc:
         raise _http(exc) from None
+
+
+# ---------- Importação de planilhas ----------
+
+XLSX_MEDIA = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+def _xlsx(content: bytes, filename: str) -> Response:
+    return Response(
+        content=content,
+        media_type=XLSX_MEDIA,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+def _job_out(job) -> ImportJobOut:
+    out = ImportJobOut.model_validate(job)
+    out.amostra = job.rows[:10]
+    return out
+
+
+@router.get("/importacoes/modelo", response_class=Response)
+def download_template(_: CurrentUser = Depends(require_roles(*MANAGE))):
+    """Planilha-modelo com as colunas esperadas e exemplos."""
+    return _xlsx(importacao.template_xlsx(), "modelo-tabela-de-precos.xlsx")
+
+
+@router.get("/importacoes", response_model=list[ImportJobSummary])
+def list_imports(
+    _: CurrentUser = Depends(require_roles(*MANAGE)), db: Session = Depends(get_tenant_db)
+):
+    return service.list_imports(db)
+
+
+@router.post("/importacoes", response_model=ImportJobOut, status_code=status.HTTP_201_CREATED)
+def create_import(
+    request: Request,
+    arquivo: UploadFile = File(..., description=".csv ou .xlsx, até 2 MB"),
+    table_id: uuid.UUID = Form(...),
+    aba: str | None = Form(None, description="Aba do Excel. Padrão: a primeira."),
+    user: CurrentUser = Depends(require_roles(*MANAGE)),
+    db: Session = Depends(get_tenant_db),
+):
+    """Lê a planilha e sugere o mapeamento de colunas. Não altera a tabela."""
+    content = arquivo.file.read(importacao.MAX_FILE_BYTES + 1)
+    try:
+        job = service.create_import(
+            db, user, table_id=table_id, filename=arquivo.filename or "", content=content, sheet=aba
+        )
+    except service.PricingError as exc:
+        raise _http(exc) from None
+    audit.record(
+        db,
+        user,
+        "precificacao.importacao_criada",
+        entity_type="import_job",
+        entity_id=job.id,
+        details={"arquivo": job.filename, "sha256": job.file_sha256, "linhas": len(job.rows)},
+        request=request,
+    )
+    db.commit()
+    return _job_out(job)
+
+
+@router.get("/importacoes/{job_id}", response_model=ImportJobOut)
+def get_import(
+    job_id: uuid.UUID,
+    _: CurrentUser = Depends(require_roles(*MANAGE)),
+    db: Session = Depends(get_tenant_db),
+):
+    try:
+        return _job_out(service.get_import(db, job_id))
+    except service.PricingError as exc:
+        raise _http(exc) from None
+
+
+@router.post("/importacoes/{job_id}/validar", response_model=ImportJobOut)
+def validate_import(
+    job_id: uuid.UUID,
+    body: ImportValidateIn,
+    request: Request,
+    user: CurrentUser = Depends(require_roles(*MANAGE)),
+    db: Session = Depends(get_tenant_db),
+):
+    """Aplica o mapeamento, valida linha a linha e mostra as diferenças. Não altera a tabela."""
+    try:
+        job = service.validate_import(
+            db,
+            service.get_import(db, job_id, lock=True),
+            column_map=body.column_map,
+            extra_columns=body.extra_columns,
+            profile_id=body.profile_id,
+        )
+    except service.PricingError as exc:
+        raise _http(exc) from None
+    audit.record(
+        db,
+        user,
+        "precificacao.importacao_validada",
+        entity_type="import_job",
+        entity_id=job.id,
+        details={"erros": job.report["total_erros"], "validas": job.report["linhas_validas"]},
+        request=request,
+    )
+    db.commit()
+    return _job_out(job)
+
+
+@router.post("/importacoes/{job_id}/aplicar", response_model=ImportApplyOut)
+def apply_import(
+    job_id: uuid.UUID,
+    body: ImportApplyIn,
+    request: Request,
+    user: CurrentUser = Depends(require_roles(*MANAGE)),
+    db: Session = Depends(get_tenant_db),
+):
+    """Grava as linhas válidas no rascunho da tabela. A publicação é um passo à parte."""
+    try:
+        job = service.get_import(db, job_id, lock=True)
+        version = service.apply_import(db, user, job, ignore_errors=body.ignorar_erros)
+    except service.PricingError as exc:
+        raise _http(exc) from None
+    audit.record(
+        db,
+        user,
+        "precificacao.importacao_aplicada",
+        entity_type="import_job",
+        entity_id=job.id,
+        details={"versao_id": str(version.id), "ignorou_erros": body.ignorar_erros},
+        request=request,
+    )
+    db.commit()
+    return ImportApplyOut(
+        importacao=ImportJobSummary.model_validate(job), versao=VersionOut.model_validate(version)
+    )
+
+
+@router.get("/tabelas/{table_id}/versoes/{version_id}/exportar", response_class=Response)
+def export_version(
+    table_id: uuid.UUID,
+    version_id: uuid.UUID,
+    _: CurrentUser = Depends(require_roles(*READ)),
+    db: Session = Depends(get_tenant_db),
+):
+    """Baixa a versão em Excel, no mesmo formato aceito pela importação."""
+    try:
+        table = service.get_table(db, table_id)
+        version = service.get_version(db, table, version_id)
+    except service.PricingError as exc:
+        raise _http(exc) from None
+    return _xlsx(service.export_version_xlsx(db, version), f"tabela-v{version.version}.xlsx")
+
+
+# ---------- Perfis de importação ----------
+
+
+@router.get("/perfis-importacao", response_model=list[ProfileOut])
+def list_profiles(
+    _: CurrentUser = Depends(require_roles(*MANAGE)), db: Session = Depends(get_tenant_db)
+):
+    return service.list_profiles(db)
+
+
+@router.post("/perfis-importacao", response_model=ProfileOut, status_code=status.HTTP_201_CREATED)
+def create_profile(
+    body: ProfileCreate,
+    request: Request,
+    user: CurrentUser = Depends(require_roles(*MANAGE)),
+    db: Session = Depends(get_tenant_db),
+):
+    try:
+        profile = service.create_profile(db, user, **body.model_dump())
+    except service.PricingError as exc:
+        raise _http(exc) from None
+    audit.record(
+        db,
+        user,
+        "precificacao.perfil_criado",
+        entity_type="import_profile",
+        entity_id=profile.id,
+        request=request,
+    )
+    db.commit()
+    return profile
+
+
+@router.delete("/perfis-importacao/{profile_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_profile(
+    profile_id: uuid.UUID,
+    request: Request,
+    user: CurrentUser = Depends(require_roles(*MANAGE)),
+    db: Session = Depends(get_tenant_db),
+):
+    try:
+        profile = service.get_profile(db, profile_id)
+    except service.PricingError as exc:
+        raise _http(exc) from None
+    name = profile.name
+    service.delete_profile(db, profile)
+    audit.record(
+        db,
+        user,
+        "precificacao.perfil_removido",
+        entity_type="import_profile",
+        entity_id=profile_id,
+        details={"nome": name},
+        request=request,
+    )
+    db.commit()

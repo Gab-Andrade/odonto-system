@@ -25,7 +25,11 @@ from app.core.config import get_settings
 from app.core.context import CurrentUser
 from app.core.roles import Role
 from app.modules.identidade.service import active_role
+from app.modules.precificacao import importacao
 from app.modules.precificacao.models import (
+    ImportJob,
+    ImportProfile,
+    ImportStatus,
     PriceAssignment,
     PriceItem,
     PriceSnapshot,
@@ -260,6 +264,7 @@ def create_draft(db: Session, user: CurrentUser, table: PriceTable) -> PriceTabl
                     procedure_code=item.procedure_code,
                     description=item.description,
                     category=item.category,
+                    custom_fields=item.custom_fields,
                     price=item.price,
                 )
             )
@@ -581,3 +586,264 @@ def get_snapshot(db: Session, snapshot_id: uuid.UUID) -> PriceSnapshot:
     if snapshot is None:
         raise NotFound("Snapshot de preço não encontrado.")
     return snapshot
+
+
+# ---------- Importação de planilhas ----------
+#
+# 1. create_import: lê o arquivo e sugere o mapeamento de colunas (status "analisada").
+# 2. validate_import: aplica o mapeamento, valida linha a linha e calcula as diferenças
+#    contra a versão de referência da tabela (status "validada").
+# 3. apply_import: grava os itens no rascunho da tabela (cria o rascunho se preciso).
+#    Não publica: a publicação continua sendo um passo explícito.
+
+
+def _reference_version(db: Session, table: PriceTable) -> PriceTableVersion | None:
+    """Versão contra a qual a importação é comparada: o rascunho, se houver;
+    senão, a versão vigente hoje."""
+    draft = db.scalar(
+        select(PriceTableVersion).where(
+            PriceTableVersion.table_id == table.id,
+            PriceTableVersion.status == VersionStatus.RASCUNHO,
+        )
+    )
+    return draft or effective_version(db, table.id, today())
+
+
+def _item_dicts(db: Session, version: PriceTableVersion | None) -> list[dict[str, Any]]:
+    if version is None:
+        return []
+    return [
+        {
+            "procedure_code": i.procedure_code,
+            "description": i.description,
+            "category": i.category,
+            "price": i.price,
+            "custom_fields": i.custom_fields,
+        }
+        for i in list_items(db, version)
+    ]
+
+
+def _to_rule_violation(exc: importacao.SpreadsheetError) -> RuleViolation:
+    return RuleViolation(exc.message)
+
+
+def list_imports(db: Session, limit: int = 50) -> list[ImportJob]:
+    return list(db.scalars(select(ImportJob).order_by(ImportJob.created_at.desc()).limit(limit)))
+
+
+def get_import(db: Session, job_id: uuid.UUID, *, lock: bool = False) -> ImportJob:
+    """Com lock=True, trava a linha até o fim da transação: duas validações/aplicações
+    simultâneas da mesma importação passam a rodar uma depois da outra."""
+    stmt = select(ImportJob).where(ImportJob.id == job_id)
+    if lock:
+        stmt = stmt.with_for_update().execution_options(populate_existing=True)
+    job = db.scalars(stmt).first()
+    if job is None:
+        raise NotFound("Importação não encontrada.")
+    return job
+
+
+def create_import(
+    db: Session,
+    user: CurrentUser,
+    *,
+    table_id: uuid.UUID,
+    filename: str,
+    content: bytes,
+    sheet: str | None,
+) -> ImportJob:
+    table = get_table(db, table_id)
+    if table.status != TableStatus.ATIVA:
+        raise RuleViolation("Tabela arquivada não recebe importações.")
+    try:
+        parsed = importacao.parse_file(filename, content, sheet)
+    except importacao.SpreadsheetError as exc:
+        raise _to_rule_violation(exc) from None
+
+    detected = {
+        **parsed.detected,
+        "mapeamento_sugerido": importacao.suggest_mapping(parsed.headers),
+    }
+    job = ImportJob(
+        clinic_id=user.clinic_id,
+        table_id=table.id,
+        filename=importacao.clean_filename(filename),
+        file_size=len(content),
+        file_sha256=importacao.file_sha256(content),
+        detected=detected,
+        headers=parsed.headers,
+        rows=parsed.rows,
+        created_by=user.user_id,
+    )
+    db.add(job)
+    db.flush()
+    return job
+
+
+def validate_import(
+    db: Session,
+    job: ImportJob,
+    *,
+    column_map: dict[str, str | None] | None,
+    extra_columns: list[str] | None,
+    profile_id: uuid.UUID | None,
+) -> ImportJob:
+    if job.status == ImportStatus.APLICADA:
+        raise RuleViolation("Esta importação já foi aplicada. Envie o arquivo de novo.")
+    if profile_id is not None:
+        profile = get_profile(db, profile_id)
+        column_map = profile.column_map if column_map is None else column_map
+        extra_columns = profile.extra_columns if extra_columns is None else extra_columns
+    if column_map is None:
+        column_map = job.detected.get("mapeamento_sugerido") or {}
+    extra_columns = extra_columns or []
+
+    try:
+        result = importacao.validate_rows(job.headers, job.rows, column_map, extra_columns)
+    except importacao.MappingError as exc:
+        raise _to_rule_violation(exc) from None
+
+    table = get_table(db, job.table_id)
+    reference = _reference_version(db, table)
+    current = _item_dicts(db, reference)
+    diff = importacao.compute_diff(current, result.items)
+
+    job.column_map = column_map
+    job.extra_columns = extra_columns
+    job.status = ImportStatus.VALIDADA
+    job.report = {
+        "total_linhas": len(job.rows),
+        "linhas_validas": len(result.items),
+        "total_erros": len(result.errors),
+        "erros": result.errors[: importacao.REPORT_DETAIL_LIMIT],
+        "total_avisos": len(result.warnings),
+        "avisos": result.warnings[: importacao.REPORT_DETAIL_LIMIT],
+        "diferencas": diff,
+        "versao_referencia": (
+            {
+                "id": str(reference.id),
+                "versao": reference.version,
+                "status": reference.status.value,
+                "impressao": importacao.items_fingerprint(current),
+            }
+            if reference
+            else None
+        ),
+    }
+    db.flush()
+    return job
+
+
+def apply_import(
+    db: Session, user: CurrentUser, job: ImportJob, *, ignore_errors: bool
+) -> PriceTableVersion:
+    if job.status != ImportStatus.VALIDADA or job.report is None or job.column_map is None:
+        raise RuleViolation("Valide a importação antes de aplicar.")
+    if job.report["total_erros"] and not ignore_errors:
+        raise RuleViolation(
+            f"A planilha tem {job.report['total_erros']} linha(s) com erro. "
+            "Corrija e envie de novo, "
+            "ou aplique ignorando essas linhas."
+        )
+
+    # Trava a tabela: duas importações diferentes não gravam no mesmo rascunho ao mesmo tempo.
+    db.execute(select(PriceTable.id).where(PriceTable.id == job.table_id).with_for_update())
+    table = get_table(db, job.table_id)
+    if table.status != TableStatus.ATIVA:
+        raise RuleViolation("Tabela arquivada não recebe importações.")
+
+    # As diferenças mostradas foram calculadas contra uma versão. Se ela mudou desde a
+    # validação (outra versão, ou itens do rascunho editados), o relatório está velho
+    # e aplicar apagaria essas edições.
+    reference = _reference_version(db, table)
+    validated = job.report.get("versao_referencia") or {}
+    now = (
+        (str(reference.id), importacao.items_fingerprint(_item_dicts(db, reference)))
+        if reference
+        else (None, None)
+    )
+    if now != (validated.get("id"), validated.get("impressao")):
+        raise RuleViolation("A tabela mudou desde a validação. Valide a importação de novo.")
+
+    result = importacao.validate_rows(job.headers, job.rows, job.column_map, job.extra_columns)
+    if not result.items:
+        raise RuleViolation("Nenhuma linha válida para importar.")
+
+    draft = (
+        reference
+        if reference is not None and reference.status == VersionStatus.RASCUNHO
+        else create_draft(db, user, table)
+    )
+    replace_items(db, user, draft, result.items)
+    job.status = ImportStatus.APLICADA
+    job.applied_version_id = draft.id
+    # As linhas já estão na versão; não guardar uma segunda cópia dos dados da planilha.
+    job.rows = []
+    db.flush()
+    return draft
+
+
+def export_version_xlsx(db: Session, version: PriceTableVersion) -> bytes:
+    items = list_items(db, version)
+    extra = sorted({k for i in items for k in (i.custom_fields or {})})
+    base_headers = ["Código", "Descrição", "Categoria", "Preço"]
+    # Coluna extra com nome de coluna padrão confundiria a reimportação.
+    extra_headers = [f"Extra: {k}" if k in base_headers else k for k in extra]
+    headers = [*base_headers, *extra_headers]
+    rows = [
+        [
+            i.procedure_code,
+            i.description,
+            i.category,
+            i.price,
+            *[(i.custom_fields or {}).get(k) for k in extra],
+        ]
+        for i in items
+    ]
+    return importacao.build_xlsx(headers, rows)
+
+
+# ---------- Perfis de importação ----------
+
+
+def list_profiles(db: Session) -> list[ImportProfile]:
+    return list(db.scalars(select(ImportProfile).order_by(ImportProfile.name)))
+
+
+def get_profile(db: Session, profile_id: uuid.UUID) -> ImportProfile:
+    profile = db.get(ImportProfile, profile_id)
+    if profile is None:
+        raise NotFound("Perfil de importação não encontrado.")
+    return profile
+
+
+def create_profile(
+    db: Session,
+    user: CurrentUser,
+    *,
+    name: str,
+    column_map: dict[str, str | None],
+    extra_columns: list[str],
+) -> ImportProfile:
+    unknown = set(column_map) - set(importacao.FIELDS)
+    if unknown:
+        raise RuleViolation(f"Campos desconhecidos no mapeamento: {', '.join(sorted(unknown))}.")
+    missing = [
+        importacao.FIELD_LABELS[f] for f in importacao.REQUIRED_FIELDS if not column_map.get(f)
+    ]
+    if missing:
+        raise RuleViolation(f"Indique a coluna de: {', '.join(missing)}.")
+    if db.scalar(select(ImportProfile.id).where(func.lower(ImportProfile.name) == name.lower())):
+        raise RuleViolation(f"Já existe um perfil chamado '{name}'.")
+    profile = ImportProfile(
+        clinic_id=user.clinic_id, name=name, column_map=column_map, extra_columns=extra_columns
+    )
+    db.add(profile)
+    db.flush()
+    return profile
+
+
+def delete_profile(db: Session, profile: ImportProfile) -> None:
+    db.delete(profile)
+    db.flush()

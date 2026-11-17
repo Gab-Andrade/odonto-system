@@ -10,6 +10,8 @@
   Na resolução, vence a menor prioridade entre as atribuições que se aplicam.
 - PriceSnapshot: resolução congelada (preço + memória de cálculo). Append-only. É o que um
   orçamento guarda, para que mudanças futuras na tabela não alterem o que já foi emitido.
+- ImportJob / ImportProfile: importação de planilha (CSV/.xlsx) para o rascunho de uma
+  tabela, e mapeamentos de colunas salvos. A lógica de leitura fica em importacao.py.
 
 Integridade entre clínicas: as referências internas usam FK composta (id, clinic_id), porque
 a checagem de FK do PostgreSQL não passa pelo RLS.
@@ -151,6 +153,8 @@ class PriceItem(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
     description: Mapped[str] = mapped_column(String(300))
     category: Mapped[str | None] = mapped_column(String(100))
     price: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    # Colunas extras da planilha que a clínica quis manter (ex.: "Tempo", "Observação").
+    custom_fields: Mapped[dict[str, str] | None] = mapped_column(JSONB)
 
 
 class PriceAssignment(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
@@ -216,3 +220,64 @@ class PriceSnapshot(UUIDPkMixin, TenantMixin, Base):
         ForeignKey("users.id", ondelete="SET NULL")
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ImportStatus(StrEnum):
+    ANALISADA = "analisada"  # arquivo lido; aguardando mapeamento
+    VALIDADA = "validada"  # mapeamento aplicado; relatório de erros e diferenças pronto
+    APLICADA = "aplicada"  # itens gravados no rascunho da tabela
+
+
+class ImportProfile(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
+    """Mapeamento de colunas salvo, para reaproveitar a cada nova versão da planilha."""
+
+    __tablename__ = "import_profiles"
+    __table_args__ = (UniqueConstraint("clinic_id", "name", name="uq_import_profiles_clinic_name"),)
+
+    name: Mapped[str] = mapped_column(String(120))
+    column_map: Mapped[dict[str, str | None]] = mapped_column(JSONB)
+    extra_columns: Mapped[list[str]] = mapped_column(JSONB, default=list)
+
+
+class ImportJob(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
+    """Uma importação de planilha para o rascunho de uma tabela.
+
+    O arquivo não é guardado: as linhas lidas ficam em `rows`, com nome, tamanho e hash
+    do arquivo para auditoria.
+    """
+
+    __tablename__ = "import_jobs"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["table_id", "clinic_id"],
+            ["price_tables.id", "price_tables.clinic_id"],
+            name="fk_import_jobs_table_same_clinic",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["applied_version_id", "clinic_id"],
+            ["price_table_versions.id", "price_table_versions.clinic_id"],
+            name="fk_import_jobs_version_same_clinic",
+            ondelete="RESTRICT",
+        ),
+    )
+
+    table_id: Mapped[uuid.UUID] = mapped_column()
+    status: Mapped[ImportStatus] = mapped_column(
+        _enum(ImportStatus),
+        default=ImportStatus.ANALISADA,
+        server_default=ImportStatus.ANALISADA.value,
+    )
+    filename: Mapped[str] = mapped_column(String(255))
+    file_size: Mapped[int] = mapped_column(Integer)
+    file_sha256: Mapped[str] = mapped_column(String(64))
+    detected: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    headers: Mapped[list[str]] = mapped_column(JSONB)
+    rows: Mapped[list[dict[str, Any]]] = mapped_column(JSONB)
+    column_map: Mapped[dict[str, str | None] | None] = mapped_column(JSONB)
+    extra_columns: Mapped[list[str] | None] = mapped_column(JSONB)
+    report: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    applied_version_id: Mapped[uuid.UUID | None] = mapped_column()
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
