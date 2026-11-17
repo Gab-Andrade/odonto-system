@@ -4,6 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Sistema de gestão odontológica multi-clínica. Hoje só existe o backend (Fase 0 – Fundação); visão, roadmap e decisões em [docs/PLANO.md](docs/PLANO.md). Código, comentários, mensagens de commit e textos de API em **português**.
 
+Documentação por módulo: técnica em `docs/tecnico/<modulo>.md` (leia antes de alterar um módulo) e para público não técnico em `docs/usuario/`. Atualize as duas com a skill `documentar` após mudar um módulo.
+
 ## Comandos
 
 Tudo a partir de `backend/` (Python 3.12+, `pip install -e ".[dev]"`):

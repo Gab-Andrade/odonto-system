@@ -367,5 +367,6 @@ odonto-system/
 | 2026-11-16 | Referências entre tabelas da mesma clínica usam FK composta `(id, clinic_id)`: a checagem de FK do PostgreSQL ignora o RLS e, com FK simples, permitiria apontar para registro de outra clínica. |
 | 2026-11-16 | Toda restrição de unicidade de tabela de clínica inclui `clinic_id`: a checagem de unicidade também ignora o RLS e, sem isso, uma clínica poderia sondar a existência de registros de outra pela mensagem de erro. |
 | 2026-11-16 | Precificação: herança com ajuste percentual na versão (não na tabela), arredondamento em centavos (meio para cima) a cada nível; "dentista" de uma atribuição pode ser membro com papel dentista ou admin (dono-dentista). |
+| 2026-11-16 | Precificação: herança resolvida na consulta (não materializada). A imutabilidade de versões publicadas fica no service; no banco, só `price_snapshots` é protegida, porque o snapshot copia valores e memória de cálculo. |
 | 2026-11-16 | Violação de constraint por concorrência (`IntegrityError`) responde 409 em toda a API, via handler global. |
 | 2026-11-16 | Redis e object storage entram no compose só quando a Fase 1 precisar. Escolha do storage S3 local em aberto: a MinIO deixou de distribuir imagens da edição comunitária, então avaliar alternativas (ex.: Garage, SeaweedFS). |

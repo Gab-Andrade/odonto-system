@@ -42,4 +42,5 @@ Use **apenas** `backend/app/modules/identidade/` e `backend/app/modules/auditori
    - clínica B não enxerga nem altera registro da clínica A (via API **e** via `tenant_session`).
    Lógica pura (cálculos, validações) vai em testes unitários sem banco.
 7. Em paralelo, numa única mensagem: acione o agente `test-runner` e o agente `revisor-tenancy` (escopo: o módulo novo). Corrija o que vier e rode o `test-runner` de novo.
-8. Se a implementação envolver uma decisão de arquitetura, proponha uma linha para a tabela "Decisões registradas" de `docs/PLANO.md`.
+8. Com testes e revisão ok, rode a skill `documentar <nome>` (gera docs técnica e de usuário em paralelo).
+9. Se a implementação envolver uma decisão de arquitetura, proponha uma linha para a tabela "Decisões registradas" de `docs/PLANO.md`.
