@@ -19,7 +19,8 @@ from app.modules.odontograma.schemas import LibraryOut
 router = APIRouter(prefix="/odontograma/3d", tags=["odontograma"])
 
 GLB_MEDIA_TYPE = "model/gltf-binary"
-CACHE = "private, max-age=86400"
+# no-cache: o navegador guarda, mas revalida pelo ETag (304) — geometria nova chega na hora.
+CACHE = "private, no-cache"
 
 
 def _glb_response(request: Request, data: bytes) -> Response:
