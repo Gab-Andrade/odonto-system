@@ -153,7 +153,9 @@ class PriceTableVersion(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
     calc_inputs_hash: Mapped[str | None] = mapped_column(String(64))
     # Procedimentos que falharam no último recálculo ({"procedimento", "erro"}). Ficam fora
     # dos itens; publicar com erros exige confirmação. Nulo enquanto não houve cálculo.
-    calc_errors: Mapped[list[dict[str, str]] | None] = mapped_column(JSONB)
+    # none_as_null: sem isso o SQLAlchemy grava None como JSON 'null' (não NULL) e o CHECK
+    # calc_errors_only_when_calculated falha.
+    calc_errors: Mapped[list[dict[str, str]] | None] = mapped_column(JSONB(none_as_null=True))
 
 
 class PriceItem(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
