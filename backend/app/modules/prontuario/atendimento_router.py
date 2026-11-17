@@ -1,7 +1,8 @@
 """Rotas do prontuário — atendimento e evolução clínica.
 
 Abrir e fechar atendimento, registrar evolução e adendo: dentista ou admin (o
-dono-dentista), e só o autor (ver atendimento_service). Leitura: ASB, gestor, dentista e
+dono-dentista), e só o autor (ver atendimento_service). Transferir atendimento aberto
+para outro dentista: só admin. Leitura: ASB, gestor, dentista e
 admin; a recepção não tem acesso. Toda leitura é auditada (LGPD), sem o texto clínico nos
 detalhes. Não há rota de alteração nem de exclusão: evolução é imutável.
 """
@@ -28,6 +29,8 @@ from app.modules.prontuario.schemas import (
     NoteCreate,
     NoteOut,
     SignatureOut,
+    TransferIn,
+    TransferOut,
 )
 
 router = APIRouter(prefix="/prontuario", tags=["prontuario"])
@@ -47,7 +50,10 @@ def _notes_out(db: Session, notes: list[ClinicalNote]) -> list[NoteOut]:
 
 def _encounter_detail(db: Session, encounter: Encounter) -> EncounterDetail:
     notes = _notes_out(db, atendimento.encounter_notes(db, encounter))
-    return EncounterDetail(**EncounterOut.model_validate(encounter).model_dump(), notes=notes)
+    transfers = [TransferOut.model_validate(t) for t in atendimento.list_transfers(db, encounter)]
+    return EncounterDetail(
+        **EncounterOut.model_validate(encounter).model_dump(), notes=notes, transfers=transfers
+    )
 
 
 @router.post("/atendimentos", response_model=EncounterDetail, status_code=status.HTTP_201_CREATED)
@@ -110,6 +116,31 @@ def close_encounter(
     audit.record(
         db, user, "prontuario.atendimento_fechado", entity_type="encounter",
         entity_id=encounter.id, details={"paciente": str(encounter.patient_id)},
+        request=request,
+    )  # fmt: skip
+    db.commit()
+    return _encounter_detail(db, encounter)
+
+
+@router.post("/atendimentos/{encounter_id}/transferir", response_model=EncounterDetail)
+def transfer_encounter(
+    encounter_id: uuid.UUID,
+    body: TransferIn,
+    request: Request,
+    user: CurrentUser = Depends(require_roles(Role.ADMIN)),
+    db: Session = Depends(get_tenant_db),
+):
+    """Admin passa um atendimento aberto para outro dentista (ex.: o dentista saiu)."""
+    try:
+        encounter = atendimento.get_encounter(db, encounter_id)
+        transfer = atendimento.transfer_encounter(db, user, encounter, body.dentist_id, body.reason)
+    except service.ProntuarioError as exc:
+        raise _http(exc) from None
+    audit.record(
+        db, user, "prontuario.atendimento_transferido", entity_type="encounter",
+        entity_id=encounter.id,
+        details={"paciente": str(encounter.patient_id), "de": str(transfer.from_dentist_id),
+                 "para": str(transfer.to_dentist_id)},
         request=request,
     )  # fmt: skip
     db.commit()

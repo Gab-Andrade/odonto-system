@@ -1,6 +1,6 @@
 ---
 modulo: prontuario
-atualizado_em: 1982acb
+atualizado_em: c0f87a0
 ---
 # Prontuário
 
@@ -27,6 +27,7 @@ O módulo tem duas partes independentes, no mesmo prefixo `/prontuario`:
 | `encounters` | sim | Atendimento: paciente, dentista, agendamento opcional, aberto/fechado |
 | `clinical_notes` | sim | Evoluções e adendos, append-only |
 | `clinical_note_signatures` | sim | Assinaturas das evoluções/adendos, append-only |
+| `encounter_transfers` | sim | Transferências de atendimento aberto entre dentistas, append-only |
 
 ### Anamnese (migração `0009_prontuario_anamnese.py`)
 
@@ -45,10 +46,16 @@ O módulo tem duas partes independentes, no mesmo prefixo `/prontuario`:
 - CHECKs em `clinical_notes`: `(kind = 'adendo') = (amends_id IS NOT NULL)`, conteúdo não vazio após `btrim`, `content_hash` com 64 hex minúsculos.
 - CHECK `icp_has_signature`: método diferente de `simples` exige `signature` e `certificate`.
 - Três gatilhos `BEFORE`, todos com `ERRCODE = check_violation`:
-  - `encounter_guard` (INSERT/UPDATE): nasce `aberto`; depois de `fechado` nada muda; paciente, dentista, clínica, `started_at` e `appointment_id` nunca mudam; ao fechar, `closed_by` tem de ser o `dentist_id` do atendimento.
+  - `encounter_guard` (INSERT/UPDATE): nasce `aberto`; depois de `fechado` nada muda; paciente, clínica, `started_at` e `appointment_id` nunca mudam; `dentist_id` só muda com transferência (ver 0012); ao fechar, `closed_by` tem de ser o `dentist_id` do atendimento.
   - `clinical_note_guard` (INSERT): evolução só com atendimento `aberto` (lê com `FOR SHARE`, para esperar um fechamento concorrente) e `author_id` = dentista do atendimento; adendo só sobre nota do tipo `evolucao` e com o mesmo autor dela. **Não** exige atendimento aberto para o adendo.
   - `clinical_note_signature_guard` (INSERT): o `content_hash` da assinatura tem de ser igual ao da nota, e assinatura `simples` só pelo autor da nota.
 - Permissões: `encounters` perde só DELETE/TRUNCATE do `odonto_app` (UPDATE é necessário para fechar); `clinical_notes` e `clinical_note_signatures` perdem UPDATE/DELETE/TRUNCATE. Todas as FKs de dado clínico são `RESTRICT`: nada se apaga (a justificativa na migração é guarda mínima de 20 anos).
+
+### Transferência de atendimento (migração `0012_prontuario_transferencia.py`)
+
+- Tabela `encounter_transfers`: append-only (REVOKE de UPDATE/DELETE/TRUNCATE do `odonto_app`), RLS, FK composta `(encounter_id, clinic_id)`, CHECKs `from_dentist_id <> to_dentist_id` e motivo não vazio. `transferred_by` é `SET NULL`; as demais FKs para usuários são `RESTRICT`.
+- A 0012 **substitui** `encounter_guard`: `dentist_id` só muda se existir em `encounter_transfers` uma linha com o mesmo atendimento, `from` = dentista antigo, `to` = novo e `created_at = now()`. Como `now()` é o início da transação, o registro tem de estar na **mesma transação** do UPDATE; uma transferência antiga não autoriza outra troca. Por isso `transfer_encounter` faz `flush` do INSERT antes de alterar `dentist_id`.
+- O downgrade restaura o gatilho da 0010 (dentista imutável).
 
 ## API
 
@@ -70,8 +77,9 @@ Prefixo `/prontuario`. Papéis na anamnese: LER = admin, gestor, dentista, asb; 
 | GET | `/pacientes/{id}/alertas` | LER | Alertas das respostas atuais |
 | GET | `/anamneses/{id}` | LER | Resposta com as perguntas da versão usada |
 | POST | `/atendimentos` | admin, dentista | Abre atendimento para quem está logado, opcionalmente a partir de um agendamento |
-| GET | `/atendimentos/{id}` | LER | Atendimento com evoluções, adendos e assinaturas |
+| GET | `/atendimentos/{id}` | LER | Atendimento com evoluções, adendos, assinaturas e transferências |
 | POST | `/atendimentos/{id}/fechar` | admin, dentista | Fecha (só o dentista do atendimento) |
+| POST | `/atendimentos/{id}/transferir` | admin | Passa atendimento aberto a outro dentista/admin, com motivo (devolve o detalhe) |
 | POST | `/atendimentos/{id}/evolucoes` | admin, dentista | Registra evolução (só o dentista do atendimento, aberto) |
 | POST | `/evolucoes/{id}/adendos` | admin, dentista | Adendo a uma evolução (só o autor dela) |
 | GET | `/pacientes/{id}/atendimentos` | LER | Atendimentos do paciente com contagem de notas (`limit` até 500) |
@@ -102,6 +110,7 @@ Erros: `ProntuarioError` vira 404 (`NotFound`), **403** (`Forbidden`, só no ate
 - Abrir exige paciente ativo. `started_at` opcional (padrão: agora) segue a mesma janela de `performed_at`.
 - Com agendamento: precisa ser `consulta` (não bloqueio) e do mesmo paciente; não pode já ter atendimento; se não estiver `atendido`, é movido para `atendido` por `agenda.service.change_status`, que valida a transição (cancelado e falta são finais; `atendido` só depois do horário de início). Se a agenda recusar, vira 409 com a mensagem dela e nada é gravado (rollback). Agendamento já `atendido` é vinculado sem nova transição.
 - Janela do ato clínico (`evolucao.py:check_performed_at`): exige fuso, no máximo 5 min no futuro (`CLOCK_TOLERANCE`) e no máximo 7 dias no passado. Vale para `started_at` e `performed_at` informados. `created_at` é a data real do registro.
+- **Transferência** (`atendimento_service.py:transfer_encounter`, só admin): exige atendimento `aberto`, destino diferente do atual e com papel ativo `dentista` ou `admin` na clínica (`active_role`; vale o dono-dentista). Evoluções já registradas continuam com o autor original; o novo dentista passa a registrar e fechar. Pode haver várias transferências em sequência; `list_transfers` ordena por `created_at, id`.
 - Fechar não exige evolução (`close_encounter`). Atendimento fechado só aceita adendo.
 - **Adendo** (`add_addendum`): só sobre `evolucao` (não sobre adendo), só pelo autor dela, a qualquer tempo, com `performed_at = agora`. Não há como editar a evolução original.
 - **Hash e assinatura**: `_new_note` calcula `content_hash` (SHA-256 de JSON canônico com id da nota, atendimento, paciente, autor, tipo, `amends_id`, `performed_at` em UTC e conteúdo; `evolucao.py:content_hash`) e cria na mesma transação a assinatura `simples` do autor com esse hash. Toda nota nasce assinada. O hash é recalculável das colunas gravadas.
@@ -126,6 +135,7 @@ Erros: `ProntuarioError` vira 404 (`NotFound`), **403** (`Forbidden`, só no ate
 | `prontuario.atendimento_aberto` | POST atendimento (`details.agendamento` se houver) |
 | `prontuario.atendimento_lido` | GET atendimento |
 | `prontuario.atendimento_fechado` | fechar |
+| `prontuario.atendimento_transferido` | transferir (`details`: paciente, `de`, `para`; o motivo não vai para o log) |
 | `prontuario.evolucao_registrada` | POST evolução (`details.data_informada`: se o cliente mandou `performed_at`) |
 | `prontuario.adendo_registrado` | POST adendo (`details.evolucao`) |
 | `prontuario.atendimentos_listados` | listagem do paciente |
@@ -149,6 +159,7 @@ Ler modelos e versões de anamnese (sem dado de paciente) não é auditado. A mu
 | Hash do conteúdo + assinatura simples automática, com campos prontos para ICP-Brasil | Prova de integridade desde já; certificado digital entra depois sem migração de tabela |
 | Regras de autoria duplicadas no gatilho | O banco é a última barreira se um caminho novo esquecer o service |
 | Atendimento aberto a partir do agendamento de outro dentista é permitido | Substituição de profissional; quem atende é quem responde pelo registro |
+| Troca de dentista só por transferência registrada, validada no gatilho | Resolve atendimento órfão (dentista desativado) sem abrir mão da regra de autoria; a troca deixa rastro imutável e o banco recusa mudança sem ele |
 
 ## Como estender
 
@@ -169,7 +180,9 @@ Ler modelos e versões de anamnese (sem dado de paciente) não é auditado. A mu
 - A publicação não revalida as perguntas já salvas; a validação acontece só no schema.
 - "Atual" depende de `created_at` (hora do início da transação); empate exato é desfeito pelo `id` (UUID aleatório).
 - Cada leitura é auditada; telas que listam muitos pacientes não devem chamar `/alertas`, `/atendimentos` ou `/evolucoes` em lote sem considerar o volume do log.
-- Um atendimento aberto e esquecido não tem prazo: só o próprio dentista fecha (nem admin diferente pode), e o gatilho exige `closed_by` = dentista. Se esse usuário for desativado, o atendimento fica aberto para sempre; não há rota de fechamento por terceiros.
+- Um atendimento aberto e esquecido não tem prazo: só o dentista atual fecha (nem outro admin), e o gatilho exige `closed_by` = dentista. Se ele for desativado, o admin resolve transferindo o atendimento (`/transferir`); não há fechamento por terceiros.
+- Após transferir, o dentista anterior perde a escrita no atendimento, mas o adendo a uma evolução dele continua só por ele (regra do autor); se ele estiver desativado, essa evolução não poderá mais receber adendo.
+- `transfer_encounter` não trava a linha do atendimento: um fechamento concorrente faz o UPDATE falhar no gatilho e o `IntegrityError` vira o 409 genérico, não a mensagem "Atendimento fechado não é transferido".
 - O papel (dentista/admin) é conferido no router por `require_roles`; o service só confere identidade (`user_id`). Chamar o service de outro lugar sem essa dependência não verifica papel.
 - `add_addendum` usa a data atual como `performed_at` e não passa pela janela de 7 dias; o adendo pode vir meses depois da evolução.
 - A assinatura `simples` é só "usuário autenticado": o hash garante integridade do que está no banco, não identidade forte nem carimbo de tempo confiável.

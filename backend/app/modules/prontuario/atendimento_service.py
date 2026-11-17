@@ -12,8 +12,10 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.context import CurrentUser
+from app.core.roles import Role
 from app.modules.agenda import service as agenda_service
 from app.modules.agenda.models import AppointmentStatus, EntryKind
+from app.modules.identidade.service import active_role
 from app.modules.pacientes.models import Patient
 from app.modules.prontuario import evolucao
 from app.modules.prontuario.models import (
@@ -21,6 +23,7 @@ from app.modules.prontuario.models import (
     ClinicalNoteSignature,
     Encounter,
     EncounterStatus,
+    EncounterTransfer,
     NoteKind,
     SignatureMethod,
 )
@@ -111,6 +114,51 @@ def close_encounter(db: Session, user: CurrentUser, encounter: Encounter) -> Non
     encounter.closed_at = now()
     encounter.closed_by = user.user_id
     db.flush()
+
+
+DENTIST_ROLES = (Role.DENTISTA, Role.ADMIN)  # admin = dono-dentista
+
+
+def transfer_encounter(
+    db: Session,
+    user: CurrentUser,
+    encounter: Encounter,
+    to_dentist_id: uuid.UUID,
+    reason: str,
+) -> EncounterTransfer:
+    """Passa um atendimento aberto para outro dentista (decisão do admin).
+
+    As evoluções já registradas continuam do autor original; o novo dentista passa a
+    registrar e fechar.
+    """
+    if encounter.status is not EncounterStatus.ABERTO:
+        raise RuleViolation("Atendimento fechado não é transferido.")
+    if to_dentist_id == encounter.dentist_id:
+        raise RuleViolation("O atendimento já é deste dentista.")
+    if active_role(db, to_dentist_id, user.clinic_id) not in DENTIST_ROLES:
+        raise RuleViolation("Dentista de destino não encontrado na clínica.")
+    transfer = EncounterTransfer(
+        clinic_id=user.clinic_id,
+        encounter_id=encounter.id,
+        from_dentist_id=encounter.dentist_id,
+        to_dentist_id=to_dentist_id,
+        reason=reason,
+        transferred_by=user.user_id,
+    )
+    db.add(transfer)
+    db.flush()  # antes do UPDATE: o gatilho exige a transferência registrada
+    encounter.dentist_id = to_dentist_id
+    db.flush()
+    return transfer
+
+
+def list_transfers(db: Session, encounter: Encounter) -> list[EncounterTransfer]:
+    query = (
+        select(EncounterTransfer)
+        .where(EncounterTransfer.encounter_id == encounter.id)
+        .order_by(EncounterTransfer.created_at, EncounterTransfer.id)
+    )
+    return list(db.scalars(query))
 
 
 # ---------- evolução e adendo ----------

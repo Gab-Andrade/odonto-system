@@ -21,6 +21,9 @@ Atendimento e evolução clínica:
   evolução (`amends_id`), feito pelo mesmo autor. `performed_at` é a data do ato clínico
   (até 7 dias para trás); `created_at` é a data real do registro. `content_hash` (SHA-256)
   fixa o conteúdo e é o que uma assinatura assina.
+- `encounter_transfers`: passagem de um atendimento aberto para outro dentista (pelo
+  admin, ex.: o dentista saiu da clínica), append-only. O gatilho da migração 0012 só
+  deixa `encounters.dentist_id` mudar com esse registro na mesma transação.
 - `clinical_note_signatures`: assinaturas das evoluções, append-only. Hoje só a assinatura
   eletrônica simples (usuário autenticado); o campo `signature`/`certificate` fica pronto
   para ICP-Brasil.
@@ -283,3 +286,25 @@ class ClinicalNoteSignature(UUIDPkMixin, TenantMixin, Base):
     signature: Mapped[str | None] = mapped_column(Text)  # ICP-Brasil: assinatura (CMS/PAdES)
     certificate: Mapped[str | None] = mapped_column(Text)  # ICP-Brasil: certificado do signatário
     signed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class EncounterTransfer(UUIDPkMixin, TenantMixin, Base):
+    __tablename__ = "encounter_transfers"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["encounter_id", "clinic_id"],
+            ["encounters.id", "encounters.clinic_id"],
+            name="fk_encounter_transfers_encounter_same_clinic",
+            ondelete="RESTRICT",
+        ),
+        Index("ix_encounter_transfers_encounter", "encounter_id", "created_at"),
+    )
+
+    encounter_id: Mapped[uuid.UUID] = mapped_column()
+    from_dentist_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    to_dentist_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    reason: Mapped[str] = mapped_column(String(300))
+    transferred_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

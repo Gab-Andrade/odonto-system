@@ -29,6 +29,7 @@ from app.modules.prontuario.models import (
     ClinicalNote,
     ClinicalNoteSignature,
     Encounter,
+    EncounterTransfer,
 )
 
 __all__ = [
@@ -47,6 +48,7 @@ __all__ = [
     "CostSheet",
     "CostSheetItem",
     "Encounter",
+    "EncounterTransfer",
     "ImportJob",
     "ImportProfile",
     "Material",

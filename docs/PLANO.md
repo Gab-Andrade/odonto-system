@@ -403,6 +403,12 @@ odonto-system/
   - Quando o tema for retomado, avaliar em fases: visualização ao lado do modelo genérico → marcação manual de pontos de referência dos dentes → segmentação automática por IA.
   - Observação: alguns scanners exportam em formato proprietário criptografado.
 - **Modo offline** do PWA para o dia de atendimento.
+- **Assinatura ICP-Brasil das evoluções**: em stand-by (o projeto ainda é um modelo, sem
+  integrações pagas). Hoje a evolução tem assinatura eletrônica simples + hash do conteúdo,
+  e a tabela `clinical_note_signatures` já tem campos para o certificado. Enquanto isso,
+  quando precisar, o prontuário é **impresso e assinado à mão** (prever a impressão nas
+  telas). Quando retomado: provedor de assinatura em nuvem (ex.: BirdID, VIDaaS) com e-CPF
+  de cada dentista.
 
 ---
 
@@ -434,6 +440,7 @@ odonto-system/
 | 2026-11-17 | Anamnese (módulo `prontuario`): modelos por clínica com versões rascunho → publicada → substituída (um rascunho e uma publicada por modelo); perguntas em JSONB tipadas (texto, sim/não, escolha única, múltipla, número, data), com obrigatória e alerta. Versão publicada congelada por gatilho no banco (não muda, não é apagada). Resposta append-only, ligada à versão publicada exibida (versão desatualizada → 409); a mais recente de cada modelo é a atual e os alertas dela vão para o cabeçalho do paciente. Recepção sem acesso; ASB, gestor, dentista e admin leem (auditado); dentista, ASB e admin preenchem; admin e gestor montam e publicam. |
 | 2026-11-17 | Atendimento e evolução (módulo `prontuario`): atendimento aberto pelo dentista (ou admin) que atende; vindo da agenda, o agendamento vira atendido (só após o início; agendamento de outro dentista é aceito, para substituição); um atendimento por agendamento. Evolução e adendo append-only, só pelo autor; fechado o atendimento, só adendo. Data do ato clínico até 7 dias para trás, com a data real do registro guardada. Cada registro tem SHA-256 canônico do conteúdo e assinatura eletrônica simples em tabela própria, pronta para ICP-Brasil. Gatilhos no banco reforçam autoria, atendimento aberto, imutabilidade do atendimento fechado e coerência da assinatura com o conteúdo. |
 | 2026-11-17 | Odontograma 2D (módulo `odontograma`): legenda por clínica (cor, tipo patologia/planejado/realizado, escopo dente inteiro ou por face), criada com a legenda padrão no primeiro uso e editável por admin e gestor; tipo, escopo e código não mudam depois de usados, e item não se apaga, só se desativa. Marcações são eventos append-only (marcar/remover) em lote atômico, por dente FDI (11–48, 51–85) e face (M, D, O/I, V, L/P; gravadas como M, D, O, V, L), com atendimento aberto opcional. O odontograma em qualquer data é reconstruído pelos eventos, ordenados por `clock_timestamp()` com as escritas serializadas por paciente. Marcam: dentista, admin e ASB; leem também o gestor (auditado); recepção sem acesso. |
+| 2026-11-17 | Atendimento sem dono (dentista saiu ou de férias): o admin transfere o atendimento aberto para outro dentista, com motivo. Transferência append-only (`encounter_transfers`); o gatilho só deixa o dentista do atendimento mudar com ela registrada na mesma transação. Evoluções anteriores continuam do autor original. |
 | 2026-11-17 | Estoque mínimo (materiais com custo) criado antes da Fase 3 e consumido pela precificação só via `estoque.service` — primeira dependência entre módulos. Lotes, validade e baixa entram no mesmo módulo depois. |
 | 2026-11-16 | Violação de constraint por concorrência (`IntegrityError`) responde 409 em toda a API, via handler global. |
 | 2026-11-16 | Redis e object storage entram no compose só quando a Fase 1 precisar. Escolha do storage S3 local em aberto: a MinIO deixou de distribuir imagens da edição comunitária, então avaliar alternativas (ex.: Garage, SeaweedFS). |

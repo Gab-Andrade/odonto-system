@@ -230,5 +230,21 @@ class NoteOut(BaseModel):
     signatures: list[SignatureOut] = []
 
 
+class TransferIn(BaseModel):
+    dentist_id: uuid.UUID = Field(description="Dentista (ou admin) que assume o atendimento.")
+    reason: _text(300)
+
+
+class TransferOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    from_dentist_id: uuid.UUID
+    to_dentist_id: uuid.UUID
+    reason: str
+    transferred_by: uuid.UUID | None
+    created_at: datetime
+
+
 class EncounterDetail(EncounterOut):
     notes: list[NoteOut]
+    transfers: list[TransferOut] = []

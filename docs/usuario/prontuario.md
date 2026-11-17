@@ -1,6 +1,6 @@
 ---
 modulo: prontuario
-atualizado_em: 1982acb
+atualizado_em: c0f87a0
 ---
 # Prontuário: anamnese, atendimento e evolução
 
@@ -10,9 +10,9 @@ atualizado_em: 1982acb
 
 | Perfil | O que pode fazer |
 |---|---|
-| Administrador | Montar e publicar os modelos de anamnese. Preencher anamneses. Abrir atendimentos, registrar evoluções, fechar e fazer adendos, desde que seja o dentista do atendimento ou o autor da evolução. Ver anamneses, atendimentos e evoluções. |
+| Administrador | Montar e publicar os modelos de anamnese. Preencher anamneses. Abrir atendimentos, registrar evoluções, fechar e fazer adendos, desde que seja o dentista do atendimento ou o autor da evolução. Passar um atendimento aberto para outro dentista, informando o motivo. Ver anamneses, atendimentos e evoluções. |
 | Gestor | Montar e publicar os modelos de anamnese. Ver anamneses, atendimentos e evoluções. Não preenche anamneses nem atende. |
-| Dentista | Preencher anamneses. Abrir atendimentos, registrar evoluções, fechar o atendimento e fazer adendos. Ver anamneses, atendimentos e evoluções. Não altera os modelos. |
+| Dentista | Preencher anamneses. Abrir atendimentos, registrar evoluções, fechar o atendimento e fazer adendos. Ver anamneses, atendimentos e evoluções. Não altera os modelos. Não passa atendimentos para outro dentista. |
 | ASB | Preencher anamneses. Ver anamneses, atendimentos e evoluções. Não abre atendimentos nem registra evoluções. Não altera os modelos. |
 | Recepção | Não vê o conteúdo do prontuário: anamneses, alertas, atendimentos nem evoluções. |
 
@@ -35,7 +35,7 @@ Quem pode: Dentista e Administrador.
 
 ### Registrar a evolução do atendimento
 
-Quem pode: Dentista e Administrador, somente no atendimento que eles abriram.
+Quem pode: Dentista e Administrador, somente no atendimento que está no nome deles (abriram ou receberam por passagem).
 
 1. Abra o atendimento.
 2. Escreva o que foi feito. O texto é obrigatório e pode ter até 20.000 caracteres.
@@ -66,7 +66,7 @@ Quem pode: somente o autor da evolução (Dentista ou Administrador).
 
 ### Fechar o atendimento
 
-Quem pode: o dentista do atendimento (Dentista ou Administrador que o abriu).
+Quem pode: o dentista responsável pelo atendimento (Dentista ou Administrador que o abriu ou que recebeu por passagem).
 
 1. Abra o atendimento.
 2. Feche quando terminar.
@@ -78,6 +78,27 @@ Quem pode: o dentista do atendimento (Dentista ou Administrador que o abriu).
 
 *Tela em construção.*
 
+### Passar um atendimento aberto para outro dentista
+
+Quem pode: somente o Administrador.
+
+Use isso quando o dentista responsável não vai mais atender no atendimento, por exemplo porque saiu da clínica ou está de férias.
+
+1. Abra o atendimento aberto que será passado.
+2. Escolha o dentista que vai assumir. Pode ser um Dentista ou um Administrador da clínica, com acesso ativo.
+3. Escreva o motivo. É obrigatório e pode ter até 300 caracteres.
+4. Confirme.
+
+- Só atendimento aberto pode ser passado. Atendimento fechado não é transferido.
+- Não dá para passar o atendimento para o próprio dentista que já está nele.
+- Depois da passagem, o novo dentista registra evoluções e fecha o atendimento.
+- O dentista anterior não registra mais evoluções nem fecha esse atendimento. Ele continua podendo fazer adendo às evoluções que ele mesmo registrou.
+- As evoluções já registradas continuam com o autor original.
+- Cada passagem fica guardada no próprio atendimento: de qual dentista para qual, a data e o motivo. Uma passagem nova não apaga as anteriores.
+- A passagem fica registrada no Histórico de ações, sem o motivo e sem o texto clínico.
+
+*Tela em construção.*
+
 ### Ver um atendimento
 
 Quem pode: Administrador, Gestor, Dentista e ASB.
@@ -85,6 +106,7 @@ Quem pode: Administrador, Gestor, Dentista e ASB.
 - Veja a data de início, o dentista responsável, se veio de um horário da agenda e a situação (aberto ou fechado).
 - Veja todas as evoluções e adendos do atendimento, na ordem em que foram registrados.
 - Cada evolução e cada adendo mostra o autor, a data do ato clínico, a data do registro e as assinaturas.
+- Veja o histórico de passagens do atendimento, se houver: de qual dentista para qual, a data e o motivo.
 
 Cada vez que você abre um atendimento, o sistema registra a ação no Histórico de ações. O registro não guarda o texto clínico.
 
@@ -215,6 +237,7 @@ Cada vez que você lista, abre ou consulta os alertas de um paciente, o sistema 
 - **Datas retroativas.** Atendimento, evolução e horário de início aceitam data de até 7 dias atrás. Mais antigo que isso, o sistema recusa. Data no futuro também é recusada, com uma pequena folga para relógios levemente adiantados.
 - **Um atendimento por horário da agenda.** Cada horário de consulta tem no máximo um atendimento.
 - **Substituição.** Quem abre o atendimento fica responsável por ele, mesmo que o horário fosse de outro dentista.
+- **Passagem de atendimento.** Só o Administrador passa um atendimento aberto para outro dentista, com motivo. Quem recebe passa a registrar e fechar. Quem passou mantém os adendos às próprias evoluções. Atendimento fechado não é passado.
 - **Paciente inativo.** Não é possível abrir atendimento para paciente inativo. Reative o cadastro antes.
 - **Anamnese não se altera nem se apaga.** Se houve erro, preencha a anamnese de novo. A nova passa a ser a atual, e a anterior fica no histórico.
 - **Versão publicada não se altera.** Para mudar um modelo, crie um novo rascunho e publique.
@@ -227,7 +250,7 @@ Cada vez que você lista, abre ou consulta os alertas de um paciente, o sistema 
   - Texto, número e data: qualquer resposta preenchida gera alerta.
   - Só perguntas marcadas como alerta geram alertas.
 - **Sigilo:** a Recepção não tem acesso ao prontuário. Cada clínica só vê os próprios modelos, anamneses, atendimentos e evoluções. Algo de outra clínica aparece como "não encontrado".
-- **Registro de ações (LGPD):** toda leitura de anamnese, alerta, atendimento ou evolução de paciente fica no Histórico de ações, com quem fez e quando. Abrir, registrar, fazer adendo e fechar também ficam registrados. Os registros não guardam o texto clínico nem as respostas.
+- **Registro de ações (LGPD):** toda leitura de anamnese, alerta, atendimento ou evolução de paciente fica no Histórico de ações, com quem fez e quando. Abrir, registrar, fazer adendo, fechar e passar para outro dentista também ficam registrados. Os registros não guardam o texto clínico nem as respostas.
 - **Previsto:** assinatura digital ICP-Brasil e anexos, como PDF e imagens.
 
 ## Perguntas frequentes
@@ -240,6 +263,9 @@ Não. Faça um adendo com a correção. O texto original continua visível, com 
 
 **Esqueci de registrar a evolução de ontem. Posso?**
 Sim, se o atendimento ainda estiver aberto ou se você abrir um atendimento novo com a data de ontem. Informe a data do ato clínico. O limite é de 7 dias para trás.
+
+**O dentista saiu da clínica. O atendimento aberto dele pode ser passado?**
+Sim, por um Administrador. Informe o novo dentista e o motivo. Atendimento fechado não é passado.
 
 **Posso fechar um atendimento sem evolução?**
 Sim. Use isso quando o paciente veio e nada foi feito.

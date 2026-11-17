@@ -17,6 +17,7 @@ from app.modules.prontuario.models import (
     ClinicalNote,
     ClinicalNoteSignature,
     Encounter,
+    EncounterTransfer,
     NoteKind,
 )
 
@@ -420,6 +421,81 @@ def test_other_clinic_cannot_see_or_write(client, make_clinic, add_member):
                 patient_id=uuid.UUID(a["patient"]),
                 dentist_id=uuid.UUID(b["ids"]["dent"]),
                 started_at=datetime.now(UTC),
+            )
+        )
+        with pytest.raises(DBAPIError, match="row-level security"):
+            s.flush()
+
+
+# ---------- transferência ----------
+
+
+def test_admin_transfers_open_encounter(client, make_clinic, add_member):
+    ctx = _setup(client, make_clinic, add_member)
+    enc = _open(client, ctx)
+    note = _note(client, ctx, enc)
+    url = f"/prontuario/atendimentos/{enc['id']}/transferir"
+    body = {"dentist_id": ctx["ids"]["dent2"], "reason": "Dentista saiu da clínica"}
+
+    for who in ("dent", "gestor", "asb"):
+        assert client.post(url, json=body, headers=ctx["h"][who]).status_code == 403
+    bad = {**body, "dentist_id": ctx["ids"]["recep"]}
+    assert client.post(url, json=bad, headers=ctx["h"]["admin"]).status_code == 409
+    same = {**body, "dentist_id": ctx["ids"]["dent"]}
+    assert client.post(url, json=same, headers=ctx["h"]["admin"]).status_code == 409
+
+    resp = client.post(url, json=body, headers=ctx["h"]["admin"])
+    assert resp.status_code == 200, resp.text
+    moved = resp.json()
+    assert moved["dentist_id"] == ctx["ids"]["dent2"]
+    assert [(t["from_dentist_id"], t["to_dentist_id"]) for t in moved["transfers"]] == [
+        (ctx["ids"]["dent"], ctx["ids"]["dent2"])
+    ]
+
+    # O novo dentista registra e fecha; o anterior não, mas o adendo à própria evolução segue.
+    _note(client, ctx, enc, who="dent", expect=403)
+    _note(client, ctx, enc, "Continuação do tratamento.", who="dent2")
+    _addendum(client, ctx, note, who="dent")
+    _close(client, ctx, enc, who="dent", expect=403)
+    _close(client, ctx, enc, who="dent2")
+    assert client.post(url, json=body, headers=ctx["h"]["admin"]).status_code == 409  # fechado
+
+    # No banco: o dentista não muda sem a transferência registrada.
+    other = _open(client, ctx)
+    with tenant_session(ctx["clinic"].id) as s:
+        e = s.get(Encounter, uuid.UUID(other["id"]))
+        e.dentist_id = uuid.UUID(ctx["ids"]["dent2"])
+        with pytest.raises(IntegrityError, match="transferência"):
+            s.flush()
+
+    # Transferência é append-only.
+    for sql in ("UPDATE encounter_transfers SET reason = 'x'", "DELETE FROM encounter_transfers"):
+        with tenant_session(ctx["clinic"].id) as s:
+            s.execute(select(1))
+            with pytest.raises(DBAPIError, match="permission denied"):
+                s.execute(text(sql))
+
+
+def test_other_clinic_cannot_see_or_forge_transfers(client, make_clinic, add_member):
+    a = _setup(client, make_clinic, add_member)
+    b = _setup(client, make_clinic, add_member)
+    enc = _open(client, a)
+    body = {"dentist_id": a["ids"]["dent2"], "reason": "Férias"}
+    url = f"/prontuario/atendimentos/{enc['id']}/transferir"
+    assert client.post(url, json=body, headers=a["h"]["admin"]).status_code == 200
+    # B não transfere o atendimento de A.
+    resp = client.post(url, json={**body, "dentist_id": b["ids"]["dent"]}, headers=b["h"]["admin"])
+    assert resp.status_code == 404
+
+    with tenant_session(b["clinic"].id) as s:
+        assert s.scalar(select(func.count()).select_from(EncounterTransfer)) == 0
+        s.add(
+            EncounterTransfer(
+                clinic_id=a["clinic"].id,
+                encounter_id=uuid.UUID(enc["id"]),
+                from_dentist_id=uuid.UUID(a["ids"]["dent2"]),
+                to_dentist_id=uuid.UUID(a["ids"]["dent"]),
+                reason="Forjada",
             )
         )
         with pytest.raises(DBAPIError, match="row-level security"):
