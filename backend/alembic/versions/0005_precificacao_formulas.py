@@ -144,10 +144,8 @@ def downgrade() -> None:
     op.drop_column("price_table_versions", "calc_inputs_hash")
     op.drop_column("price_table_versions", "calculated_at")
     op.drop_column("price_table_versions", "formula")
-    op.drop_constraint("ck_price_tables_calculated_has_no_parent", "price_tables", type_="check")
-    op.drop_constraint(
-        "ck_price_tables_calc_dentist_only_calculated", "price_tables", type_="check"
-    )
-    op.drop_constraint("ck_price_tables_kind_valid", "price_tables", type_="check")
+    op.drop_constraint("calculated_has_no_parent", "price_tables", type_="check")
+    op.drop_constraint("calc_dentist_only_calculated", "price_tables", type_="check")
+    op.drop_constraint("kind_valid", "price_tables", type_="check")
     op.drop_column("price_tables", "calc_dentist_id")
     op.drop_column("price_tables", "kind")

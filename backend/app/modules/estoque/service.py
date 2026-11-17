@@ -10,6 +10,13 @@ from sqlalchemy.orm import Session
 from app.core.context import CurrentUser
 from app.modules.estoque.models import Material
 
+COST_PLACES = Decimal("0.0001")
+
+
+def _cost(value: Decimal) -> Decimal:
+    """Custo sempre com 4 casas, igual ao que o banco guarda (Numeric(12, 4))."""
+    return Decimal(value).quantize(COST_PLACES)
+
 
 class StockError(Exception):
     def __init__(self, message: str):
@@ -58,7 +65,11 @@ def create_material(
 ) -> Material:
     _ensure_unique_name(db, name)
     material = Material(
-        clinic_id=user.clinic_id, name=name, unit=unit, category=category, unit_cost=unit_cost
+        clinic_id=user.clinic_id,
+        name=name,
+        unit=unit,
+        category=category,
+        unit_cost=_cost(unit_cost),
     )
     db.add(material)
     db.flush()
@@ -74,7 +85,7 @@ def update_material(db: Session, material: Material, changes: dict[str, Any]) ->
     if "category" in changes:
         material.category = changes["category"]
     if changes.get("unit_cost") is not None:
-        material.unit_cost = changes["unit_cost"]
+        material.unit_cost = _cost(changes["unit_cost"])
     if changes.get("active") is not None:
         material.active = changes["active"]
     db.flush()
