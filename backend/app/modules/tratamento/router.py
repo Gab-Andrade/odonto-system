@@ -70,7 +70,7 @@ def _plan_out(db: Session, plan: TreatmentPlan) -> PlanOut:
     base = {
         name: getattr(plan, name)
         for name in PlanOut.model_fields
-        if name not in ("items", "totals", "expired")
+        if name not in ("items", "totals", "expired", "warnings")
     }
     return PlanOut(
         **base,
