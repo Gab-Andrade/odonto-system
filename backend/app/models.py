@@ -21,8 +21,16 @@ from app.modules.precificacao.models import (
     PriceTableVersion,
     PricingVariable,
 )
+from app.modules.prontuario.models import (
+    AnamnesisResponse,
+    AnamnesisTemplate,
+    AnamnesisTemplateVersion,
+)
 
 __all__ = [
+    "AnamnesisResponse",
+    "AnamnesisTemplate",
+    "AnamnesisTemplateVersion",
     "Appointment",
     "AppointmentEvent",
     "AuditLog",

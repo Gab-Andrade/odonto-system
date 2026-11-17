@@ -61,7 +61,8 @@ def clean_db(owner_engine):
     with owner_engine.begin() as conn:
         conn.execute(
             text(
-                "TRUNCATE appointment_events, appointments, chairs, patient_consents, patients, "
+                "TRUNCATE anamnesis_responses, anamnesis_template_versions, anamnesis_templates, "
+                "appointment_events, appointments, chairs, patient_consents, patients, "
                 "cost_sheet_items, cost_sheets, pricing_variables, materials, "
                 "import_jobs, import_profiles, price_snapshots, price_assignments, "
                 "price_items, price_table_versions, "

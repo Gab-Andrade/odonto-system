@@ -12,7 +12,7 @@ atualizado_em: a86b581
 |---|---|
 | Administrador, Gestor, Dentista, ASB e Recepção | Buscar pacientes, cadastrar, alterar e consultar a ficha, e ver e registrar consentimentos. |
 
-O cadastro é igual para toda a equipe. O conteúdo clínico (anamnese, evolução e odontograma) terá regras próprias em outras partes do sistema, previstas para depois.
+O cadastro é igual para toda a equipe. O conteúdo clínico tem regras próprias: a anamnese é vista por dentistas, ASB, gestor e administrador, mas não pela recepção (veja [Prontuário e anamnese](prontuario.md)). Evolução e odontograma virão depois.
 
 ## O que dá para fazer
 
