@@ -294,6 +294,12 @@ quote_item           (..., unit_price, price_table_version_id, calc_trace jsonb)
 - **Multi-tenant**: isolamento por clínica via `clinic_id` + Row-Level Security no PostgreSQL.
 - **Backups**: backups do Postgres automatizados e **restaurados periodicamente em teste**.
 - **Desempenho no tablet**: carregamento inicial enxuto, modelos 3D comprimidos e cache via PWA.
+- **Segurança de acesso: pendências antes de produção** (levantadas na documentação de [identidade](tecnico/identidade.md)):
+  - **Proteção contra força bruta no login**: hoje não há limite de tentativas. Avaliar rate limit por IP + e-mail e bloqueio temporário após falhas seguidas.
+  - **Auditoria de login com falha**: só o login bem-sucedido é registrado, porque `audit_logs` exige `clinic_id`. Definir onde gravar tentativas falhas (ex.: tabela global de eventos de segurança, sem dados de clínica).
+  - **CLI `criar-clinica` com e-mail já cadastrado**: o usuário existente é reaproveitado e a senha digitada é **ignorada sem aviso**. Avisar e exigir confirmação explícita para vincular o usuário existente.
+  - **Recuperação de senha**: não existe. Hoje depende de intervenção manual.
+  - **Política de senha**: o mínimo de 10 caracteres só é validado na CLI. Centralizar a regra quando houver cadastro e troca de senha pela API.
 
 ---
 
