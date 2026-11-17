@@ -32,7 +32,7 @@ def test_default_then_recorded(client, make_clinic, add_member):
     assert resp.status_code == 200, resp.text
     default = resp.json()
     assert default["source"] == "padrao" and default["dentition"] == "permanente"
-    assert len(default["teeth"]) == 32 and default["third_molars"] == [18, 28, 38, 48]
+    assert len(default["teeth"]) == 32 and default["third_molars"] == [18, 28, 48, 38]
     assert default["id"] is None
 
     adult = client.post(
