@@ -26,9 +26,9 @@ jobs:
       TEST_DATABASE_URL: postgresql+psycopg://odonto_app:odonto_app@localhost:5432/odonto_test
       TEST_MIGRATIONS_DATABASE_URL: postgresql+psycopg://odonto:odonto@localhost:5432/odonto_test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
           cache: pip
@@ -51,4 +51,16 @@ jobs:
           ruff format --check .
 
       - name: Testes (unitários + integração)
-        run: pytest -q
+        shell: bash
+        run: |
+          set +e
+          pytest -q -rfE --tb=line 2>&1 | tee pytest.out
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            # Anotações são públicas na API do GitHub (o log completo exige login).
+            # O GitHub limita a 10 anotações por etapa, então vão todas numa só.
+            msg=$(grep -E '^(FAILED|ERROR) |^E |^/.*\.py:[0-9]+:|Error' pytest.out \
+              | head -60 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+            echo "::error title=Falhas do pytest::${msg}"
+          fi
+          exit $status
