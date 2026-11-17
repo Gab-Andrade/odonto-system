@@ -88,7 +88,9 @@ def upgrade() -> None:
         sa.Column("published_by", sa.Uuid(), sa.ForeignKey("users.id", ondelete="SET NULL")),
         *_timestamps(),
         sa.UniqueConstraint("id", "clinic_id", name="uq_price_table_versions_id_clinic"),
-        sa.UniqueConstraint("table_id", "version", name="uq_price_table_versions_table_version"),
+        sa.UniqueConstraint(
+            "clinic_id", "table_id", "version", name="uq_price_table_versions_table_version"
+        ),
         sa.ForeignKeyConstraint(
             ["table_id", "clinic_id"],
             ["price_tables.id", "price_tables.clinic_id"],
@@ -104,7 +106,7 @@ def upgrade() -> None:
     op.create_index(
         "uq_price_table_versions_one_draft",
         "price_table_versions",
-        ["table_id"],
+        ["clinic_id", "table_id"],
         unique=True,
         postgresql_where=sa.text("status = 'rascunho'"),
     )
@@ -119,7 +121,9 @@ def upgrade() -> None:
         sa.Column("category", sa.String(100)),
         sa.Column("price", sa.Numeric(12, 2), nullable=False),
         *_timestamps(),
-        sa.UniqueConstraint("version_id", "procedure_code", name="uq_price_items_version_code"),
+        sa.UniqueConstraint(
+            "clinic_id", "version_id", "procedure_code", name="uq_price_items_version_code"
+        ),
         sa.ForeignKeyConstraint(
             ["version_id", "clinic_id"],
             ["price_table_versions.id", "price_table_versions.clinic_id"],
@@ -140,6 +144,7 @@ def upgrade() -> None:
         sa.Column("priority", sa.Integer(), nullable=False),
         *_timestamps(),
         sa.UniqueConstraint(
+            "clinic_id",
             "table_id",
             "scope_type",
             "scope_id",

@@ -97,7 +97,9 @@ class PriceTableVersion(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
     __tablename__ = "price_table_versions"
     __table_args__ = (
         UniqueConstraint("id", "clinic_id", name="uq_price_table_versions_id_clinic"),
-        UniqueConstraint("table_id", "version", name="uq_price_table_versions_table_version"),
+        UniqueConstraint(
+            "clinic_id", "table_id", "version", name="uq_price_table_versions_table_version"
+        ),
         ForeignKeyConstraint(
             ["table_id", "clinic_id"],
             ["price_tables.id", "price_tables.clinic_id"],
@@ -107,6 +109,7 @@ class PriceTableVersion(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
         # No máximo um rascunho por tabela.
         Index(
             "uq_price_table_versions_one_draft",
+            "clinic_id",
             "table_id",
             unique=True,
             postgresql_where=text("status = 'rascunho'"),
@@ -131,7 +134,9 @@ class PriceTableVersion(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
 class PriceItem(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
     __tablename__ = "price_items"
     __table_args__ = (
-        UniqueConstraint("version_id", "procedure_code", name="uq_price_items_version_code"),
+        UniqueConstraint(
+            "clinic_id", "version_id", "procedure_code", name="uq_price_items_version_code"
+        ),
         ForeignKeyConstraint(
             ["version_id", "clinic_id"],
             ["price_table_versions.id", "price_table_versions.clinic_id"],
@@ -152,6 +157,7 @@ class PriceAssignment(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
     __tablename__ = "price_assignments"
     __table_args__ = (
         UniqueConstraint(
+            "clinic_id",
             "table_id",
             "scope_type",
             "scope_id",
