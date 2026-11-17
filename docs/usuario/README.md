@@ -11,8 +11,9 @@ Este guia explica, em linguagem simples, o que cada parte do sistema faz e quem 
 | Parte | Para que serve |
 |---|---|
 | [Acesso e login](identidade.md) | Entrar no sistema, escolher a clínica e entender os perfis de acesso |
+| [Estoque de materiais](estoque.md) | Cadastrar os materiais da clínica, com unidade de uso e custo, e desativar os que não são mais usados |
 | [Histórico de ações](auditoria.md) | Ver quem fez o quê e quando, para segurança e para a LGPD |
-| [Tabelas de preço](precificacao.md) | Montar os preços da clínica, importar planilhas, definir a quem cada tabela se aplica e consultar ou congelar o preço de um procedimento |
+| [Tabelas de preço](precificacao.md) | Montar os preços da clínica por planilha ou por fórmula de custos, definir a quem cada tabela se aplica e consultar ou congelar o preço de um procedimento |
 
 ## Perfis de acesso
 
