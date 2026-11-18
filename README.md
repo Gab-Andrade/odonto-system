@@ -174,7 +174,7 @@ rota do backend, rode `npm run atualizar-api` e commite `openapi.json` e `schema
 CI confere os dois). A sessão fica no `sessionStorage` (some ao fechar o navegador) e o PWA
 só guarda o app em cache, nunca dados da API.
 
-O que já dá para testar no navegador está na tabela abaixo (atualizada a cada etapa):
+O que dá para testar no navegador:
 
 | Tela | Situação |
 |---|---|
@@ -189,7 +189,7 @@ O que já dá para testar no navegador está na tabela abaixo (atualizada a cada
 | Planos e orçamentos: procedimentos da tabela, a fazer/feito no odontograma, desconto, emitir, decisão parcial, realizar no atendimento, duplicar, imprimir | pronta |
 | Financeiro do paciente: extrato, parcelar orçamento aprovado, registrar recebimento | pronta |
 | Gestão: visão geral (com comparação mês a mês, metas e alertas), equipe, tendências em gráficos (com tabela), metas; dentista vê o próprio desempenho | pronta |
-| Precificação | na próxima etapa |
+| Precificação: tabelas (fixa, herdada com ajuste, calculada), versões, edição dos itens no rascunho, importação .csv/.xlsx com mapeamento, erros e diferenças, publicar, exportar .xlsx, atribuições e simulação com memória de cálculo | pronta |
 
 ## Testes
 
