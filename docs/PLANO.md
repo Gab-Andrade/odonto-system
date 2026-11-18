@@ -89,7 +89,7 @@ O sistema é um **monólito modular**, com **workers assíncronos** para o proce
 | ORM / migrações | **SQLAlchemy 2.0** + Alembic | Maduro e adequado a um domínio complexo. |
 | Banco | **PostgreSQL 16** | JSONB para formulários e campos configuráveis. Row-Level Security para multi-tenant. |
 | Filas | **Celery + Redis** (+ Celery Beat) | Tarefas pesadas e agendadas. |
-| Arquivos | **S3-compatível** (AWS S3 / MinIO) | Upload direto via URL pré-assinada. |
+| Arquivos | Disco local no desenvolvimento; **S3-compatível** em produção (AWS S3 sa-east-1, Cloudflare R2, Backblaze B2, MinIO), trocado por configuração (`STORAGE_BACKEND`) | Já implementado em `app/core/storage.py`: mesma interface e mesmas chaves nos dois. URL pré-assinada fica para quando houver arquivos grandes. |
 | Auth | **Keycloak** (OIDC) ou fastapi-users + JWT | Controle de acesso por papéis (RBAC): dentista, ASB, recepção, gestor, admin. |
 | Testes | pytest, factory-boy, Playwright (E2E) | |
 
@@ -102,6 +102,23 @@ Django + DRF foi considerado. FastAPI venceu porque o núcleo do sistema é uma 
 - **Tailwind + Radix/shadcn/ui**, com alvos de toque de no mínimo 44px e layout pensado para tablet na horizontal.
 - **React Hook Form + Zod** para formulários.
 - **AG Grid Community** ou **TanStack Table** para grades editáveis (tabelas de preço, estoque).
+
+#### O frontend em linguagem simples
+
+Vite e PWA não são linguagens. A linguagem é uma só: **TypeScript** (JavaScript, a única
+linguagem que o navegador entende, com tipos que dizem o formato de cada dado).
+
+| Peça | O que é | Por que foi escolhida |
+|---|---|---|
+| **TypeScript** | A linguagem do frontend | Os tipos são gerados da própria API (`openapi.json`): se o backend muda um campo e o front não acompanha, o erro aparece antes de rodar, não na frente do dentista |
+| **React** | Biblioteca para montar a tela em pedaços reutilizáveis (botão, cartão do paciente, dente) | A mais usada: mais exemplos, ajuda e bibliotecas prontas, inclusive a do 3D (React Three Fiber) |
+| **Vite** | Ferramenta de trabalho: `npm run dev` abre o site e recarrega a cada mudança; `npm run build` gera os arquivos finais | Padrão atual para React, rápido e quase sem configuração; no desenvolvimento repassa `/api` para o backend |
+| **PWA** | Site que pode ser "instalado" no tablet (ícone na tela inicial, tela cheia, como um app) | Atende ao uso em tablet sem fazer um app de loja (Android/iOS), que seria outro projeto, com outra linguagem e custo de publicação |
+| **Tailwind** | Jeito de escrever o visual (cores, tamanhos) direto nos componentes | Facilita o modo claro/escuro e os botões grandes para toque |
+
+Para testar não é preciso conhecer nada disso: com a API no ar, `npm run dev` na pasta
+`frontend` (ou `.\dev.ps1 -Demo -Front` na raiz) e abrir http://localhost:5173. Para mexer no
+código, o que vale aprender é TypeScript e React.
 
 ### 3D (odontograma genérico)
 
@@ -472,6 +489,9 @@ odonto-system/
 | 2026-11-18 | Kit de teste local: `dev.ps1` (migra e sobe a API), `python -m app.cli demo` (dados de demonstração idempotentes, recusado em produção) e `testes.ps1` com banco `odonto_test` local. |
 | 2026-11-18 | Frontend: React 19 + Vite + TypeScript, TanStack Query, React Router, Zustand só para a sessão. Componentes próprios com Tailwind 4 (alvos de toque ≥ 44px, claro/escuro por tokens) em vez de Radix/shadcn, para não depender de gerador. Cliente gerado do OpenAPI com openapi-typescript + openapi-fetch; `openapi.json` e `schema.d.ts` versionados e conferidos no CI. Sessão no `sessionStorage` (some ao fechar o navegador, tablet compartilhado) e PWA que guarda só o app, nunca dados da API. Em dev o Vite repassa `/api` para a API (sem CORS). 3D com React Three Fiber carregado sob demanda; o GLB é baixado com o token e pintado pelos nomes dos nós. TypeScript 5.9 até o ecossistema aceitar o 6/7. |
 | 2026-11-18 | `GET /auth/equipe`: nome, papel e CRO dos membros ativos da clínica (sem e-mail), para o front escolher dentista. |
+| 2026-11-18 | Financeiro do paciente para o dentista: **parametrizável por clínica**. O admin ou gestor liga a opção (`financial_settings.dentist_can_view`, desligada por padrão, auditada; tela Gestão → Configurações) e o dentista passa a **ler** o extrato de qualquer paciente da clínica (mesmo escopo do prontuário, que é compartilhado). Receber, parcelar, estornar e contas a pagar continuam só com o caixa; ASB continua sem acesso. |
+| 2026-11-18 | `GET /auth/equipe` (nome, papel e CRO dos membros ativos, sem e-mail) fica visível a todos os papéis da clínica. |
+| 2026-11-18 | Armazenamento de arquivos preparado para nuvem sem custo agora: dois backends com a mesma interface e as mesmas chaves (`<clinica>/<uuid>.<ext>`). Hoje `local` (disco); em produção `s3`, que serve a qualquer provedor compatível (AWS S3 em sa-east-1 pela LGPD, Cloudflare R2, Backblaze B2), com bucket privado, criptografia no servidor (SSE) e acesso só pela API. Migrar = copiar os arquivos mantendo as chaves e mudar `STORAGE_BACKEND`; `boto3` é dependência opcional (`.[s3]`). Isso fecha a escolha "storage S3 local" deixada em aberto em 2026-11-16: no desenvolvimento, disco local basta. |
 | 2026-11-17 | Estoque mínimo (materiais com custo) criado antes da Fase 3 e consumido pela precificação só via `estoque.service` — primeira dependência entre módulos. Lotes, validade e baixa entram no mesmo módulo depois. |
 | 2026-11-16 | Violação de constraint por concorrência (`IntegrityError`) responde 409 em toda a API, via handler global. |
 | 2026-11-16 | Redis e object storage entram no compose só quando a Fase 1 precisar. Escolha do storage S3 local em aberto: a MinIO deixou de distribuir imagens da edição comunitária, então avaliar alternativas (ex.: Garage, SeaweedFS). |

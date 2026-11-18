@@ -8,10 +8,12 @@ from decimal import Decimal
 import pytest
 from sqlalchemy import func, select, text
 from sqlalchemy.exc import DBAPIError, IntegrityError
+from test_auth_integration import _auth, _login
 from test_tratamento_integration import _decide, _issue, _plan, _setup
 
 from app.core.audit import AuditLog
 from app.core.db import tenant_session
+from app.core.roles import Role
 from app.modules.financeiro.models import Payable, Payment, Receivable
 from app.modules.financeiro.service import today
 
@@ -260,4 +262,52 @@ def test_other_clinic_cannot_see_or_use(client, make_clinic, add_member):
             )
         )
         with pytest.raises(DBAPIError, match="row-level security"):
+            s.flush()
+
+
+def test_dentist_reads_statement_only_when_enabled(client, make_clinic, add_member):
+    from app.modules.financeiro.models import FinancialSettings
+
+    ctx = _setup(client, make_clinic, add_member)
+    pid = ctx["patient"]
+    url = f"/financeiro/pacientes/{pid}/extrato"
+    h = ctx["h"]
+    assert client.get("/financeiro/configuracao", headers=h["dent"]).json() == {
+        "dentist_can_view": False
+    }
+    assert client.get(url, headers=h["dent"]).status_code == 403
+
+    # Só admin e gestor liberam.
+    for who in ("dent", "recep", "asb"):
+        r = client.put("/financeiro/configuracao", json={"dentist_can_view": True}, headers=h[who])
+        assert r.status_code == 403, who
+    r = client.put("/financeiro/configuracao", json={"dentist_can_view": True}, headers=h["gestor"])
+    assert r.status_code == 200 and r.json()["dentist_can_view"] is True
+
+    assert client.get(url, headers=h["dent"]).status_code == 200
+    assert client.get(url, headers=h["asb"]).status_code == 403  # ASB continua fora
+    # Liberar o extrato não libera o caixa.
+    assert client.get("/financeiro/receber", headers=h["dent"]).status_code == 403
+    assert client.get("/financeiro/pagar", headers=h["dent"]).status_code == 403
+
+    r = client.put("/financeiro/configuracao", json={"dentist_can_view": False}, headers=h["admin"])
+    assert r.status_code == 200
+    assert client.get(url, headers=h["dent"]).status_code == 403
+
+    with tenant_session(ctx["clinic"].id) as s:
+        n = s.scalar(
+            select(func.count())
+            .select_from(AuditLog)
+            .where(AuditLog.action == "financeiro.configuracao_alterada")
+        )
+    assert n == 2
+
+    # Outra clínica não vê nem herda a configuração; escrita cruzada barrada pelo RLS.
+    clinic_b, user_b, pw_b = make_clinic(role=Role.ADMIN)
+    hb = _auth(_login(client, user_b.email, pw_b).json()["access_token"])
+    assert client.get("/financeiro/configuracao", headers=hb).json()["dentist_can_view"] is False
+    with tenant_session(clinic_b.id) as s:
+        assert s.scalars(select(FinancialSettings)).all() == []
+        s.add(FinancialSettings(clinic_id=ctx["clinic"].id, dentist_can_view=True))
+        with pytest.raises(DBAPIError):
             s.flush()

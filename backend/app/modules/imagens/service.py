@@ -34,6 +34,10 @@ class RuleViolation(ImagingError):
     pass
 
 
+class Unavailable(ImagingError):
+    """Armazenamento fora do ar (ex.: S3)."""
+
+
 def get_patient(db: Session, patient_id: uuid.UUID) -> Patient:
     try:
         return pacientes.get_patient(db, patient_id)
@@ -128,7 +132,10 @@ def upload(
     )
     db.add(exam)
     db.flush()
-    storage.put(key, data)
+    try:
+        storage.put(key, data)
+    except storage.StorageError as exc:
+        raise Unavailable(str(exc)) from None
     return exam
 
 
@@ -178,5 +185,7 @@ def read_file(exam: ImagingExam) -> bytes:
         raise NotFound("Arquivo não encontrado no armazenamento.")
     try:
         return storage.get(exam.storage_key)
+    except storage.StorageUnavailable as exc:
+        raise Unavailable(str(exc)) from None
     except storage.StorageError as exc:
         raise NotFound(str(exc)) from None

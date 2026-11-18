@@ -2704,6 +2704,34 @@
         "title": "FaceViewOut",
         "type": "object"
       },
+      "FinancialSettingsIn": {
+        "properties": {
+          "dentist_can_view": {
+            "description": "Dentista lê o extrato do paciente (só leitura; receber continua com o caixa).",
+            "title": "Dentist Can View",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "dentist_can_view"
+        ],
+        "title": "FinancialSettingsIn",
+        "type": "object"
+      },
+      "FinancialSettingsOut": {
+        "properties": {
+          "dentist_can_view": {
+            "description": "Dentista lê o extrato do paciente (só leitura; receber continua com o caixa).",
+            "title": "Dentist Can View",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "dentist_can_view"
+        ],
+        "title": "FinancialSettingsOut",
+        "type": "object"
+      },
       "FormulaOut": {
         "properties": {
           "entradas_do_sistema": {
@@ -11920,6 +11948,76 @@
         "summary": "Stock",
         "tags": [
           "estoque"
+        ]
+      }
+    },
+    "/financeiro/configuracao": {
+      "get": {
+        "operationId": "get_settings_financeiro_configuracao_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinancialSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Settings",
+        "tags": [
+          "financeiro"
+        ]
+      },
+      "put": {
+        "operationId": "save_settings_financeiro_configuracao_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FinancialSettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinancialSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Save Settings",
+        "tags": [
+          "financeiro"
         ]
       }
     },

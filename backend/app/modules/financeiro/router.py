@@ -1,8 +1,9 @@
 """Rotas do financeiro.
 
 Papéis: caixa (contas a receber, parcelamento, recebimentos, extrato) — admin, gestor e
-recepção; cancelar conta, estornar e contas a pagar — admin e gestor. Dentista e ASB não
-acessam o financeiro (a produção do dentista entra no repasse e no painel).
+recepção; cancelar conta, estornar e contas a pagar — admin e gestor. ASB não acessa.
+Dentista só lê o extrato do paciente, e só se o admin ou gestor liberar na configuração
+da clínica (`/financeiro/configuracao`, desligado por padrão).
 
 LGPD: extrato e listas de contas de paciente são auditados, além das escritas.
 """
@@ -19,6 +20,8 @@ from app.core.roles import Role
 from app.modules.financeiro import service
 from app.modules.financeiro.models import PayableStatus
 from app.modules.financeiro.schemas import (
+    FinancialSettingsIn,
+    FinancialSettingsOut,
     InstallmentPlanIn,
     PayableCreate,
     PayableOut,
@@ -214,9 +217,14 @@ def reverse_payment(
 def statement(
     patient_id: uuid.UUID,
     request: Request,
-    user: CurrentUser = Depends(require_roles(*CASHIER)),
+    user: CurrentUser = Depends(require_roles(*CASHIER, Role.DENTISTA)),
     db: Session = Depends(get_tenant_db),
 ):
+    if user.role == Role.DENTISTA and not service.dentist_can_view(db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="O financeiro não está liberado para dentistas nesta clínica.",
+        )
     try:
         patient = service.get_patient(db, patient_id)
     except service.FinanceError as exc:
@@ -307,3 +315,30 @@ def cancel_payable(
             entity_id=payable.id, motivo=body.reason)  # fmt: skip
     db.commit()
     return _payable_out(payable)
+
+
+# ---------- configuração ----------
+
+
+@router.get("/configuracao", response_model=FinancialSettingsOut)
+def get_settings(
+    _: CurrentUser = Depends(require_roles(*CASHIER, Role.DENTISTA)),
+    db: Session = Depends(get_tenant_db),
+):
+    return FinancialSettingsOut(dentist_can_view=service.dentist_can_view(db))
+
+
+@router.put("/configuracao", response_model=FinancialSettingsOut)
+def save_settings(
+    body: FinancialSettingsIn,
+    request: Request,
+    user: CurrentUser = Depends(require_roles(*MANAGE)),
+    db: Session = Depends(get_tenant_db),
+):
+    changed = service.save_settings(db, user, body.dentist_can_view)
+    _record(
+        db, user, "configuracao_alterada", request, entity_type="financial_settings",
+        dentista_ve_extrato=body.dentist_can_view, mudou=changed,
+    )  # fmt: skip
+    db.commit()
+    return FinancialSettingsOut(dentist_can_view=body.dentist_can_view)

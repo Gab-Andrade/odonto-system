@@ -1,6 +1,6 @@
 ---
 modulo: financeiro
-atualizado_em: 30ed9b3
+atualizado_em: 1d37523
 ---
 # Financeiro
 
@@ -12,10 +12,11 @@ atualizado_em: 30ed9b3
 - Registra recebimentos (totais ou parciais), a taxa do meio de pagamento e o líquido. Correção é estorno, nunca edição.
 - Calcula o status das contas (aberta, parcial, paga, vencida) a partir dos recebimentos. Só o cancelamento é gravado.
 - Extrato do paciente e contas a pagar (fornecedor, vencimento, pagar, cancelar).
+- Configuração da clínica (`financial_settings`): hoje só `dentist_can_view`, que libera o extrato ao dentista.
 
 Fora do módulo:
 - Cálculo do total aprovado e do desconto: `tratamento/regras.py:totals`, reutilizado aqui.
-- Repasse ao dentista e painel: ainda não existem. O dentista e a ASB não têm acesso ao financeiro.
+- Repasse ao dentista e painel: ainda não existem. A ASB não tem acesso ao financeiro. O dentista só lê o extrato, e só se a clínica liberar.
 - Gateway de pagamento: não existe de propósito (o projeto é um modelo). O recebimento é lançado à mão, sem conciliação nem confirmação externa.
 
 ## Modelo de dados
@@ -25,8 +26,9 @@ Fora do módulo:
 | `receivables` | sim | uma conta a receber (`entrada`, `parcela` n/N ou `avulsa`) |
 | `payments` | sim | um recebimento ou o estorno dele; append-only |
 | `payables` | sim | uma conta a pagar da clínica |
+| `financial_settings` | sim | configuração da clínica, uma linha por clínica (`uq_financial_settings_clinic`). Sem linha vale o padrão: dentista sem acesso |
 
-Migração: `alembic/versions/0014_financeiro.py`. Pontos que não são óbvios pelo model:
+Migrações: `alembic/versions/0014_financeiro.py` (contas e recebimentos) e `0022_financeiro_configuracao.py` (configuração, sem gatilhos nem REVOKE: é editável, diferente das tabelas de dinheiro). Pontos que não são óbvios pelo model:
 
 - FKs compostas com `clinic_id` e `patient_id`. Conta, plano e paciente são sempre da mesma clínica, e o recebimento herda o paciente da conta. O model e a migração declaram as mesmas constraints.
 - `payments.amount` é negativo no estorno. O CHECK `sign_by_kind` amarra o sinal a `reversal_of`, e `fee_sign` faz a taxa seguir o sinal.
@@ -51,12 +53,15 @@ Prefixo `/financeiro`. Caixa = admin, gestor, recepção. Gestão = admin, gesto
 | POST | `/receber/{id}/cancelar` | gestão | Cancela uma conta sem saldo recebido |
 | POST | `/receber/{id}/pagamentos` | caixa | Registra recebimento |
 | POST | `/pagamentos/{id}/estornar` | gestão | Cria o lançamento negativo que anula o recebimento |
-| GET | `/pacientes/{id}/extrato` | caixa | Contas (inclusive canceladas), recebimentos e totais do paciente; audita |
+| GET | `/pacientes/{id}/extrato` | caixa; dentista se liberado | Contas (inclusive canceladas), recebimentos e totais do paciente; audita |
 | GET/POST | `/pagar` | gestão | Lista e cria contas a pagar |
 | POST | `/pagar/{id}/pagar` | gestão | Marca como paga |
 | POST | `/pagar/{id}/cancelar` | gestão | Cancela |
+| GET | `/configuracao` | caixa, dentista | Lê a configuração (`dentist_can_view`) |
+| PUT | `/configuracao` | gestão | Grava a configuração; audita |
 
 Respostas fora do padrão:
+- Extrato lido por dentista com a configuração desligada responde 403 em português (`router.py:statement`). O papel passa em `require_roles`, e a checagem da configuração é feita dentro da rota.
 - `NotFound` do service vira 404 e `RuleViolation` vira 409 (`router.py:_http`), com mensagem em português.
 - Qualquer `IntegrityError` que escape (corrida, gatilho, CHECK) é convertido em **409** genérico pelo handler global de `app/main.py`, não em 500. A mensagem do gatilho não chega ao cliente.
 - Criar conta a pagar não captura `FinanceError`. O service não levanta nenhum nesse caminho.
@@ -72,6 +77,7 @@ Respostas fora do padrão:
 - Estorno: usa a data de hoje, copia método e taxa com sinal invertido, e não pode ser estornado. O recebimento original permanece e o saldo da conta volta.
 - Todas as escritas sobre uma conta pegam `SELECT ... FOR UPDATE` na conta (`service.get_receivable(lock=True)`). O estorno trava a conta do recebimento, não o recebimento. O parcelamento trava o plano (`plan_service.get_plan(lock=True)`) para duas requisições não gerarem contas duplicadas.
 - Status é derivado (`regras.receivable_status`). "Vencida" compara o vencimento com o dia no fuso `clinic_timezone` (`service.today`), não com o UTC.
+- Liberação do dentista: `service.dentist_can_view` lê a linha da clínica (isolada pelo RLS). `service.save_settings` faz upsert (`ON CONFLICT (clinic_id)`): a primeira gravação cria a linha e as seguintes atualizam. Liberar o extrato não libera o caixa: `/receber` e `/pagar` seguem 403 para o dentista.
 - Dinheiro usa `Decimal` com 2 casas e `ROUND_HALF_UP` (`regras.money`).
 
 ## Tenancy e auditoria
@@ -88,6 +94,7 @@ Respostas fora do padrão:
 | `parcelamento_criado` / `parcelamento_cancelado` | parcelamento do plano |
 | `conta_cancelada` | cancelamento de uma conta |
 | `recebimento_registrado` / `recebimento_estornado` | recebimentos |
+| `configuracao_alterada` | PUT `/configuracao`; `details` com o novo valor e se mudou |
 | `conta_pagar_criada` / `conta_pagar_paga` / `conta_pagar_cancelada` | contas a pagar |
 
 Listar contas a pagar não é auditado.
@@ -102,6 +109,7 @@ Listar contas a pagar não é auditado.
 | Sem gateway de pagamento | O projeto é um modelo, e o registro é manual. `fee_pct` é informado pelo operador. |
 | Parcelamento calculado no ato, sem vínculo de versão do orçamento | As contas passam a ser o compromisso financeiro, independente de edições posteriores do plano. |
 | Recepção opera o caixa, mas não cancela nem estorna | Desfazer lançamento exige gestão. |
+| Dentista lê o extrato por opção da clínica, desligado por padrão | Nem toda clínica quer o dentista vendo valores do paciente. Só leitura: o caixa continua com recepção e gestão. |
 
 ## Como estender
 
@@ -112,6 +120,8 @@ Listar contas a pagar não é auditado.
 
 ## Armadilhas
 
+- O dentista liberado lê o extrato de **qualquer** paciente da clínica, não só dos que atende: `statement` não restringe por vínculo. A configuração é tudo ou nada.
+- `PUT /configuracao` com o mesmo valor não dá erro e ainda grava auditoria (`mudou=false`) e atualiza `updated_at`/`updated_by`. `GET /configuracao` é aberto ao dentista, mas não à ASB.
 - As contas **não acompanham** o plano depois do parcelamento. Cancelar item aprovado em `tratamento.service.cancel_item` não altera nem cancela as parcelas. Nenhum código do módulo `tratamento` conhece o financeiro. A coerência é manual: cancelar o parcelamento e refazê-lo.
 - Cancelar o parcelamento de um plano com qualquer recebimento é bloqueado (inclusive de uma só parcela). É preciso estornar antes. Um recebimento estornado deixa saldo zero e libera o cancelamento, mas o original permanece no extrato.
 - `Payment.paid` do extrato soma todos os lançamentos, estornos inclusive, e `total` ignora contas canceladas. O `balance` do extrato é `total - paid`.

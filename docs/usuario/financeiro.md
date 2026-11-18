@@ -1,6 +1,6 @@
 ---
 modulo: financeiro
-atualizado_em: 30ed9b3
+atualizado_em: 1d37523
 ---
 # Financeiro
 
@@ -10,9 +10,9 @@ atualizado_em: 30ed9b3
 
 | Perfil | O que pode fazer |
 |---|---|
-| Administrador | Tudo o que a Recepção faz, além de estornar recebimentos, cancelar contas e parcelamentos, e cuidar das contas a pagar |
-| Gestor | Tudo o que a Recepção faz, além de estornar recebimentos, cancelar contas e parcelamentos, e cuidar das contas a pagar |
-| Dentista | Não acessa o financeiro |
+| Administrador | Tudo o que a Recepção faz, além de estornar recebimentos, cancelar contas e parcelamentos, cuidar das contas a pagar e decidir se os dentistas podem ver o extrato do paciente |
+| Gestor | Tudo o que a Recepção faz, além de estornar recebimentos, cancelar contas e parcelamentos, cuidar das contas a pagar e decidir se os dentistas podem ver o extrato do paciente |
+| Dentista | Não acessa o financeiro, a não ser que o Administrador ou o Gestor libere. Nesse caso, só vê o extrato do paciente, sem alterar nada |
 | ASB | Não acessa o financeiro |
 | Recepção | Parcelar orçamento aprovado, cobrar conta avulsa, registrar recebimentos, ver as contas a receber e o extrato do paciente |
 
@@ -87,6 +87,16 @@ atualizado_em: 30ed9b3
    - **saldo a pagar**: total cobrado menos total recebido;
    - **em atraso**: soma do saldo das contas vencidas.
 3. Cada consulta ao extrato fica registrada no histórico de ações, por causa da LGPD.
+4. O Administrador, o Gestor e a Recepção sempre veem o extrato. O Dentista só vê se a clínica tiver liberado (veja "Liberar o extrato para dentistas").
+
+### Liberar o extrato para dentistas
+*Tela em construção.*
+
+1. Só o Administrador e o Gestor podem mudar esta opção. Ela fica em Gestão → Configurações.
+2. Ligue a opção para que os dentistas possam ver o extrato do paciente. Desligue para voltar ao padrão.
+3. A opção vem desligada em todas as clínicas. Enquanto estiver desligada, o dentista que tentar abrir o extrato recebe a mensagem de que o financeiro não está liberado para dentistas.
+4. Liberar o extrato não dá ao dentista nenhum outro acesso. Ele não registra recebimento, não estorna, não parcela e não cancela conta.
+5. Cada troca de opção fica registrada no histórico de ações, com quem fez e quando.
 
 ### Registrar uma conta a pagar
 *Tela em construção.*
@@ -123,7 +133,8 @@ atualizado_em: 30ed9b3
 - **Valor não passa do saldo.** O sistema não aceita recebimento maior que o que falta pagar na conta.
 - **A taxa não muda o saldo do paciente.** A taxa só fica registrada, para a clínica saber quanto realmente entrou.
 - **A Recepção não vê as contas a pagar.** Esse controle fica com o Administrador e o Gestor.
-- **Dentista e ASB não acessam o financeiro.**
+- **Dentista só lê o extrato, e só se a clínica liberar.** Ele não tem acesso às contas a receber, aos recebimentos nem às contas a pagar.
+- **ASB não acessa o financeiro.**
 - **Repasse:** o que o paciente paga aqui é a base do [repasse dos dentistas](repasse.md). A produção do dentista no painel de gestão ainda está prevista.
 
 ## Perguntas frequentes
@@ -148,3 +159,9 @@ Não. A taxa só reduz o valor que sobra para a clínica. O saldo do paciente ca
 
 **Quem pode estornar um recebimento?**
 Só o Administrador e o Gestor.
+
+**O dentista não vê o extrato do paciente. Por quê?**
+A opção de liberar o extrato para dentistas vem desligada. Peça ao Administrador ou ao Gestor para ligá-la em Gestão → Configurações.
+
+**Ligar a opção dá ao dentista como receber ou cobrar pelo sistema?**
+Não. O dentista só consegue ler o extrato. Recebimentos, estornos, parcelamentos e contas continuam com a Recepção, o Gestor e o Administrador.

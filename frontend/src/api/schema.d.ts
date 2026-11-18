@@ -346,6 +346,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/financeiro/configuracao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Settings */
+        get: operations["get_settings_financeiro_configuracao_get"];
+        /** Save Settings */
+        put: operations["save_settings_financeiro_configuracao_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/financeiro/pacientes/{patient_id}/extrato": {
         parameters: {
             query?: never;
@@ -3179,6 +3197,22 @@ export interface components {
              * @description Nó da malha no .glb (ex.: 11_V).
              */
             node: string;
+        };
+        /** FinancialSettingsIn */
+        FinancialSettingsIn: {
+            /**
+             * Dentist Can View
+             * @description Dentista lê o extrato do paciente (só leitura; receber continua com o caixa).
+             */
+            dentist_can_view: boolean;
+        };
+        /** FinancialSettingsOut */
+        FinancialSettingsOut: {
+            /**
+             * Dentist Can View
+             * @description Dentista lê o extrato do paciente (só leitura; receber continua com o caixa).
+             */
+            dentist_can_view: boolean;
         };
         /** FormulaOut */
         FormulaOut: {
@@ -6937,6 +6971,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["app__modules__estoque__schemas__StockOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_settings_financeiro_configuracao_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinancialSettingsOut"];
+                };
+            };
+        };
+    };
+    save_settings_financeiro_configuracao_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FinancialSettingsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinancialSettingsOut"];
                 };
             };
             /** @description Validation Error */

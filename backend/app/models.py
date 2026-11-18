@@ -7,7 +7,7 @@ from app.core.audit import AuditLog
 from app.core.models import Base
 from app.modules.agenda.models import Appointment, AppointmentEvent, Chair
 from app.modules.estoque.models import Material, StockLot, StockMovement
-from app.modules.financeiro.models import Payable, Payment, Receivable
+from app.modules.financeiro.models import FinancialSettings, Payable, Payment, Receivable
 from app.modules.identidade.models import Clinic, ClinicMembership, User
 from app.modules.imagens.models import ImagingExam
 from app.modules.inteligencia.models import AlertDismissal, AlertRuleSetting
@@ -65,6 +65,7 @@ __all__ = [
     "CostSheetItem",
     "Encounter",
     "EncounterTransfer",
+    "FinancialSettings",
     "ImagingExam",
     "ImportJob",
     "ImportProfile",

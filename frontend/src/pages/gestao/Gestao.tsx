@@ -9,7 +9,7 @@ import { useDentistas } from "../../lib/equipe";
 import Barras from "./Barras";
 
 type Metricas = Schemas["MonthMetricsOut"];
-type Aba = "geral" | "equipe" | "tendencias" | "metas" | "meu";
+type Aba = "geral" | "equipe" | "tendencias" | "metas" | "config" | "meu";
 
 const NOME_METRICA: Record<string, string> = {
   recebido: "Recebido",
@@ -52,6 +52,7 @@ export default function Gestao() {
         { id: "equipe", rotulo: "Equipe" },
         { id: "tendencias", rotulo: "Tendências" },
         { id: "metas", rotulo: "Metas" },
+        { id: "config", rotulo: "Configurações" },
         ...(papel === "admin" ? [{ id: "meu" as Aba, rotulo: "Meu desempenho" }] : []),
       ]
     : [{ id: "meu", rotulo: "Meu desempenho" }];
@@ -68,6 +69,7 @@ export default function Gestao() {
       {aba === "equipe" && <Equipe mes={mes} />}
       {aba === "tendencias" && <Tendencias ate={mes} />}
       {aba === "metas" && <Metas mes={mes} />}
+      {aba === "config" && <Configuracoes />}
       {aba === "meu" && <MeuDesempenho mes={mes} />}
     </div>
   );
@@ -393,5 +395,39 @@ function MeuDesempenho({ mes }: { mes: string }) {
       {(v.goals ?? []).length > 0 && <ListaMetas metas={v.goals ?? []} />}
       {t.data && <SerieMensal meses={t.data.months} />}
     </div>
+  );
+}
+
+function Configuracoes() {
+  const cliente = useQueryClient();
+  const q = useQuery({
+    queryKey: ["financeiro", "configuracao"],
+    queryFn: async () => ok(await api.GET("/financeiro/configuracao")),
+  });
+  const salvar = useMutation({
+    mutationFn: async (liberado: boolean) =>
+      ok(await api.PUT("/financeiro/configuracao", { body: { dentist_can_view: liberado } })),
+    onSuccess: (r) => cliente.setQueryData(["financeiro", "configuracao"], r),
+  });
+  if (q.isLoading) return <Carregando />;
+  if (q.error) return <ErroCarga erro={q.error} />;
+  return (
+    <Cartao titulo="Financeiro">
+      {salvar.error && <Aviso tom="perigo">{salvar.error.message}</Aviso>}
+      <label className="flex min-h-11 items-center gap-3 text-sm">
+        <input
+          type="checkbox"
+          className="size-5"
+          checked={q.data?.dentist_can_view ?? false}
+          disabled={salvar.isPending}
+          onChange={(e) => salvar.mutate(e.target.checked)}
+        />
+        Dentistas podem ver o extrato financeiro do paciente
+      </label>
+      <p className="mt-1 text-xs text-texto-suave">
+        Só leitura: receber, parcelar e estornar continuam com o caixa (admin, gestor e recepção). A
+        mudança fica registrada na auditoria.
+      </p>
+    </Cartao>
   );
 }

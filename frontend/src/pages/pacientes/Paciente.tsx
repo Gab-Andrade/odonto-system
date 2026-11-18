@@ -33,7 +33,15 @@ export default function Paciente() {
   const { papel } = useSessao();
   const [params, setParams] = useSearchParams();
   const clinico = temPapel(papel, ...CLINICOS);
-  const caixa = temPapel(papel, "admin", "gestor", "recepcao");
+  // Dentista vê o extrato só se o admin/gestor liberar (Gestão → Configurações).
+  const config = useQuery({
+    enabled: papel === "dentista",
+    queryKey: ["financeiro", "configuracao"],
+    queryFn: async () => ok(await api.GET("/financeiro/configuracao")),
+  });
+  const caixa =
+    temPapel(papel, "admin", "gestor", "recepcao") ||
+    (papel === "dentista" && config.data?.dentist_can_view === true);
   const planos = temPapel(papel, "admin", "gestor", "dentista", "asb", "recepcao");
 
   const abas: { id: Aba; rotulo: string }[] = [

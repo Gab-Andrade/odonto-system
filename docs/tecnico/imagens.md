@@ -1,6 +1,6 @@
 ---
 modulo: imagens
-atualizado_em: 1ee64af
+atualizado_em: 1d37523
 ---
 # Imagens (exames de raio-X)
 
@@ -11,7 +11,7 @@ atualizado_em: 1ee64af
 - Recebe o upload de um arquivo DICOM por paciente, valida, calcula o SHA-256, grava no armazenamento (`app/core/storage.py`) e cria o registro.
 - Lê só o cabeçalho com pydicom (`dicom.py:read`, `stop_before_pixels=True`) e guarda tags selecionadas em JSONB.
 - Lista, detalha e devolve o arquivo original; classifica (PATCH) e invalida com motivo.
-- **Fora do módulo:** visualizador de imagem, Orthanc/PACS e S3 (não existem; `models.py` e `storage.py` citam a Fase 5.3 e o PLANO). Cadastro do paciente fica em `pacientes`; atendimento em `prontuario`. A validação de dente FDI reaproveita `odontograma.regras:is_valid_tooth`.
+- **Fora do módulo:** visualizador de imagem, Orthanc/PACS (não existem; `models.py` cita a Fase 5.3 e o PLANO). Cadastro do paciente fica em `pacientes`; atendimento em `prontuario`. A validação de dente FDI reaproveita `odontograma.regras:is_valid_tooth`.
 
 ## Modelo de dados
 
@@ -59,7 +59,9 @@ Recepção não acessa nada. Respostas fora do padrão: 413 (arquivo acima de `m
 
 | Decisão | Motivo |
 |---|---|
-| Armazenamento atrás de `put/get/delete` em `core/storage.py`, em disco local (`STORAGE_DIR`, padrão `var/arquivos`) | trocar por S3 depois sem mexer no módulo; acesso sempre pela API, que confere papel e RLS |
+| Armazenamento atrás de `put/get/delete` em `core/storage.py`, com dois backends escolhidos por `STORAGE_BACKEND`: `local` (padrão, `STORAGE_DIR`, padrão `var/arquivos`) e `s3` (qualquer serviço compatível, via `S3_ENDPOINT_URL`; `S3_BUCKET` obrigatório, validado em `config.py`) | trocar de backend sem mexer no módulo nem no banco (as chaves são idênticas; basta copiar os arquivos); bucket privado, acesso sempre pela API, que confere papel e RLS |
+| `S3Backend` grava com `ServerSideEncryption="AES256"` e aceita `S3_PREFIX` | criptografia em repouso para dado de saúde; o prefixo permite dividir um bucket entre ambientes sem alterar a chave guardada no banco |
+| `boto3` é opcional (extra `[s3]`) e importado só em `storage.py:_s3_client` | desenvolvimento e testes não precisam da dependência |
 | Gravação atômica (arquivo temporário + `fsync` + rename) | nunca deixar arquivo parcial sob a chave final |
 | Não há exclusão; só invalidação com motivo | guarda do prontuário; envio errado some da listagem padrão mas continua guardado |
 | Arquivo e metadados imutáveis no banco (gatilho) | a regra vale mesmo para código novo que esqueça de respeitá-la |
@@ -70,7 +72,9 @@ Recepção não acessa nada. Respostas fora do padrão: 413 (arquivo acima de `m
 
 - **Novo tipo de exame:** acrescente em `models.py:ImageKind`, na tupla `KINDS` de `dicom.py` e, em nova migração, recrie o CHECK `kind_valid` (a `0021` tem a lista fixa).
 - **Nova tag guardada:** inclua em `dicom.py:KEPT_TAGS`. Só vale para uploads novos, já que os metadados são imutáveis.
-- **Trocar para S3:** implemente `put/get/delete` com a mesma assinatura em `core/storage.py`, mantendo o formato de chave. Se a chave mudar, ajuste `_KEY` e a checagem de prefixo em `service.py:read_file`.
+- **Novo backend de armazenamento:** implemente a interface `Backend` (`put/get/delete`) em `core/storage.py`, valide a chave com `check_key`, escolha-o em `storage.py:backend` e acrescente o valor em `Settings.storage_backend`. Se o formato da chave mudar, ajuste `_KEY` e a checagem de prefixo em `service.py:read_file`.
+- **Usar S3:** `pip install -e ".[s3]"`, `STORAGE_BACKEND=s3`, `S3_BUCKET` e, fora da AWS, `S3_ENDPOINT_URL`. Sem `S3_ACCESS_KEY_ID`/`S3_SECRET_ACCESS_KEY` o boto3 usa as credenciais do ambiente.
+- **Testar o armazenamento:** troque `storage.backend` por `lambda: storage.LocalBackend(tmp_path)` (como `test_imagens_integration.py:_storage`); para S3, passe um cliente falso a `S3Backend` (ver `_FakeS3` em `test_imagens_unit.py`).
 - **Nova rota de upload com corpo grande:** registre o caminho em `overrides` no `main.py`; o override vale só para POST.
 
 ## Armadilhas
@@ -82,3 +86,7 @@ Recepção não acessa nada. Respostas fora do padrão: 413 (arquivo acima de `m
 - `PATCH` com `notes: null` limpa a observação, mas `kind: null` é recusado (422). `ExamUpdate` não impede enviar `exam_date: null`, que limpa a data.
 - O upload lê o arquivo inteiro em memória (até `max_dicom_bytes`, 30 MB por padrão); o Starlette também o grava em disco temporário antes da rota.
 - Sem proxy reverso limitando o corpo, só o middleware protege o disco (aviso em `limits.py`).
+- `storage.py:backend` é cacheado (`lru_cache`): mudar variáveis de armazenamento exige reiniciar o processo, e a ausência do `boto3` só aparece no primeiro `put/get`, não na subida (a config só valida `S3_BUCKET`).
+- No `S3Backend`, "NoSuchKey" vira `StorageError` (arquivo não encontrado → 404) e qualquer outra falha do S3 (permissão, rede) vira `StorageUnavailable`, logada, que a rota responde com 503. Na limpeza depois de um commit que falhou, uma falha ao apagar é ignorada para não esconder o erro original.
+- No S3 a chave real é `S3_PREFIX/<clinic_id>/<uuid>.dcm`, mas o banco guarda só a parte sem prefixo. Mudar `S3_PREFIX` depois de haver exames deixa os arquivos antigos inacessíveis.
+- No S3, `delete` de chave inexistente não falha. Trocar de backend não migra arquivos existentes.

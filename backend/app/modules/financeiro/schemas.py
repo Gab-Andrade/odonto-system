@@ -123,3 +123,13 @@ class PayableOut(BaseModel):
     paid_method: PaymentMethod | None
     cancel_reason: str | None
     created_at: datetime
+
+
+class FinancialSettingsIn(BaseModel):
+    dentist_can_view: bool = Field(
+        description="Dentista lê o extrato do paciente (só leitura; receber continua com o caixa)."
+    )
+
+
+class FinancialSettingsOut(FinancialSettingsIn):
+    pass

@@ -29,6 +29,8 @@ DICOM_MEDIA_TYPE = "application/dicom"
 
 
 def _http(exc: service.ImagingError) -> HTTPException:
+    if isinstance(exc, service.Unavailable):
+        return HTTPException(status_code=503, detail=exc.message)
     code = 404 if isinstance(exc, service.NotFound) else 422
     return HTTPException(status_code=code, detail=exc.message)
 
@@ -94,7 +96,12 @@ def upload_exam(
         )
         db.commit()
     except Exception:
-        storage.delete(exam.storage_key)  # a transação não valeu: não deixa arquivo órfão
+        # A transação não valeu: não deixa arquivo órfão. Se nem apagar der, o erro
+        # original é o que importa.
+        try:
+            storage.delete(exam.storage_key)
+        except storage.StorageError:
+            pass
         raise
     return ExamDetail.model_validate(exam)
 

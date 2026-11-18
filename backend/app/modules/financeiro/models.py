@@ -20,6 +20,7 @@ from decimal import Decimal
 from enum import StrEnum
 
 from sqlalchemy import (
+    Boolean,
     Date,
     DateTime,
     Enum,
@@ -30,6 +31,7 @@ from sqlalchemy import (
     SmallInteger,
     String,
     UniqueConstraint,
+    false,
     func,
     text,
 )
@@ -169,5 +171,19 @@ class Payable(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
     paid_method: Mapped[PaymentMethod | None] = mapped_column(_enum(PaymentMethod))
     cancel_reason: Mapped[str | None] = mapped_column(String(300))
     created_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+
+
+class FinancialSettings(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
+    """Configuração do financeiro da clínica (uma linha por clínica; sem linha = padrão)."""
+
+    __tablename__ = "financial_settings"
+    __table_args__ = (UniqueConstraint("clinic_id", name="uq_financial_settings_clinic"),)
+
+    # Liberado pelo admin ou gestor: o dentista passa a ler o extrato do paciente (só leitura;
+    # receber, estornar e parcelar continuam com o caixa).
+    dentist_can_view: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    updated_by: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )

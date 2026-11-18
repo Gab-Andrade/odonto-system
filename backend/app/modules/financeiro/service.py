@@ -7,12 +7,14 @@ from decimal import Decimal
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.context import CurrentUser
 from app.modules.financeiro import regras
 from app.modules.financeiro.models import (
+    FinancialSettings,
     Payable,
     PayableStatus,
     Payment,
@@ -411,3 +413,34 @@ def cancel_payable(db: Session, payable: Payable, reason: str) -> None:
     payable.status = PayableStatus.CANCELADA
     payable.cancel_reason = reason
     db.flush()
+
+
+# ---------- configuração ----------
+
+
+def dentist_can_view(db: Session) -> bool:
+    row = db.scalar(select(FinancialSettings))
+    return bool(row and row.dentist_can_view)
+
+
+def save_settings(db: Session, user: CurrentUser, dentist_view: bool) -> bool:
+    """Grava a configuração; devolve se mudou (para a auditoria)."""
+    before = dentist_can_view(db)
+    stmt = insert(FinancialSettings).values(
+        id=uuid.uuid4(),
+        clinic_id=user.clinic_id,
+        dentist_can_view=dentist_view,
+        updated_by=user.user_id,
+    )
+    db.execute(
+        stmt.on_conflict_do_update(
+            index_elements=["clinic_id"],
+            set_={
+                "dentist_can_view": dentist_view,
+                "updated_by": user.user_id,
+                "updated_at": now(),
+            },
+        )
+    )
+    db.flush()
+    return before != dentist_view

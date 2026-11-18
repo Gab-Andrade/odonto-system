@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { api, ok, type Schemas } from "../../api/client";
+import { temPapel, useSessao } from "../../auth/sessao";
 import Modal from "../../components/Modal";
 import { Aviso, Botao, Campo, Cartao, Carregando, ErroCarga, Etiqueta, Selecao, Vazio } from "../../components/ui";
 import { dataBR, dinheiro } from "../../lib/datas";
@@ -26,6 +27,8 @@ const TOM: Record<string, "info" | "alerta" | "perigo" | "sucesso"> = {
 
 /** Extrato do paciente e registro de pagamento (caixa: admin, gestor e recepção). */
 export default function FinanceiroPaciente({ pacienteId }: { pacienteId: string }) {
+  const { papel } = useSessao();
+  const caixa = temPapel(papel, "admin", "gestor", "recepcao"); // dentista só lê
   const [pagar, setPagar] = useState<Conta | null>(null);
   const extrato = useQuery({
     queryKey: ["financeiro", pacienteId],
@@ -67,7 +70,7 @@ export default function FinanceiroPaciente({ pacienteId }: { pacienteId: string 
                 </p>
               </div>
               <Etiqueta tom={TOM[c.status] ?? "info"}>{c.status}</Etiqueta>
-              {Number(c.balance) > 0 && !c.cancelled_at && (
+              {caixa && Number(c.balance) > 0 && !c.cancelled_at && (
                 <Botao variante="secundario" onClick={() => setPagar(c)}>
                   Receber
                 </Botao>

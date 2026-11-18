@@ -16,7 +16,7 @@ pytestmark = pytest.mark.integration
 def _storage(tmp_path, monkeypatch):
     from app.core import storage
 
-    monkeypatch.setattr(storage, "_root", lambda: tmp_path)
+    monkeypatch.setattr(storage, "backend", lambda: storage.LocalBackend(tmp_path))
     return tmp_path
 
 
