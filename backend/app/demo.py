@@ -22,6 +22,11 @@ from app.core.roles import Role
 from app.core.security import hash_password
 from app.modules.agenda import service as agenda
 from app.modules.agenda.models import Appointment, Chair
+from app.modules.estoque import lotes_service as estoque_lotes
+from app.modules.estoque import service as estoque
+from app.modules.estoque.models import Material
+from app.modules.financeiro import service as financeiro
+from app.modules.financeiro.models import Payable, PaymentMethod, Receivable
 from app.modules.identidade.models import Clinic, ClinicMembership, User
 from app.modules.identidade.service import create_clinic_with_admin, normalize_email
 from app.modules.odontograma import service as odontograma
@@ -32,9 +37,16 @@ from app.modules.precificacao import service as pricing
 from app.modules.precificacao.models import PriceAssignment, PriceTable, ScopeType
 from app.modules.prontuario import atendimento_service as atendimento
 from app.modules.prontuario import service as prontuario
-from app.modules.prontuario.models import AnamnesisTemplate, Encounter, VersionStatus
+from app.modules.prontuario.models import (
+    AnamnesisTemplate,
+    Encounter,
+    EncounterStatus,
+    VersionStatus,
+)
+from app.modules.repasse import service as repasse
+from app.modules.repasse.models import CommissionRule
 from app.modules.tratamento import service as tratamento
-from app.modules.tratamento.models import TreatmentPlan
+from app.modules.tratamento.models import ItemStatus, TreatmentPlan, TreatmentPlanItem
 
 DEMO_PASSWORD = "demo-odonto-2026"  # noqa: S105 - só para dados locais de demonstração
 DEMO_TABLE = "Tabela Demo"
@@ -683,6 +695,128 @@ def _plan_for_adult(
     report.created.append(f"orçamento aguardando resposta de {patient.full_name}")
 
 
+# ---------- gestão: estoque, contas a pagar e repasse ----------
+
+# (nome, unidade, categoria, custo, mínimo, lotes: (qtd, dias p/ vencer | None, dias da compra))
+MATERIALS = (
+    ("Resina composta A2", "tubo", "Dentística", "89.90", "3", [("2", 20, 30)]),
+    ("Luva de procedimento", "cx", "Descartáveis", "32.50", "5", [("12", 400, 10)]),
+    ("Anestésico lidocaína 2%", "un", "Anestesia", "2.80", "50",
+     [("120", 200, 15), ("10", -10, 200)]),
+    ("Lima endodôntica", "un", "Endodontia", "18.00", "6", [("10", None, 40)]),
+)  # fmt: skip
+
+
+def _stock(db: Session, actor: CurrentUser, today: date, report: Report) -> None:
+    """Materiais com lotes: um abaixo do mínimo e vencendo, um com lote vencido."""
+    if db.scalar(select(Material.id).limit(1)) is not None:
+        return
+    for name, unit, category, cost, minimum, lots in MATERIALS:
+        material = estoque.create_material(
+            db, actor, name=name, unit=unit, category=category,
+            unit_cost=Decimal(cost), min_quantity=Decimal(minimum),
+        )  # fmt: skip
+        for n, (qty, expires, received) in enumerate(lots, start=1):
+            estoque_lotes.register_entry(
+                db,
+                actor,
+                {
+                    "material_id": material.id,
+                    "quantity": Decimal(qty),
+                    "unit_cost": Decimal(cost),
+                    "lot_code": f"DEMO-{name[:3].upper()}-{n}",
+                    "expires_on": today + timedelta(days=expires) if expires is not None else None,
+                    "supplier": "Dental Demo Distribuidora",
+                    "received_on": today - timedelta(days=received),
+                },
+                can_set_cost=True,
+            )
+    report.created.append(f"{len(MATERIALS)} materiais com lotes no estoque")
+
+
+def _payables(db: Session, actor: CurrentUser, today: date, report: Report) -> None:
+    """Contas a pagar: uma paga, uma em atraso e uma a vencer."""
+    if db.scalar(select(Payable.id).limit(1)) is not None:
+        return
+    paid = financeiro.create_payable(
+        db, actor, {"supplier": "Dental Demo Distribuidora", "category": "Material",
+                    "description": "Reposição de resinas e anestésicos",
+                    "due_date": today - timedelta(days=12), "amount": Decimal("820.00")},
+    )  # fmt: skip
+    financeiro.pay_payable(db, paid, PaymentMethod.PIX, today - timedelta(days=12))
+    financeiro.create_payable(
+        db, actor, {"supplier": "Laboratório Prótese Demo", "category": "Laboratório",
+                    "description": "Coroa provisória", "due_date": today - timedelta(days=5),
+                    "amount": Decimal("650.00")},
+    )  # fmt: skip
+    financeiro.create_payable(
+        db, actor, {"supplier": "Imobiliária Demo", "category": "Aluguel", "description": None,
+                    "due_date": today + timedelta(days=7), "amount": Decimal("4500.00")},
+    )  # fmt: skip
+    report.created.append("3 contas a pagar (paga, em atraso e a vencer)")
+
+
+def _commission(
+    db: Session,
+    actor: CurrentUser,
+    dentist: CurrentUser,
+    patient: Patient,
+    team: dict[str, User],
+    today: date,
+    report: Report,
+) -> None:
+    """Regras de repasse e, no plano do adulto, entrada paga e profilaxia realizada, para a
+    prévia do repasse da dentista ter o que mostrar."""
+    if db.scalar(select(CommissionRule.id).limit(1)) is not None:
+        return
+    since = today - timedelta(days=60)
+    for email, pct in (
+        ("beatriz.demo@example.com", "40"),
+        ("rafael.demo@example.com", "35"),
+        ("giovanna.demo@example.com", "45"),
+    ):
+        repasse.create_rule(
+            db, actor, {"dentist_id": team[email].id, "procedure_code": None,
+                        "kind": "percentual", "value": Decimal(pct), "deduct_materials": True,
+                        "deduct_card_fee": True, "valid_from": since},
+        )  # fmt: skip
+    report.created.append("regras de repasse dos dentistas")
+
+    plan = db.scalar(
+        select(TreatmentPlan).where(
+            TreatmentPlan.patient_id == patient.id, TreatmentPlan.title == "Plano inicial"
+        )
+    )
+    encounter = db.scalar(
+        select(Encounter).where(
+            Encounter.patient_id == patient.id,
+            Encounter.status == EncounterStatus.ABERTO,
+            Encounter.dentist_id == dentist.user_id,
+        )
+    )
+    if plan is None or encounter is None:
+        return
+    if db.scalar(select(Receivable.id).where(Receivable.plan_id == plan.id)) is None:
+        rows = financeiro.installment_plan(
+            db, actor, plan.id, Decimal("940.00"), 3, today - timedelta(days=2), None
+        )
+        down = financeiro.get_receivable(db, rows[0].id, lock=True)
+        financeiro.register_payment(
+            db, actor, down, down.amount, PaymentMethod.PIX, Decimal("0"),
+            today - timedelta(days=2), "Entrada (demo)",
+        )  # fmt: skip
+    prof = db.scalar(
+        select(TreatmentPlanItem).where(
+            TreatmentPlanItem.plan_id == plan.id,
+            TreatmentPlanItem.procedure_code == "DEMO-PROF",
+            TreatmentPlanItem.status == ItemStatus.APROVADO,
+        )
+    )
+    if prof is not None:
+        tratamento.perform_item(db, dentist, plan, prof, encounter.id)
+    report.created.append(f"entrada paga e profilaxia realizada no plano de {patient.full_name}")
+
+
 def _appointments(
     db: Session,
     actor: CurrentUser,
@@ -758,6 +892,10 @@ def seed(slug: str) -> Report:
         cadu, _ = _patient(db, actor, cadu_demo, legend, report)
         _cadu_history(db, as_giovanna, template, cadu, report)
         _cadu_plan(db, actor, cadu, giovanna.id, legend, report)
+
+        _stock(db, actor, today, report)
+        _payables(db, actor, today, report)
+        _commission(db, actor, as_dentist, adult, team, today, report)
 
         tomorrow = today + timedelta(days=1)
         _appointments(

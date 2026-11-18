@@ -9,9 +9,12 @@ pytestmark = pytest.mark.integration
 def _counts(clinic_id):
     from app.core.db import tenant_session
     from app.modules.agenda.models import Appointment
+    from app.modules.estoque.models import Material, StockLot
+    from app.modules.financeiro.models import Payable, Payment
     from app.modules.odontograma.models import ArchConfig, OdontogramEvent, ToothNote
     from app.modules.pacientes.models import Patient
     from app.modules.prontuario.models import AnamnesisResponse, Encounter
+    from app.modules.repasse.models import CommissionRule
     from app.modules.tratamento.models import TreatmentPlan
 
     with tenant_session(clinic_id) as s:
@@ -26,6 +29,11 @@ def _counts(clinic_id):
                 Encounter,
                 AnamnesisResponse,
                 ToothNote,
+                Material,
+                StockLot,
+                Payable,
+                Payment,
+                CommissionRule,
             )
         }
 
@@ -48,6 +56,11 @@ def test_demo_creates_clinic_and_is_idempotent(clean_db):
     assert counts["Encounter"] == 3
     assert counts["AnamnesisResponse"] == 2
     assert counts["ToothNote"] == 1
+    assert counts["Material"] == 4
+    assert counts["StockLot"] == 5
+    assert counts["Payable"] == 3
+    assert counts["Payment"] == 1
+    assert counts["CommissionRule"] == 3
 
     second = demo.seed("demo-teste")
     assert second.created == []

@@ -22,13 +22,13 @@ export default function Repasse() {
   const gestao = temPapel(sessao.papel, ...GESTAO);
   const dentistas = useDentistas();
   const [escolhido, setEscolhido] = useState("");
-  const dentista = gestao ? escolhido : (sessao.usuario?.id ?? "");
+  // Gestão: começa no primeiro dentista da lista; o dentista vê só o próprio.
+  const dentista = gestao ? escolhido || (dentistas.data?.[0]?.user_id ?? "") : (sessao.usuario?.id ?? "");
 
   return (
     <div className="flex flex-col gap-4">
       {gestao && (
-        <Selecao rotulo="Dentista" value={escolhido} onChange={(e) => setEscolhido(e.target.value)} className="max-w-sm">
-          <option value="">— escolha —</option>
+        <Selecao rotulo="Dentista" value={dentista} onChange={(e) => setEscolhido(e.target.value)} className="max-w-sm">
           {dentistas.data?.map((d) => (
             <option key={d.user_id} value={d.user_id}>
               {d.full_name}
