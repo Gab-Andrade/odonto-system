@@ -111,7 +111,7 @@ ANAMNESE = [
 TEAM = (
     ("beatriz.demo@example.com", "Dra. Beatriz Demo", Role.DENTISTA, "CRO-SP 00001"),
     ("rafael.demo@example.com", "Dr. Rafael Demo", Role.DENTISTA, "CRO-SP 00002"),
-    ("giovanna.demo@example.com", "Dra. Giovanna Martins", Role.DENTISTA, "CRO-SP 00003"),
+    ("giovanna.demo@example.com", "Dra. Giovanna Andrade", Role.DENTISTA, "CRO-SP 00003"),
     ("recepcao.demo@example.com", "Júlia Recepção Demo", Role.RECEPCAO, None),
     ("gestor.demo@example.com", "Marcos Gestor Demo", Role.GESTOR, None),
 )
@@ -186,6 +186,10 @@ def _team(db: Session, clinic: Clinic, report: Report) -> dict[str, User]:
             db.add(user)
             db.flush()
             report.created.append(f"usuário {email} ({role.value})")
+        elif user.full_name != name:  # usuário de demonstração: o nome segue o do código
+            report.created.append(f"nome de {email}: {user.full_name} → {name}")
+            user.full_name = name
+            db.flush()
         membership = db.scalar(
             select(ClinicMembership).where(
                 ClinicMembership.user_id == user.id, ClinicMembership.clinic_id == clinic.id
