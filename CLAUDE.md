@@ -2,13 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Sistema de gestão odontológica multi-clínica. Hoje só existe o backend: Fase 0 (fundação) e Fase 1 (precificação + estoque mínimo) concluídas, Fase 2 (MVP clínico: pacientes, agenda, anamnese, atendimento/evolução, odontograma 2D) e Fase 3 (gestão: plano de tratamento/orçamento, financeiro, estoque por lote, repasse, painel v1) e Fase 4 (odontograma 3D: arcada por paciente, biblioteca GLB gerada por código, visualização sincronizada com o 2D) concluídas no backend; o frontend espera o Node.js. Visão, roadmap e decisões em [docs/PLANO.md](docs/PLANO.md). Código, comentários, mensagens de commit e textos de API em **português**.
+Sistema de gestão odontológica multi-clínica. Hoje só existe o backend: Fase 0 (fundação) e Fase 1 (precificação + estoque mínimo) concluídas, Fase 2 (MVP clínico: pacientes, agenda, anamnese, atendimento/evolução, odontograma 2D) e Fase 3 (gestão: plano de tratamento/orçamento, financeiro, estoque por lote, repasse, painel v1) Fase 4 (odontograma 3D: arcada por paciente, biblioteca GLB gerada por código, visualização sincronizada com o 2D) e Fase 5 (alertas por regra, painel completo com metas/equipe/tendências, raio-X DICOM) concluídas no backend; o frontend (React + Vite PWA em `frontend/`) está sendo construído por partes. Visão, roadmap e decisões em [docs/PLANO.md](docs/PLANO.md). Código, comentários, mensagens de commit e textos de API em **português**.
 
 Documentação por módulo: técnica em `docs/tecnico/<modulo>.md` (leia antes de alterar um módulo) e para público não técnico em `docs/usuario/`. Atualize as duas com a skill `documentar` após mudar um módulo.
 
 ## Comandos
 
-Tudo a partir de `backend/` (Python 3.12+, `pip install -e ".[dev]"`):
+Backend a partir de `backend/` (Python 3.12+, `pip install -e ".[dev]"`); no Windows, `.\dev.ps1 [-Demo] [-Front]` na raiz sobe tudo e `.\testes.ps1` roda lint e testes no banco local `odonto_test`:
 
 ```sh
 ruff check . && ruff format --check .      # lint (CI roda os dois)
@@ -18,6 +18,8 @@ alembic upgrade head                       # usa MIGRATIONS_DATABASE_URL (role d
 alembic revision -m "descricao"            # migrações são escritas à mão (ver abaixo)
 uvicorn app.main:app --reload
 ```
+
+Frontend a partir de `frontend/`: `npm run dev`, `npm run lint`, `npm run build`; depois de mudar rotas do backend, `npm run atualizar-api` (regenera `openapi.json` e `src/api/schema.d.ts`; o CI confere).
 
 Ambiente completo: `docker compose up --build` na raiz (Postgres + API em :8000, migra na subida). Primeira clínica: `docker compose exec api python -m app.cli criar-clinica ...` (ver README).
 

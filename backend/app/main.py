@@ -14,6 +14,7 @@ from app.modules.estoque.lotes_router import router as estoque_lotes_router
 from app.modules.estoque.router import router as estoque_router
 from app.modules.financeiro.router import router as financeiro_router
 from app.modules.identidade.router import router as identidade_router
+from app.modules.imagens.router import router as imagens_router
 from app.modules.inteligencia.router import router as inteligencia_router
 from app.modules.odontograma.biblioteca_router import router as odontograma_3d_router
 from app.modules.odontograma.router import router as odontograma_router
@@ -30,7 +31,17 @@ def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(title="Odonto System API", version="0.1.0")
 
-    app.add_middleware(BodySizeLimitMiddleware, max_bytes=settings.max_request_bytes)
+    app.add_middleware(
+        BodySizeLimitMiddleware,
+        max_bytes=settings.max_request_bytes,
+        # Envio de raio-X: um arquivo DICOM + a folga do envelope multipart.
+        overrides=(
+            (
+                r"/imagens/pacientes/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/exames",
+                settings.max_dicom_bytes + 64 * 1024,
+            ),
+        ),
+    )
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -75,6 +86,7 @@ def create_app() -> FastAPI:
     app.include_router(repasse_router)
     app.include_router(painel_router)
     app.include_router(inteligencia_router)
+    app.include_router(imagens_router)
     return app
 
 

@@ -13,6 +13,7 @@ Este guia explica, em linguagem simples, o que cada parte do sistema faz e quem 
 | [Acesso e login](identidade.md) | Entrar no sistema, escolher a clínica e entender os perfis de acesso |
 | [Cadastro de pacientes](pacientes.md) | Guardar a ficha de cada paciente, buscar pacientes e registrar os consentimentos para o uso dos dados |
 | [Prontuário e anamnese](prontuario.md) | Montar o questionário inicial de cada paciente, registrar o atendimento e a evolução de cada consulta, e ver os alertas e o histórico clínico |
+| [Exames de imagem (raio-X)](imagens.md) | Guardar raios-X e outros exames no prontuário de cada paciente, com dente, data e tipo, e baixar o arquivo original |
 | [Odontograma](odontograma.md) | Marcar e consultar o estado de cada dente e face do paciente, com a arcada, visão 2D e 3D, comparação antes e depois e histórico de todas as marcações e remoções |
 | [Agenda de consultas](agenda.md) | Marcar, remarcar e bloquear horários dos dentistas e das cadeiras, e registrar se o paciente veio, faltou ou cancelou |
 | [Estoque de materiais](estoque.md) | Controlar os materiais por lote e validade, com alertas de estoque mínimo e de vencimento, e dar baixa automática nos procedimentos realizados |
@@ -21,7 +22,8 @@ Este guia explica, em linguagem simples, o que cada parte do sistema faz e quem 
 | [Plano de tratamento e orçamento](tratamento.md) | Montar o plano de tratamento do paciente, dar desconto dentro do limite, registrar a aprovação total ou parcial e marcar os procedimentos realizados no odontograma |
 | [Financeiro](financeiro.md) | Parcelar o orçamento aprovado, registrar recebimentos e ver o extrato de cada paciente, e controlar as contas a pagar da clínica |
 | [Repasse de dentistas](repasse.md) | Definir quanto cada dentista recebe sobre o que os pacientes pagaram, ver a prévia, fechar o repasse até uma data e consultar os fechamentos |
-| [Painel do gestor](painel.md) | Ver como está a clínica (agenda, dinheiro, orçamentos, estoque e produção por dentista) e o próprio desempenho de cada dentista |
+| [Painel do gestor](painel.md) | Ver como está a clínica (agenda, dinheiro, orçamentos, estoque e produção), comparar a equipe e os meses, acompanhar metas e ver o próprio desempenho |
+| [Alertas da clínica](inteligencia.md) | Ver os pacientes que pedem atenção (retornos, orçamentos, faltas, atendimentos abertos e contas em atraso), esconder um alerta por um tempo e ligar, desligar ou ajustar as regras |
 
 ## Perfis de acesso
 

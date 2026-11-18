@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     # limitado a 2 MB; a folga cobre o envelope multipart).
     max_request_bytes: int = 3 * 1024 * 1024
 
+    # Arquivos (raio-X): pasta local até haver um storage S3. Fora do controle de versão.
+    storage_dir: str = "var/arquivos"
+    # Tamanho máximo de um arquivo DICOM (só a rota de envio de exame aceita corpo maior).
+    max_dicom_bytes: int = 30 * 1024 * 1024
+
     @model_validator(mode="after")
     def _check_production(self) -> "Settings":
         if self.environment == "production":

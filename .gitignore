@@ -12,6 +12,9 @@ htmlcov/
 node_modules/
 dist/
 
+# Arquivos enviados (raio-X) no desenvolvimento
+backend/var/
+
 # Ambiente
 .env
 .env.*

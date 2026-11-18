@@ -15,6 +15,7 @@ from app.modules.identidade.schemas import (
     ClinicSelectionResponse,
     LoginRequest,
     MeResponse,
+    TeamMember,
     TokenResponse,
 )
 
@@ -69,3 +70,13 @@ def me(user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_
         clinic=ClinicOption(id=clinic.id, name=clinic.name),
         role=user.role,
     )
+
+
+@router.get("/equipe", response_model=list[TeamMember])
+def team(user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Nome e papel dos membros ativos da clínica (para escolher dentista na agenda, no
+    plano etc.). Sem e-mail: só o que aparece nas telas."""
+    return [
+        TeamMember(user_id=u.id, full_name=u.full_name, role=role, cro=u.cro)
+        for u, role in service.team(db, user.clinic_id)
+    ]

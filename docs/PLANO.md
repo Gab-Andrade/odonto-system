@@ -1,7 +1,7 @@
 # Odonto System — Plano de Arquitetura e Produto
 
 > Documento vivo. Registra a visão do produto, a arquitetura, a stack escolhida e o roadmap.
-> Última atualização: 2026-11-17
+> Última atualização: 2026-11-18
 
 ## Sumário
 
@@ -389,7 +389,7 @@ odonto-system/
 | **2 – MVP clínico** | Pacientes, anamnese configurável, evolução clínica, agenda, odontograma 2D, legenda personalizável |
 | **3 – Gestão** | Plano de tratamento → orçamento → financeiro; estoque por lote; ficha técnica; repasse de dentistas; **painel do gestor v1** (visão geral e "meu desempenho") |
 | **4 – Odontograma 3D** | Biblioteca GLB (FDI, decídua/permanente/mista, 0–4 sisos), sincronizada com o 2D — **backend concluído** (arcada por paciente, GLB gerado por código, visualização 2D/3D, comparação antes/depois); visualizador espera o frontend |
-| **5 – Inteligência** | Raio-X/DICOM no prontuário, alertas por regra + WhatsApp, painel do gestor com equipe completa, metas, alertas e tendências |
+| **5 – Inteligência** | Raio-X/DICOM no prontuário, alertas por regra, painel do gestor com equipe completa, metas, alertas e tendências — **backend concluído** (alertas calculados na hora e configuráveis por clínica, painel com equipe/metas/tendências, exames DICOM com metadados via pydicom); WhatsApp em stand-by (pago); visualizador DICOM e Orthanc depois |
 | **6 – IA** | Previsão de faltas e abandono, apoio à análise de raio-X |
 
 **Próximo passo concreto:** validar o modelo de dados central antes das telas: Paciente, Atendimento, Evolução, EventoOdontograma, StatusLegenda, ItemPlanoTratamento e as entidades de precificação da seção 5.7.
@@ -411,6 +411,13 @@ odonto-system/
   - Junto: raízes mais realistas (mais grossas, ápice arredondado em vez de ponta).
   - Alternativa a avaliar: modelos prontos (Blender/artista ou com licença livre de uso
     comercial), mantendo os nomes de nós e a orientação já documentados.
+- **WhatsApp (lembretes e alertas)**: em stand-by — a API oficial (WhatsApp Business) é
+  paga e o projeto não tem integrações pagas por enquanto. Os alertas da Fase 5 ficam
+  dentro do sistema; o consentimento `comunicacao` do paciente já existe para quando
+  o envio for retomado (avaliar também e-mail, que é gratuito).
+- **Raio-X, próximos passos**: visualizador DICOM no navegador (Cornerstone3D), Orthanc
+  como PACS (DICOMweb), tomografia com várias fatias por estudo, JPEG/PNG de sensores
+  intraorais e armazenamento S3 no lugar do disco local.
 - **Modo offline** do PWA para o dia de atendimento.
 - **Assinatura ICP-Brasil das evoluções**: em stand-by (o projeto ainda é um modelo, sem
   integrações pagas). Hoje a evolução tem assinatura eletrônica simples + hash do conteúdo,
@@ -458,6 +465,10 @@ odonto-system/
 | 2026-11-17 | Fase 4, arcada do paciente (módulo `odontograma`): dentição permanente, decídua ou mista, com 0 a 4 sisos ou lista explícita de dentes FDI; append-only, a mais recente vale e pode ser vista em qualquer data. Sem registro, sugerida pela idade (até 5 anos decídua, 6–11 mista típica, 12–17 permanente sem sisos, adulto ou sem data de nascimento 32 dentes). Decíduo e sucessor permanente não ocupam a mesma vaga. A arcada descreve a dentição; dente perdido continua sendo a marcação "ausente". Marcam: admin, dentista e ASB. |
 | 2026-11-17 | Fase 4, biblioteca 3D: GLB **gerado por código** no backend (gravador glTF próprio, sem dependência e sem binário no repositório), determinístico, com ETag e cache. Cada dente é `dente_<fdi>` com um nó por face (`<fdi>_M/_D/_O/_V/_L`) e `<fdi>_raiz`; formas simplificadas por tipo (incisivo, canino, pré-molar, molar) e medidas médias. Arcada montada por composição (parábola por arcada, decíduos na vaga do sucessor, arcada decídua menor). Rotas `/odontograma/3d/*` exigem login mas não abrem sessão de clínica nem são auditadas (sem dado de paciente). Modelos do Blender podem substituir o gerador mantendo nomes e orientação. |
 | 2026-11-17 | Fase 4, sincronização 2D/3D: uma só resposta (`/visualizacao`) serve as duas visões, com arcada, as cinco faces de cada dente (nó da malha, cor e marcações) e a posição na arcada. Cor: item da face, senão o do dente inteiro; prioridade patologia > planejado > realizado. Item da legenda ganhou efeito 3D (`colorir` ou `ocultar`, este só para dente inteiro; "ausente" oculta). Comparação antes/depois entre duas datas pelos eventos. Leitura auditada como o odontograma. |
+| 2026-11-18 | Fase 5.1, alertas por regra (módulo `inteligencia`): calculados na hora a partir de agenda, plano de tratamento, atendimentos e financeiro, sem tabela de alertas. O catálogo de regras fica no código (profilaxia atrasada, canal sem retorno, orçamento aprovado sem agendamento, orçamento sem resposta, atendimento aberto, faltas repetidas, conta em atraso); a clínica liga/desliga e muda os parâmetros (`alert_rule_settings`). Cada regra tem os papéis que a veem (recepção não vê alerta clínico; dentista e ASB não veem financeiro). Dispensar "até tal data" é append-only (`alert_dismissals`); voltar a mostrar é um registro novo. Listagem auditada (traz nome e telefone); resumo só com contagens. Sem envio externo: WhatsApp em stand-by. |
+| 2026-11-18 | Fase 5.2, painel completo: metas mensais opcionais (`panel_goals`, única escrita do módulo, unicidade com `NULLS NOT DISTINCT`) da clínica ou por dentista para recebido (só clínica), produção, procedimentos e valor aprovado; equipe com conversão (aprovados ÷ decididos), ticket médio, faltas e metas; tendências mês a mês com variação; visão geral e meu desempenho com comparativo, metas e contagem de alertas. Indicadores recalculados a cada consulta (sem cache). |
+| 2026-11-18 | Fase 5.3, raio-X simples (módulo `imagens`): só DICOM, um arquivo por envio (até 30 MB, limite próprio só nessa rota), metadados lidos com pydicom sem os pixels, tipo sugerido pela modalidade (PX panorâmica, IO periapical, CT tomografia). Arquivo em disco local por clínica com chave gerada pelo servidor (`app.core.storage`, interface pronta para S3), download só pela API, auditado. Arquivo, paciente e metadados imutáveis (gatilho), sem exclusão: envio errado é invalidado com motivo. Sem Orthanc e sem visualizador por enquanto. |
+| 2026-11-18 | Kit de teste local: `dev.ps1` (migra e sobe a API), `python -m app.cli demo` (dados de demonstração idempotentes, recusado em produção) e `testes.ps1` com banco `odonto_test` local. |
 | 2026-11-17 | Estoque mínimo (materiais com custo) criado antes da Fase 3 e consumido pela precificação só via `estoque.service` — primeira dependência entre módulos. Lotes, validade e baixa entram no mesmo módulo depois. |
 | 2026-11-16 | Violação de constraint por concorrência (`IntegrityError`) responde 409 em toda a API, via handler global. |
 | 2026-11-16 | Redis e object storage entram no compose só quando a Fase 1 precisar. Escolha do storage S3 local em aberto: a MinIO deixou de distribuir imagens da edição comunitária, então avaliar alternativas (ex.: Garage, SeaweedFS). |

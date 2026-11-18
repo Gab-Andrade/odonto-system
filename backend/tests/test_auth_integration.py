@@ -76,3 +76,20 @@ def test_audit_listing_is_role_restricted_and_isolated(client, make_clinic):
     assert [(r["action"], r["user_id"]) for r in logs.json()] == [("auth.login", str(admin_a.id))]
 
     assert client.get("/auditoria", headers=_auth(token_d)).status_code == 403
+
+
+def test_team_lists_only_active_members_of_own_clinic(client, make_clinic, add_member, db_session):
+    clinic, admin, pw = make_clinic(role=Role.ADMIN)
+    dentist, _ = add_member(clinic, Role.DENTISTA)
+    gone, _ = add_member(clinic, Role.ASB)
+    db_session.query(ClinicMembership).filter_by(user_id=gone.id).update({"active": False})
+    db_session.commit()
+    make_clinic(role=Role.ADMIN)  # outra clínica
+
+    h = _auth(_login(client, admin.email, pw).json()["access_token"])
+    r = client.get("/auth/equipe", headers=h)
+    assert r.status_code == 200
+    ids = {m["user_id"] for m in r.json()}
+    assert ids == {str(admin.id), str(dentist.id)}
+    assert all("email" not in m for m in r.json())
+    assert client.get("/auth/equipe").status_code == 401

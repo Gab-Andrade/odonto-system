@@ -18,6 +18,7 @@ dependencies = [
     "python-multipart>=0.0.12",  # upload de arquivos
     "openpyxl>=3.1",  # leitura e geração de .xlsx
     "defusedxml>=0.7",  # o openpyxl usa automaticamente: protege contra XML malicioso
+    "pydicom>=3.0",  # metadados dos arquivos de raio-X (DICOM)
 ]
 
 [project.optional-dependencies]

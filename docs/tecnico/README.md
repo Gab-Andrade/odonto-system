@@ -19,7 +19,9 @@ Cada módulo tem um documento próprio, gerado e atualizado pela skill `document
 | [tratamento](tratamento.md) | Plano de tratamento e orçamento: itens por dente/face, emissão com preço congelado (snapshots), validade, desconto com limite por papel, aprovação parcial e realização vinculada ao atendimento e ao odontograma |
 | [financeiro](financeiro.md) | Contas a receber (parcelamento do orçamento aprovado e avulsas), recebimentos append-only com estorno e taxa, extrato do paciente e contas a pagar; invariantes de valor em gatilhos do banco, registro manual sem gateway |
 | [repasse](repasse.md) | Comissão de dentistas sobre o recebido: regras por dentista/procedimento com vigência, prévia e fechamentos acumulados append-only |
-| [painel](painel.md) | Indicadores agregados só de leitura: visão do gestor (agenda, receita, vencidos, orçamentos, estoque, produção) e desempenho do dentista; sem tabelas próprias nem auditoria |
+| [inteligencia](inteligencia.md) | Alertas por regra calculados na hora (recall, orçamento parado, faltas, atraso), com regras configuráveis por clínica, visibilidade por papel e dispensa temporária append-only |
+| [imagens](imagens.md) | Exames de raio-X DICOM por paciente: arquivo em armazenamento local com metadados lidos do cabeçalho, classificação por tipo/dentes, arquivo e metadados imutáveis, invalidação com motivo (sem exclusão); toda leitura auditada, sem acesso da recepção |
+| [painel](painel.md) | Indicadores agregados calculados na hora: visão do gestor, desempenho do dentista, equipe, tendências mensais e metas (única escrita, auditada em `panel_goals`) |
 
 ## Fundação (válida para todos os módulos)
 

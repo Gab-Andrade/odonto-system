@@ -98,3 +98,14 @@ def create_clinic_with_admin(
     session.add(ClinicMembership(user_id=user.id, clinic_id=clinic.id, role=Role.ADMIN))
     session.flush()
     return clinic, user
+
+
+def team(session: Session, clinic_id: uuid.UUID) -> list[tuple[User, Role]]:
+    """Membros ativos da clínica (tabelas globais: o filtro por clínica é explícito)."""
+    rows = session.execute(
+        select(User, ClinicMembership.role)
+        .join(ClinicMembership, ClinicMembership.user_id == User.id)
+        .where(ClinicMembership.clinic_id == clinic_id, ClinicMembership.active, User.active)
+        .order_by(User.full_name)
+    ).all()
+    return [(u, r) for u, r in rows]

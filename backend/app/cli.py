@@ -6,6 +6,7 @@
 A senha é pedida no terminal (não fica no histórico do shell).
 
     python -m app.cli demo --slug teste     # dados de demonstração (só desenvolvimento)
+    python -m app.cli openapi --saida ../frontend/openapi.json
 """
 
 import argparse
@@ -64,6 +65,20 @@ def _demo(args: argparse.Namespace) -> int:
     return 0
 
 
+def _openapi(args: argparse.Namespace) -> int:
+    import json
+
+    from app.main import app
+
+    text = json.dumps(app.openapi(), ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    if args.saida:
+        with open(args.saida, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write(text)
+    else:
+        sys.stdout.write(text)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m app.cli")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -78,6 +93,10 @@ def main(argv: list[str] | None = None) -> int:
     d = sub.add_parser("demo", help="cria dados de demonstração (idempotente; não em produção)")
     d.add_argument("--slug", default="teste", help="clínica existente, ou criada se não houver")
     d.set_defaults(func=_demo)
+
+    o = sub.add_parser("openapi", help="exporta o esquema OpenAPI (para gerar o cliente do front)")
+    o.add_argument("--saida", help="arquivo de saída (padrão: terminal)")
+    o.set_defaults(func=_openapi)
 
     args = parser.parse_args(argv)
     return args.func(args)

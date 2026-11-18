@@ -9,6 +9,7 @@ from app.modules.agenda.models import Appointment, AppointmentEvent, Chair
 from app.modules.estoque.models import Material, StockLot, StockMovement
 from app.modules.financeiro.models import Payable, Payment, Receivable
 from app.modules.identidade.models import Clinic, ClinicMembership, User
+from app.modules.imagens.models import ImagingExam
 from app.modules.inteligencia.models import AlertDismissal, AlertRuleSetting
 from app.modules.odontograma.models import ArchConfig, OdontogramEvent, ToothStatus
 from app.modules.pacientes.models import Patient, PatientConsent
@@ -64,6 +65,7 @@ __all__ = [
     "CostSheetItem",
     "Encounter",
     "EncounterTransfer",
+    "ImagingExam",
     "ImportJob",
     "ImportProfile",
     "Material",

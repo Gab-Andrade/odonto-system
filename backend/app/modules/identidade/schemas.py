@@ -36,3 +36,10 @@ class MeResponse(BaseModel):
     cro: str | None
     clinic: ClinicOption
     role: Role
+
+
+class TeamMember(BaseModel):
+    user_id: uuid.UUID
+    full_name: str
+    role: Role
+    cro: str | None
