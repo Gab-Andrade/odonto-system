@@ -63,3 +63,8 @@ export function idade(nascimento?: string | null): number | null {
 export function mesAtual(): string {
   return hojeISO().slice(0, 7);
 }
+
+/** Data (AAAA-MM-DD) + hora (HH:MM) locais → ISO com fuso, como a API exige. */
+export function instante(data: string, hora: string): string {
+  return new Date(`${data}T${hora}:00`).toISOString();
+}

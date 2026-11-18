@@ -176,7 +176,10 @@ O que já dá para testar no navegador está na tabela abaixo (atualizada a cada
 | Tela | Situação |
 |---|---|
 | Login com escolha de clínica, menu por papel, início (agenda do dia e alertas) | pronta |
-| Pacientes, agenda, prontuário, odontograma 2D/3D, gestão, precificação | nas próximas etapas |
+| Pacientes: busca, cadastro/edição (responsável para menor), consentimentos LGPD, consultas do paciente | pronta |
+| Agenda do dia por dentista: agendar (toque no horário), bloquear, confirmar, falta, cancelar, remarcar, iniciar atendimento | pronta |
+| Alertas: lista por regra, dispensar/voltar a mostrar, configurar regras (admin/gestor) | pronta |
+| Prontuário (anamnese, atendimento, evolução), odontograma 2D/3D, planos, raio-X, gestão, precificação | nas próximas etapas |
 
 ## Testes
 
