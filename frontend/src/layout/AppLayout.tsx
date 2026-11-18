@@ -3,6 +3,7 @@ import { Navigate, NavLink, Outlet, useLocation } from "react-router-dom";
 
 import {
   AGENDA,
+  CLINICOS,
   GESTAO,
   NOME_PAPEL,
   sessaoValida,
@@ -32,6 +33,7 @@ const MENU: ItemMenu[] = [
   { para: "/agenda", rotulo: "Agenda", icone: "▦", papeis: AGENDA },
   { para: "/alertas", rotulo: "Alertas", icone: "!", papeis: AGENDA },
   { para: "/gestao", rotulo: "Gestão", icone: "▲", papeis: [...GESTAO, "dentista"] },
+  { para: "/estoque", rotulo: "Estoque", icone: "▤", papeis: CLINICOS },
   { para: "/precificacao", rotulo: "Precificação", icone: "$", papeis: GESTAO },
 ];
 

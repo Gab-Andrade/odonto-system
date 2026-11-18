@@ -14,6 +14,7 @@ const Agenda = lazy(() => import("./pages/agenda/Agenda"));
 const Alertas = lazy(() => import("./pages/Alertas"));
 const Gestao = lazy(() => import("./pages/gestao/Gestao"));
 const Precificacao = lazy(() => import("./pages/precificacao/Precificacao"));
+const Estoque = lazy(() => import("./pages/estoque/Estoque"));
 
 function Tela({ children }: { children: ReactNode }) {
   return <Suspense fallback={<Carregando />}>{children}</Suspense>;
@@ -31,6 +32,7 @@ export default function App() {
         <Route path="alertas" element={<Tela><Alertas /></Tela>} />
         <Route path="gestao" element={<Tela><Gestao /></Tela>} />
         <Route path="precificacao/*" element={<Tela><Precificacao /></Tela>} />
+        <Route path="estoque" element={<Tela><Estoque /></Tela>} />
         <Route path="*" element={<NaoEncontrado />} />
       </Route>
     </Routes>
