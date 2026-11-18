@@ -64,3 +64,51 @@ jobs:
             echo "::error title=Falhas do pytest::${msg}"
           fi
           exit $status
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Cliente da API em dia com o openapi.json
+        run: |
+          npm run gerar-api
+          git diff --exit-code -- src/api/schema.d.ts
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build (tipos + Vite + PWA)
+        run: npm run build
+
+  openapi:
+    # O openapi.json do front precisa refletir a API: se mudou uma rota, rode
+    # `npm run atualizar-api` no frontend e commite.
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+      - run: pip install -e .
+      - name: openapi.json em dia
+        run: |
+          python -m app.cli openapi --saida ../frontend/openapi.json
+          git diff --exit-code -- ../frontend/openapi.json

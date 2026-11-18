@@ -11,10 +11,10 @@ Visão, arquitetura e roadmap: [docs/PLANO.md](docs/PLANO.md).
 backend/    API FastAPI (monólito modular) + migrações Alembic + testes
 dev.ps1     sobe o backend local (Windows); testes.ps1 roda lint e testes no odonto_test
 docker/     scripts do Postgres (role da aplicação)
+frontend/   React + Vite PWA (tablet-first), cliente tipado gerado do OpenAPI
 docs/       documentação
 ```
 
-O frontend (React + Vite PWA) entra na sequência da Fase 0.
 
 ## Rodando com Docker
 
@@ -142,6 +142,41 @@ ALTER DATABASE odonto_test SET lc_messages = 'C';
 ```
 
 Depois, `.\testes.ps1` roda o lint e todos os testes (argumentos vão para o pytest).
+
+### 6. Frontend
+
+Requer Node.js 20+ (testado com o 26). Com a API rodando (`.\dev.ps1`), em outro terminal:
+
+```powershell
+cd frontend
+npm install
+npm run dev                     # http://localhost:5173
+```
+
+Ou tudo de uma vez: `.\dev.ps1 -Demo -Front` (abre o `npm run dev` em outra janela).
+
+O Vite repassa `/api/*` para a API em `localhost:8000`, então não há CORS no
+desenvolvimento. Entre com um usuário da demonstração (ex.: `beatriz.demo@example.com`,
+senha `demo-odonto-2026`) ou com o admin da clínica.
+
+| Comando | O que faz |
+|---|---|
+| `npm run dev` | servidor de desenvolvimento |
+| `npm run lint` | ESLint |
+| `npm run build` | checagem de tipos + build de produção (com o service worker do PWA) |
+| `npm run atualizar-api` | exporta o OpenAPI do backend (`python -m app.cli openapi`) e regenera `src/api/schema.d.ts` |
+
+O cliente da API é gerado do OpenAPI (`openapi-typescript` + `openapi-fetch`): ao mudar uma
+rota do backend, rode `npm run atualizar-api` e commite `openapi.json` e `schema.d.ts` (o
+CI confere os dois). A sessão fica no `sessionStorage` (some ao fechar o navegador) e o PWA
+só guarda o app em cache, nunca dados da API.
+
+O que já dá para testar no navegador está na tabela abaixo (atualizada a cada etapa):
+
+| Tela | Situação |
+|---|---|
+| Login com escolha de clínica, menu por papel, início (agenda do dia e alertas) | pronta |
+| Pacientes, agenda, prontuário, odontograma 2D/3D, gestão, precificação | nas próximas etapas |
 
 ## Testes
 

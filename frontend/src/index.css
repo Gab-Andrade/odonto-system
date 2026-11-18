@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+/* Tokens de cor: claro por padrão, escuro pela preferência do sistema. */
+@theme {
+  --color-marca: #0f766e;
+  --color-marca-forte: #115e59;
+  --color-marca-suave: #ccfbf1;
+  --color-fundo: #f8fafc;
+  --color-painel: #ffffff;
+  --color-borda: #e2e8f0;
+  --color-texto: #0f172a;
+  --color-texto-suave: #475569;
+  --color-perigo: #b91c1c;
+  --color-perigo-suave: #fee2e2;
+  --color-alerta: #b45309;
+  --color-alerta-suave: #fef3c7;
+  --color-sucesso: #15803d;
+  --color-sucesso-suave: #dcfce7;
+  --font-sans: "Inter", ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-marca: #2dd4bf;
+    --color-marca-forte: #5eead4;
+    --color-marca-suave: #134e4a;
+    --color-fundo: #0b1220;
+    --color-painel: #111a2e;
+    --color-borda: #24314d;
+    --color-texto: #e2e8f0;
+    --color-texto-suave: #94a3b8;
+    --color-perigo: #f87171;
+    --color-perigo-suave: #450a0a;
+    --color-alerta: #fbbf24;
+    --color-alerta-suave: #451a03;
+    --color-sucesso: #4ade80;
+    --color-sucesso-suave: #052e16;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--color-fundo);
+  color: var(--color-texto);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Impressão do prontuário (assinatura à mão enquanto o ICP-Brasil está em stand-by). */
+@media print {
+  .nao-imprimir {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+    color: #000;
+  }
+}
