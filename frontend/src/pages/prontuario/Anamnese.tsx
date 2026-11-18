@@ -7,7 +7,7 @@ import { Aviso, Botao, Campo, Cartao, Carregando, ErroCarga, Etiqueta, Selecao, 
 import { dataHoraBR } from "../../lib/datas";
 import { formatarResposta } from "../../lib/texto";
 
-interface Pergunta {
+export interface Pergunta {
   id: string;
   text: string;
   type: "texto" | "sim_nao" | "escolha_unica" | "multipla" | "numero" | "data";
@@ -16,6 +16,7 @@ interface Pergunta {
   required?: boolean;
   alert?: boolean;
   options?: string[];
+  alert_options?: string[];
 }
 
 export default function Anamnese({ pacienteId }: { pacienteId: string }) {
@@ -203,7 +204,7 @@ function Formulario({
   );
 }
 
-function CampoPergunta({
+export function CampoPergunta({
   pergunta: p,
   valor,
   aoMudar,

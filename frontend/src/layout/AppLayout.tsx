@@ -36,6 +36,7 @@ const MENU: ItemMenu[] = [
   { para: "/estoque", rotulo: "Estoque", icone: "▤", papeis: CLINICOS },
   { para: "/financeiro", rotulo: "Financeiro", icone: "¤", papeis: [...GESTAO, "dentista"] },
   { para: "/precificacao", rotulo: "Precificação", icone: "$", papeis: GESTAO },
+  { para: "/configuracoes", rotulo: "Configurações", icone: "⚙", papeis: GESTAO },
 ];
 
 export default function AppLayout() {
