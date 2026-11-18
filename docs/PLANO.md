@@ -402,6 +402,15 @@ odonto-system/
   - Até lá, os arquivos (STL/PLY/OBJ) podem ser guardados como **anexos** do paciente, sem visualizador.
   - Quando o tema for retomado, avaliar em fases: visualização ao lado do modelo genérico → marcação manual de pontos de referência dos dentes → segmentação automática por IA.
   - Observação: alguns scanners exportam em formato proprietário criptografado.
+- **Gengiva no modelo 3D** (pedido após o teste da Fase 4, 2026-11-18): as raízes geradas
+  por código ficaram feias quando expostas.
+  - Gerar uma malha de gengiva por arcada (superior e inferior), acompanhando a curva e só
+    os dentes presentes do paciente, como nó próprio (`gengiva_superior`/`gengiva_inferior`).
+  - Raízes ficam **dentro** da gengiva. Gengiva translúcida ou removível pelo usuário, para
+    ver as raízes quando quiser (ex.: explicar um canal ao paciente).
+  - Junto: raízes mais realistas (mais grossas, ápice arredondado em vez de ponta).
+  - Alternativa a avaliar: modelos prontos (Blender/artista ou com licença livre de uso
+    comercial), mantendo os nomes de nós e a orientação já documentados.
 - **Modo offline** do PWA para o dia de atendimento.
 - **Assinatura ICP-Brasil das evoluções**: em stand-by (o projeto ainda é um modelo, sem
   integrações pagas). Hoje a evolução tem assinatura eletrônica simples + hash do conteúdo,

@@ -4,6 +4,8 @@
         --admin-email admin@sorriso.com.br --admin-nome "Ana Souza"
 
 A senha é pedida no terminal (não fica no histórico do shell).
+
+    python -m app.cli demo --slug teste     # dados de demonstração (só desenvolvimento)
 """
 
 import argparse
@@ -41,6 +43,27 @@ def _criar_clinica(args: argparse.Namespace) -> int:
     return 0
 
 
+def _demo(args: argparse.Namespace) -> int:
+    from app import demo
+
+    try:
+        report = demo.seed(args.slug)
+    except demo.DemoError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    print(f"Clínica: {report.clinic} (slug {args.slug})")
+    for line in report.created:
+        print(f"  + {line}")
+    for line in report.kept:
+        print(f"  = {line}")
+    if not report.created:
+        print("Nada novo: os dados de demonstração já existiam.")
+    print(f"Usuários de demonstração (senha {demo.DEMO_PASSWORD}):")
+    for email, name, role, _ in demo.TEAM:
+        print(f"  {email:30} {role.value:9} {name}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m app.cli")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -51,6 +74,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--admin-email", required=True)
     p.add_argument("--admin-nome", required=True)
     p.set_defaults(func=_criar_clinica)
+
+    d = sub.add_parser("demo", help="cria dados de demonstração (idempotente; não em produção)")
+    d.add_argument("--slug", default="teste", help="clínica existente, ou criada se não houver")
+    d.set_defaults(func=_demo)
 
     args = parser.parse_args(argv)
     return args.func(args)

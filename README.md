@@ -9,6 +9,7 @@ Visão, arquitetura e roadmap: [docs/PLANO.md](docs/PLANO.md).
 
 ```
 backend/    API FastAPI (monólito modular) + migrações Alembic + testes
+dev.ps1     sobe o backend local (Windows); testes.ps1 roda lint e testes no odonto_test
 docker/     scripts do Postgres (role da aplicação)
 docs/       documentação
 ```
@@ -49,6 +50,98 @@ cp .env.example .env
 alembic upgrade head
 uvicorn app.main:app --reload
 ```
+
+## Testando localmente (Windows, sem Docker)
+
+### 1. PostgreSQL nativo
+
+Com o PostgreSQL (16 ou mais novo) instalado como serviço, no `psql` como superusuário
+(`postgres`):
+
+```sql
+CREATE ROLE odonto LOGIN PASSWORD 'odonto';           -- dono do schema (migrações)
+CREATE DATABASE odonto OWNER odonto;
+\c odonto
+CREATE EXTENSION IF NOT EXISTS pg_trgm;               -- as migrações precisam das duas e
+CREATE EXTENSION IF NOT EXISTS btree_gist;            -- o role odonto não é superusuário
+```
+
+Depois crie o role da aplicação (`odonto_app`, sem `BYPASSRLS`) com o script do projeto:
+
+```powershell
+& "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -d odonto `
+  -v app_password=odonto_app -v owner=odonto -f docker/postgres/roles.sql
+```
+
+### 2. Backend e dados de demonstração
+
+```powershell
+cd backend
+py -m venv .venv
+.venv\Scripts\pip install -e ".[dev]"
+copy .env.example .env          # para testar com calma: ACCESS_TOKEN_MINUTES=480
+cd ..
+.\dev.ps1 -Demo                 # migra, cria os dados de demonstração e sobe a API
+```
+
+`.\dev.ps1` sozinho migra e sobe a API; `-Demo` roda antes `python -m app.cli demo`, que é
+idempotente (pode rodar de novo sem duplicar nada) e usa a clínica do `--slug` (padrão
+`teste`), criando-a se não existir. Ele cria:
+
+- equipe: Dra. Beatriz e Dr. Rafael (dentistas), recepção e gestor, todos com e-mail
+  `@example.com` e senha `demo-odonto-2026` (o comando lista os e-mails);
+- pacientes: **Carlos** (adulto, 30 dentes, cáries, restaurações, canal, coroa e um
+  ausente), **Laura** (4 anos, decídua, com responsável) e **Pedro** (9 anos, mista);
+- a "Tabela Demo" de preços, um plano aprovado e um orçamento aguardando resposta do
+  Carlos, a "Cadeira Demo" e consultas para amanhã e depois de amanhã.
+
+O comando recusa rodar com `ENVIRONMENT=production`.
+
+### 3. Login no Swagger
+
+1. Abra http://localhost:8000/docs.
+2. `POST /auth/login` → *Try it out* com `{"email": "...", "password": "..."}`. Se o
+   usuário estiver em mais de uma clínica, a resposta 409 lista as clínicas: repita
+   enviando também `"clinic_id"`.
+3. Copie o `access_token`, clique em **Authorize** (cadeado no topo) e cole só o token.
+   Ele vale `ACCESS_TOKEN_MINUTES` (60 por padrão).
+
+### 4. Roteiro curto do odontograma 3D
+
+1. `GET /pacientes?busca=demo` → copie o `id` do Carlos (ou da Laura/Pedro).
+2. `GET /odontograma/pacientes/{id}/arcada` → dentição e lista de dentes.
+3. `GET /odontograma/pacientes/{id}/visualizacao` → cada dente com as cinco faces, o nome
+   do nó 3D de cada face (`16_O` …), a cor resolvida e `hidden` (o 46 do Carlos, ausente).
+4. `GET /odontograma/3d/arcada.glb?dentes=<lista da arcada separada por vírgula>` e
+   `GET /odontograma/3d/dentes/{fdi}.glb` → modelo 3D.
+5. Marque algo (`POST /odontograma/pacientes/{id}/eventos`) e veja a mudança em
+   `/visualizacao` e em `/comparacao?de=...&ate=...`.
+
+**Ver os `.glb`:** no Swagger, a resposta do GLB tem o link *Download file*. Salve como
+`arcada.glb` e arraste para https://gltf-viewer.donmccurdy.com (roda no navegador; o
+arquivo não sai da máquina). O painel *Scene* mostra os nós `dente_<fdi>` e as faces.
+
+### 5. Testes de integração locais
+
+Use um banco **separado**, `odonto_test` (os testes o apagam e recriam a cada execução;
+nunca aponte para o `odonto`). Como `postgres`:
+
+```sql
+CREATE DATABASE odonto_test OWNER odonto;
+\c odonto_test
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+GRANT USAGE ON SCHEMA public TO odonto_app;
+ALTER DEFAULT PRIVILEGES FOR ROLE odonto IN SCHEMA public
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO odonto_app;
+ALTER DEFAULT PRIVILEGES FOR ROLE odonto IN SCHEMA public
+  GRANT USAGE, SELECT ON SEQUENCES TO odonto_app;
+-- alguns testes conferem a mensagem "permission denied"; com o Postgres em português
+-- ela viria traduzida:
+ALTER DATABASE odonto_test SET lc_messages = 'C';
+```
+
+Depois, `.\testes.ps1` roda o lint e todos os testes (argumentos vão para o pytest).
 
 ## Testes
 
