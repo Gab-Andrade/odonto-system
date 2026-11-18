@@ -164,11 +164,27 @@ export default function Boca2D({
               rx={r}
               transform={`translate(${x},${y}) rotate(${angulo})`}
               fill={fundo}
-              stroke={sel ? "var(--color-marca)" : "#374151"}
-              strokeWidth={sel ? 3 : 1.6}
+              // Raiz marcada (canal, lesão): contorno grosso na cor da raiz, em volta da coroa.
+              stroke={d.root_color ?? "#374151"}
+              strokeWidth={d.root_color ? 3.6 : 1.6}
               strokeDasharray={ausente ? "4 3" : undefined}
               className="transition-opacity hover:opacity-80"
             />
+            {sel && (
+              <rect
+                x={-w / 2 - 3.5}
+                y={-h / 2 - 3.5}
+                width={w + 7}
+                height={h + 7}
+                rx={r + 3}
+                transform={`translate(${x},${y}) rotate(${angulo})`}
+                fill="none"
+                stroke="var(--color-marca)"
+                strokeWidth={2}
+                strokeDasharray="4 2.5"
+                pointerEvents="none"
+              />
+            )}
             <text
               x={x}
               y={y + (coresFaces.length ? -1 : 3.5)}

@@ -18,6 +18,7 @@ class S:
     color: str
     sort_order: int = 0
     display_3d: str = "colorir"
+    region: str = "coroa"
     name: str = "x"
     id: uuid.UUID = None
 
@@ -87,3 +88,24 @@ def test_status_display_schema():
     assert StatusCreate(**base, display_3d="ocultar").display_3d == "ocultar"
     with pytest.raises(ValidationError):
         StatusCreate(**base, display_3d="piscar")
+
+
+def test_root_layer_is_separate_from_crown():
+    canal = S("endodontia", "realizado", "#1565C0", region="raiz")
+    lesao = S("lesao_periapical", "patologia", "#6A1B9A", region="raiz")
+    coroa = S("coroa", "realizado", "#0D47A1")
+    statuses = {s.id: s for s in (canal, lesao, coroa, RESTAURACAO)}
+    marks = {
+        (36, None, canal.id),
+        (36, None, lesao.id),
+        (36, None, coroa.id),
+        (36, "O", RESTAURACAO.id),
+        (46, None, canal.id),
+    }
+    teeth = {t["tooth"]: t for t in visualizacao.build([36, 46], marks, statuses)}
+    assert teeth[36]["root_color"] == "#6A1B9A"  # patologia vence o canal
+    assert teeth[36]["color"] == "#0D47A1"  # a coroa não herda a cor da raiz
+    assert teeth[36]["faces"]["O"]["color"] == "#1565C0"
+    assert teeth[36]["faces"]["V"]["color"] == "#0D47A1"
+    assert teeth[46]["root_color"] == "#1565C0" and teeth[46]["color"] is None
+    assert [m["region"] for m in teeth[46]["whole"]] == ["raiz"]

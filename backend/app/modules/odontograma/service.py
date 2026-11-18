@@ -21,6 +21,7 @@ from app.modules.odontograma.models import (
     OdontogramEvent,
     PersonalColor,
     StatusKind,
+    StatusRegion,
     StatusScope,
     ToothNote,
     ToothStatus,
@@ -79,6 +80,7 @@ def ensure_default_legend(db: Session, clinic_id: uuid.UUID) -> None:
             "scope": scope,
             "sort_order": i * 10,
             "display_3d": "ocultar" if code in regras.HIDDEN_IN_3D else "colorir",
+            "region": "raiz" if code in regras.ROOT_ITEMS else "coroa",
         }
         for i, (code, name, color, kind, scope) in enumerate(regras.DEFAULT_LEGEND)
     ]
@@ -112,6 +114,7 @@ class StatusView:
     scope: StatusScope
     sort_order: int
     display_3d: Display3D
+    region: StatusRegion
     active: bool
 
 
@@ -137,6 +140,7 @@ def statuses_for(
             scope=s.scope,
             sort_order=s.sort_order,
             display_3d=s.display_3d,
+            region=s.region,
             active=s.active,
         )
         for s in list_statuses(db, include_inactive=include_inactive)
@@ -207,6 +211,7 @@ def create_status(db: Session, user: CurrentUser, data: dict[str, Any]) -> Tooth
     if db.scalar(select(ToothStatus.id).where(ToothStatus.code == data["code"])) is not None:
         raise RuleViolation("Já existe um item da legenda com este código.")
     _check_display(data["scope"], data.get("display_3d", Display3D.COLORIR))
+    _check_region(data["scope"], data.get("region", StatusRegion.COROA))
     status = ToothStatus(clinic_id=user.clinic_id, **data)
     db.add(status)
     db.flush()
@@ -227,7 +232,9 @@ def update_status(db: Session, status: ToothStatus, changes: dict[str, Any]) -> 
         raise RuleViolation(
             "Tipo e escopo não mudam depois de usados; crie outro item e desative este."
         )
-    _check_display(changes.get("scope", status.scope), changes.get("display_3d", status.display_3d))
+    scope = changes.get("scope", status.scope)
+    _check_display(scope, changes.get("display_3d", status.display_3d))
+    _check_region(scope, changes.get("region", status.region))
     for name in changed:
         setattr(status, name, changes[name])
     db.flush()
@@ -237,6 +244,11 @@ def update_status(db: Session, status: ToothStatus, changes: dict[str, Any]) -> 
 def _check_display(scope: StatusScope, display: Display3D) -> None:
     if Display3D(display) is Display3D.OCULTAR and StatusScope(scope) is not StatusScope.DENTE:
         raise RuleViolation("Só item de dente inteiro pode ocultar o dente no 3D.")
+
+
+def _check_region(scope: StatusScope, region: StatusRegion) -> None:
+    if StatusRegion(region) is StatusRegion.RAIZ and StatusScope(scope) is not StatusScope.DENTE:
+        raise RuleViolation("Só item de dente inteiro pode pintar a raiz.")
 
 
 # ---------- marcações ----------

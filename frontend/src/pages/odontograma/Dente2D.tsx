@@ -49,7 +49,7 @@ export default function Dente2D({
     <g transform={`translate(${x},${y})`}>
       <text
         x={T / 2}
-        y={numeroEmCima ? -6 : T + 16}
+        y={numeroEmCima ? -12 : T + 21}
         textAnchor="middle"
         className="cursor-pointer fill-current text-[11px] font-semibold select-none"
         onClick={aoTocarDente}
@@ -77,6 +77,10 @@ export default function Dente2D({
         {dente.color && !ausente && (
           <rect x={-3} y={-3} width={T + 6} height={T + 6} rx={6} fill="none" stroke={dente.color} strokeWidth={4} pointerEvents="none" />
         )}
+        {/* Raiz marcada (canal, lesão): segundo contorno, por fora, na cor da raiz. */}
+        {dente.root_color && !ausente && (
+          <rect x={-6.5} y={-6.5} width={T + 13} height={T + 13} rx={9} fill="none" stroke={dente.root_color} strokeWidth={2.6} pointerEvents="none" />
+        )}
         {ausente && (
           <g stroke={dente.color ?? "#616161"} strokeWidth={4} pointerEvents="none">
             <line x1={2} y1={2} x2={T - 2} y2={T - 2} />
@@ -84,7 +88,7 @@ export default function Dente2D({
           </g>
         )}
         {selecionado && (
-          <rect x={-5} y={-5} width={T + 10} height={T + 10} rx={8} fill="none" stroke="var(--color-marca)" strokeDasharray="4 3" strokeWidth={2} pointerEvents="none" />
+          <rect x={-10} y={-10} width={T + 20} height={T + 20} rx={11} fill="none" stroke="var(--color-marca)" strokeDasharray="4 3" strokeWidth={2} pointerEvents="none" />
         )}
       </g>
     </g>

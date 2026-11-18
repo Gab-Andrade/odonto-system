@@ -3678,6 +3678,8 @@ export interface components {
             kind: components["schemas"]["StatusKind"];
             /** Name */
             name: string;
+            /** @default coroa */
+            region: components["schemas"]["StatusRegion"];
             /**
              * Status Id
              * Format: uuid
@@ -5287,6 +5289,11 @@ export interface components {
             kind: components["schemas"]["StatusKind"];
             /** Name */
             name: string;
+            /**
+             * @description Onde pinta: coroa, ou raiz (só dente inteiro; ex.: canal).
+             * @default coroa
+             */
+            region: components["schemas"]["StatusRegion"];
             scope: components["schemas"]["StatusScope"];
             /**
              * Sort Order
@@ -5330,10 +5337,16 @@ export interface components {
              * @default false
              */
             personal: boolean;
+            region: components["schemas"]["StatusRegion"];
             scope: components["schemas"]["StatusScope"];
             /** Sort Order */
             sort_order: number;
         };
+        /**
+         * StatusRegion
+         * @enum {string}
+         */
+        StatusRegion: "coroa" | "raiz";
         /**
          * StatusScope
          * @enum {string}
@@ -5350,6 +5363,7 @@ export interface components {
             kind?: components["schemas"]["StatusKind"] | null;
             /** Name */
             name?: string | null;
+            region?: components["schemas"]["StatusRegion"] | null;
             /** @description Só enquanto o item não foi usado. */
             scope?: components["schemas"]["StatusScope"] | null;
             /** Sort Order */
@@ -5603,7 +5617,7 @@ export interface components {
         ToothViewOut: {
             /**
              * Color
-             * @description Cor do item mais importante do dente inteiro.
+             * @description Cor do item mais importante da coroa (itens de dente inteiro da coroa).
              */
             color: string | null;
             /** Deciduous */
@@ -5632,6 +5646,11 @@ export interface components {
             node: string;
             /** @description Posição na arcada deste paciente. */
             placement: components["schemas"]["PlacementOut"];
+            /**
+             * Root Color
+             * @description Cor do item mais importante da raiz (canal, lesão periapical...).
+             */
+            root_color: string | null;
             /** Tooth */
             tooth: number;
             /** Whole */

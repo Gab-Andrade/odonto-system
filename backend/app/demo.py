@@ -25,7 +25,7 @@ from app.modules.agenda.models import Appointment, Chair
 from app.modules.identidade.models import Clinic, ClinicMembership, User
 from app.modules.identidade.service import create_clinic_with_admin, normalize_email
 from app.modules.odontograma import service as odontograma
-from app.modules.odontograma.models import StatusKind, StatusScope, ToothStatus
+from app.modules.odontograma.models import StatusKind, StatusRegion, StatusScope, ToothStatus
 from app.modules.pacientes import service as pacientes
 from app.modules.pacientes.models import ConsentGivenBy, ConsentPurpose, Patient, Sex
 from app.modules.precificacao import service as pricing
@@ -336,7 +336,7 @@ def _clinical_history(
 
 # Itens que a clínica de demonstração acrescenta à legenda padrão (mostra que ela é editável).
 EXTRA_LEGEND = (
-    ("lesao_periapical", "Lesão periapical", "#6A1B9A", "patologia", "dente", 25),
+    ("lesao_periapical", "Lesão periapical", "#6A1B9A", "patologia", "dente", 25, "raiz"),
     (
         "retratamento_planejado",
         "Retratamento de canal a fazer",
@@ -344,15 +344,16 @@ EXTRA_LEGEND = (
         "planejado",
         "dente",
         45,
+        "raiz",
     ),
-    ("retratamento", "Retratamento de canal", "#00838F", "realizado", "dente", 85),
+    ("retratamento", "Retratamento de canal", "#00838F", "realizado", "dente", 85, "raiz"),
 )
 
 
 def _legend(db: Session, actor: CurrentUser, report: Report) -> dict[str, uuid.UUID]:
     odontograma.ensure_default_legend(db, actor.clinic_id)
     codes = set(db.scalars(select(ToothStatus.code)))
-    for code, name, color, kind, scope, order in EXTRA_LEGEND:
+    for code, name, color, kind, scope, order, region in EXTRA_LEGEND:
         if code not in codes:
             odontograma.create_status(
                 db,
@@ -364,6 +365,7 @@ def _legend(db: Session, actor: CurrentUser, report: Report) -> dict[str, uuid.U
                     "kind": StatusKind(kind),
                     "scope": StatusScope(scope),
                     "sort_order": order,
+                    "region": StatusRegion(region),
                 },
             )
             report.created.append(f"item da legenda {name}")

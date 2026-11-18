@@ -3733,6 +3733,10 @@
             "title": "Name",
             "type": "string"
           },
+          "region": {
+            "$ref": "#/components/schemas/StatusRegion",
+            "default": "coroa"
+          },
           "status_id": {
             "format": "uuid",
             "title": "Status Id",
@@ -8005,6 +8009,11 @@
             "title": "Name",
             "type": "string"
           },
+          "region": {
+            "$ref": "#/components/schemas/StatusRegion",
+            "default": "coroa",
+            "description": "Onde pinta: coroa, ou raiz (só dente inteiro; ex.: canal)."
+          },
           "scope": {
             "$ref": "#/components/schemas/StatusScope"
           },
@@ -8083,6 +8092,9 @@
             "title": "Personal",
             "type": "boolean"
           },
+          "region": {
+            "$ref": "#/components/schemas/StatusRegion"
+          },
           "scope": {
             "$ref": "#/components/schemas/StatusScope"
           },
@@ -8100,10 +8112,19 @@
           "scope",
           "sort_order",
           "display_3d",
+          "region",
           "active"
         ],
         "title": "StatusOut",
         "type": "object"
+      },
+      "StatusRegion": {
+        "enum": [
+          "coroa",
+          "raiz"
+        ],
+        "title": "StatusRegion",
+        "type": "string"
       },
       "StatusScope": {
         "enum": [
@@ -8171,6 +8192,16 @@
               }
             ],
             "title": "Name"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StatusRegion"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "scope": {
             "anyOf": [
@@ -8879,7 +8910,7 @@
                 "type": "null"
               }
             ],
-            "description": "Cor do item mais importante do dente inteiro.",
+            "description": "Cor do item mais importante da coroa (itens de dente inteiro da coroa).",
             "title": "Color"
           },
           "deciduous": {
@@ -8913,6 +8944,18 @@
             "$ref": "#/components/schemas/PlacementOut",
             "description": "Posição na arcada deste paciente."
           },
+          "root_color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Cor do item mais importante da raiz (canal, lesão periapical...).",
+            "title": "Root Color"
+          },
           "tooth": {
             "title": "Tooth",
             "type": "integer"
@@ -8932,6 +8975,7 @@
           "hidden",
           "node",
           "color",
+          "root_color",
           "whole",
           "faces",
           "placement"

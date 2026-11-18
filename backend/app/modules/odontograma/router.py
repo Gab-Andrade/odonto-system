@@ -186,7 +186,9 @@ def get_odontogram(
     teeth: dict[int, ToothOut] = {}
     for tooth, face, status_id in sorted(marks, key=lambda k: (k[0], k[1] or "", str(k[2]))):
         s = statuses[status_id]
-        mark = MarkOut(status_id=s.id, code=s.code, name=s.name, color=s.color, kind=s.kind)
+        mark = MarkOut(
+            status_id=s.id, code=s.code, name=s.name, color=s.color, kind=s.kind, region=s.region
+        )
         entry = teeth.setdefault(
             tooth,
             ToothOut(tooth=tooth, deciduous=regras.is_deciduous(tooth), whole=[], faces={}),

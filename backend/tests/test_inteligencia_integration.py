@@ -41,7 +41,7 @@ def scenario(make_clinic):
     actor = CurrentUser(user_id=admin.id, clinic_id=clinic.id, role=Role.ADMIN)
     with tenant_session(clinic.id) as db:
         demo._price_table(db, actor, demo.Report())
-        legend = demo._legend(db, clinic.id)
+        legend = demo._legend(db, actor, demo.Report())
         patient = pacientes.create_patient(
             db, actor, {"full_name": "Paciente Alerta", "phone": "11999990000"}
         )

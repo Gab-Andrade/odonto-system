@@ -1,6 +1,6 @@
 ---
 modulo: odontograma
-atualizado_em: 3b9b648
+atualizado_em: e2f4840
 ---
 # Odontograma
 
@@ -8,7 +8,7 @@ atualizado_em: 3b9b648
 
 ## Responsabilidades
 
-- Legenda da clínica (`tooth_statuses`): itens com cor, tipo (patologia, planejado, realizado), escopo (dente inteiro ou face) e efeito no 3D (colorir ou ocultar o dente).
+- Legenda da clínica (`tooth_statuses`): itens com cor, tipo (patologia, planejado, realizado), escopo (dente inteiro ou face), efeito no 3D (colorir ou ocultar o dente) e região (coroa ou raiz).
 - Cor pessoal (`tooth_status_user_colors`): cada usuário pode sobrescrever a cor de um item só para si; as leituras devolvem a cor efetiva de quem pede.
 - Marcar e remover itens em dentes/faces de um paciente, em lotes, opcionalmente vinculados a um atendimento aberto.
 - Consultar o odontograma atual ou "como estava em" um momento, o histórico de eventos e a comparação entre dois momentos.
@@ -30,7 +30,7 @@ atualizado_em: 3b9b648
 - `odontogram_events` não tem estado: não existe "marcação atual" gravada. O estado é sempre derivado dos eventos (`regras.py:rebuild`).
 - Append-only: a migração 0011 revoga UPDATE/DELETE/TRUNCATE do `odonto_app` em `odontogram_events`; a 0017 faz o mesmo em `dental_arch_configs`. Em `tooth_statuses` revoga só DELETE/TRUNCATE (itens são desativados, não apagados).
 - FKs compostas com `clinic_id` garantem que paciente, item da legenda e atendimento sejam da mesma clínica; o atendimento ainda precisa ser do mesmo paciente (`fk_odontogram_events_encounter_same_patient`).
-- CHECKs: dente FDI (11-48 com posição 1-8; 51-85 com posição 1-5), face em M/D/O/V/L, cor `#RRGGBB` maiúscula, código `[a-z0-9_]{1,40}`. Em `dental_arch_configs`, só numeração FDI e tamanho (1 a 52); repetição, vaga ocupada por dois dentes e coerência com a dentição ficam em `arcada.py:validate` (CHECK não tem subconsulta). Em `tooth_statuses` (0018): `display_3d` válido e `display_3d_whole_tooth` (`ocultar` só com escopo `dente`).
+- CHECKs: dente FDI (11-48 com posição 1-8; 51-85 com posição 1-5), face em M/D/O/V/L, cor `#RRGGBB` maiúscula, código `[a-z0-9_]{1,40}`. Em `dental_arch_configs`, só numeração FDI e tamanho (1 a 52); repetição, vaga ocupada por dois dentes e coerência com a dentição ficam em `arcada.py:validate` (CHECK não tem subconsulta). Em `tooth_statuses` (0018): `display_3d` válido e `display_3d_whole_tooth` (`ocultar` só com escopo `dente`). Em `tooth_statuses` (0025): `region_valid` (`coroa`|`raiz`) e `region_whole_tooth` (`raiz` só com escopo `dente`).
 - Gatilhos (migração 0011, `check_violation`):
   - `odontogram_event_guard` (BEFORE INSERT): a presença de face tem de bater com o escopo do item; só `marcar` item ativo. Usa `FOR SHARE` no item para serializar com mudança concorrente de escopo.
   - `tooth_status_guard` (BEFORE UPDATE): `kind`, `scope`, `code` e `clinic_id` não mudam se já existe evento com o item. `display_3d` e `active` podem mudar mesmo com o item em uso.
@@ -80,6 +80,9 @@ Recepção não acessa nada. Gestor lê e edita a legenda, mas não marca. Denti
 - Arcada e marcações são independentes: marcar não consulta a arcada, e mudar a arcada não apaga marcações. Dente marcado fora da arcada aparece em `/visualizacao` com `in_arch=false` (`visualizacao.py:build`).
 - Cor de uma face: item mais importante da face; sem ele, o mais importante do dente inteiro; sem nenhum, `null`. Importância: patologia > planejado > realizado, desempate por `sort_order` e `code` (`visualizacao.py:priority`). Dente é `hidden` se tem marcação de dente inteiro com `display_3d = ocultar`.
 - `display_3d = ocultar` só em item de dente inteiro: validado em `service.py:_check_display` e pelo CHECK.
+- Região: `raiz` só em item de dente inteiro (`service.py:_check_region` em `create_status` e `update_status`, mais o CHECK). Ao editar, a checagem usa o escopo resultante, então trocar para `face` um item de raiz sem mudar a região é recusado.
+- Duas camadas por dente em `/visualizacao` (`visualizacao.py:build`): as marcações de dente inteiro são separadas por região. `color` = melhor item da **coroa**; `root_color` = melhor item da **raiz** (`null` se não há). Faces sem marcação própria herdam só `color`, nunca a cor da raiz. Mesma prioridade nas duas camadas (patologia > planejado > realizado, depois `sort_order`). `whole` traz as marcações das duas regiões (cada `MarkOut` tem `region`), e `hidden` considera todas.
+- Legenda padrão: `regras.py:ROOT_ITEMS` (`endodontia`, `endodontia_planejada`) define quais itens nascem com região `raiz` em `service.py:ensure_default_legend`.
 - Tipo/escopo mudam só enquanto o item não tem evento (`service.py:update_status`, gatilho).
 - Anotação: dente validado por `Tooth` no schema e pelo CHECK; texto aparado e de 1 a 2000 caracteres (`schemas.py:ToothNoteIn`). Todos os papéis de leitura veem todas as anotações do paciente (sem filtro por autor). `em` usa `created_at <= em` (`service.py:tooth_notes`); `add_tooth_note` faz `refresh` para trazer o `created_at` do banco.
 - Cor efetiva = cor pessoal do usuário que pede, senão a da clínica (`service.py:statuses_for`). Usada em `GET /legenda`, `GET /pacientes/{id}`, `/visualizacao` e `/comparacao`; a decisão de cor por face em `visualizacao.py` já recebe a cor resolvida, então 2D e 3D seguem iguais para a mesma pessoa. Mudar a cor da clínica não afeta quem tem cor pessoal naquele item.
@@ -113,6 +116,7 @@ Recepção não acessa nada. Gestor lê e edita a legenda, mas não marca. Denti
 | Tipo/escopo imutáveis após uso, por serviço e por gatilho | Mudar escopo reinterpretaria eventos antigos |
 | Cor pessoal em tabela própria, não campo no item | A legenda é da clínica; a preferência (ex.: cárie preta) é de cada pessoa e não deve alterar o que os outros veem. Substitui o "dentista só recolore a legenda" (commit 3b9b648), que mudava a cor para todos |
 | Anotação por dente em tabela própria e append-only, fora de `odontogram_events` | Texto livre não é estado de marcação (não entra em `rebuild`, comparação nem visualização) e o registro clínico não pode ser reescrito |
+| Região (coroa/raiz) no item da legenda, com `root_color` separado de `color` | Canal e lesão periapical são da raiz: pintar a coroa inteira de roxo/azul seria clinicamente errado e esconderia a cor da coroa. Raiz só em dente inteiro porque não existe "face da raiz" nas cinco faces |
 | Face O e L guardam também incisal e palatina | Evita duplicar faces; o rótulo depende do dente |
 | Lock na linha do paciente | Serializar validação e inserção do lote |
 | `/visualizacao` única para 2D e 3D, com decisão de cor no backend | As duas visões não divergem; o frontend só pinta |
@@ -121,7 +125,7 @@ Recepção não acessa nada. Gestor lê e edita a legenda, mas não marca. Denti
 
 ## Como estender
 
-- Novo item padrão: editar `regras.py:DEFAULT_LEGEND` (e `HIDDEN_IN_3D` se deve ocultar). Só afeta clínicas ainda sem legenda; as existentes precisam criar via API.
+- Novo item padrão: editar `regras.py:DEFAULT_LEGEND` (e `HIDDEN_IN_3D` se deve ocultar, `ROOT_ITEMS` se pinta a raiz). Só afeta clínicas ainda sem legenda; as existentes precisam criar via API.
 - Nova face ou tipo: atualizar enum no model, schema, CHECK numa nova migração (inclusive nos gatilhos, se afetar a regra) e `regras.py`. Nova face também exige nós e materiais em `malha3d.py`.
 - Trocar a geometria dos dentes: mude `malha3d.py` e incremente `VERSION` (o frontend usa `library_version`). Para modelos externos, preserve nomes de nós, orientação (convenções em `malha3d.CONVENTIONS`) e `extras`.
 - Nova regra de composição da arcada: `arcada.py:validate`/`preset`; só a numeração/tamanho está no CHECK.
@@ -142,6 +146,8 @@ Recepção não acessa nada. Gestor lê e edita a legenda, mas não marca. Denti
 - Eventos de um mesmo lote têm `created_at` distintos (`clock_timestamp()`), mas o desempate de ordenação é por `id` (UUID aleatório); não confie na ordem dentro de um lote além do timestamp.
 - `em`, `de` e `ate` exigem data com fuso (`AwareDatetime`).
 - A migração 0018 desliga e religa `FORCE ROW LEVEL SECURITY` em `tooth_statuses` para atualizar "ausente" de todas as clínicas; ela também muda um item próprio da clínica que tenha o mesmo código, tipo e escopo. Se a migração falhar no meio, confira que o FORCE voltou (roda na transação, então o rollback restaura).
+- A migração 0025 usa o mesmo `NO FORCE`/`FORCE ROW LEVEL SECURITY` ao redor do `UPDATE` para converter em `raiz`, em todas as clínicas, os itens de dente inteiro com código `endodontia`, `endodontia_planejada`, `retratamento`, `retratamento_planejado` e `lesao_periapical`, inclusive os criados pela própria clínica com esses códigos. Itens de outros códigos que sejam de raiz ficam em `coroa` até alguém editar. `ROOT_ITEMS` só afeta clínicas ainda sem legenda.
+- `region` não está entre os campos travados pelo gatilho `tooth_status_guard` (como `display_3d`): dá para mudar a região de um item já usado, e as marcações antigas passam a ser desenhadas na outra camada.- `MarkOut.region` tem default `coroa` no schema, mas `get_odontogram` e `/visualizacao` sempre preenchem a região real do item.
 - `record_arch` não trava a linha do paciente (diferente de `record_events`): duas arcadas simultâneas são aceitas e vale a de `created_at` maior.
 - `arch_model_url` em `/visualizacao` é um caminho relativo sem prefixo de versão; o `.glb` exige login (Bearer), então o frontend não pode usar uma tag de carregamento direto sem o header.
 - Cache dos `.glb`: `private, no-cache` com ETag por hash do conteúdo: o navegador guarda o arquivo, mas revalida a cada uso (304 quando não mudou), então uma geometria nova chega na hora. Os caches em memória (`lru_cache` em `malha3d.py`) são por processo.

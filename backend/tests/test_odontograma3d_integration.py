@@ -170,3 +170,40 @@ def test_other_clinic_cannot_see(client, make_clinic, add_member):
     now = datetime.now(UTC).isoformat()
     assert client.get(f"{base}/comparacao", params={"de": now}, headers=hb).status_code == 404
     assert all(not t["whole"] for t in _viz(client, b)["teeth"])
+
+
+def test_crown_and_root_layers(client, make_clinic, add_member):
+    """Canal e lesão pintam a raiz; coroa e faces ficam por cima, na coroa."""
+    ctx = _setup(client, make_clinic, add_member)
+    h = ctx["h"]
+    legend = {s["code"]: s for s in client.get(L, headers=h["dent"]).json()}
+    assert legend["endodontia"]["region"] == "raiz"
+    assert legend["coroa"]["region"] == "coroa" and legend["carie"]["region"] == "coroa"
+
+    lesao = {"code": "lesao_periapical", "name": "Lesão periapical", "color": "#6A1B9A",
+             "kind": "patologia", "scope": "dente", "region": "raiz"}  # fmt: skip
+    created = client.post(L, json=lesao, headers=h["admin"])
+    assert created.status_code == 201, created.text
+    ctx["legend"]["lesao_periapical"] = created.json()["id"]
+    face_root = {**lesao, "code": "x", "scope": "face"}
+    assert client.post(L, json=face_root, headers=h["admin"]).status_code == 409
+
+    _mark(client, ctx, [
+        _ev(ctx, "endodontia", 36),
+        _ev(ctx, "lesao_periapical", 36),
+        _ev(ctx, "coroa", 36),
+        _ev(ctx, "restauracao", 36, "O"),
+        _ev(ctx, "endodontia", 46),
+    ])  # fmt: skip
+    teeth = {t["tooth"]: t for t in _viz(client, ctx)["teeth"]}
+    t36 = teeth[36]
+    assert t36["root_color"] == "#6A1B9A"  # patologia vence o canal feito
+    assert t36["color"] == legend["coroa"]["color"]  # a coroa não fica roxa
+    assert t36["faces"]["O"]["color"] == legend["restauracao"]["color"]  # face por cima
+    assert t36["faces"]["V"]["color"] == legend["coroa"]["color"]
+    regions = {m["code"]: m["region"] for m in t36["whole"]}
+    assert regions == {"endodontia": "raiz", "lesao_periapical": "raiz", "coroa": "coroa"}
+    # Só canal: raiz pintada, coroa natural.
+    assert teeth[46]["root_color"] == legend["endodontia"]["color"]
+    assert teeth[46]["color"] is None and teeth[46]["faces"]["O"]["color"] is None
+    assert teeth[11]["root_color"] is None

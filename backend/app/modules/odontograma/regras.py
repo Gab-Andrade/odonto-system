@@ -90,6 +90,8 @@ def check_batch(current: set[Key], changes: list[Event]) -> None:
 
 # Itens da legenda padrão que escondem o dente no modelo 3D (os demais colorem).
 HIDDEN_IN_3D = frozenset({"ausente"})
+# Itens da legenda padrão que pintam a raiz em vez da coroa.
+ROOT_ITEMS = frozenset({"endodontia", "endodontia_planejada"})
 
 # Legenda padrão criada para cada clínica (código, nome, cor, tipo, escopo).
 # Cores: vermelho = patologia, laranja = planejado, azul = realizado.

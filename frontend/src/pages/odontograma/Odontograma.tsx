@@ -270,10 +270,10 @@ function Fileira({
   selecionado: number | null;
   aoTocar: (d: DenteVis, face: string | null) => void;
 }) {
-  const passo = LADO + 10;
+  const passo = LADO + 18;
   const largura = Math.max(dentes.length * passo + 20, 200);
   return (
-    <svg viewBox={`-10 -22 ${largura} ${LADO + 44}`} className="h-auto w-full min-w-[640px] text-texto" role="img" aria-label="Odontograma">
+    <svg viewBox={`-12 -26 ${largura} ${LADO + 52}`} className="h-auto w-full min-w-[640px] text-texto" role="img" aria-label="Odontograma">
       {dentes.map((d, i) => (
         <Dente2D
           key={d.tooth}
@@ -299,7 +299,7 @@ function DetalheDente({ dente, children }: { dente: DenteVis; children?: ReactNo
         {dente.whole.map((m) => (
           <Etiqueta key={m.status_id}>
             <span className="mr-1 inline-block size-3 rounded-sm" style={{ background: m.color }} />
-            {m.name} (dente)
+            {m.name} ({m.region === "raiz" ? "raiz" : "dente"})
           </Etiqueta>
         ))}
         {faces.map(([rotulo, f]) =>

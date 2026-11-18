@@ -7,6 +7,7 @@ from pydantic import ValidationError
 
 from app.modules.odontograma.regras import (
     DEFAULT_LEGEND,
+    ROOT_ITEMS,
     Event,
     OdontogramRuleError,
     check_batch,
@@ -82,3 +83,6 @@ def test_default_legend_is_consistent():
     assert len(codes) == len(set(codes))
     for code, name, color, kind, scope in DEFAULT_LEGEND:
         StatusCreate(code=code, name=name, color=color, kind=kind, scope=scope)
+    # Itens da raiz são de dente inteiro (a raiz não tem faces).
+    scopes = {row[0]: row[4] for row in DEFAULT_LEGEND}
+    assert ROOT_ITEMS <= set(scopes) and all(scopes[c] == "dente" for c in ROOT_ITEMS)

@@ -1,6 +1,6 @@
 ---
 modulo: odontograma
-atualizado_em: 41c614e
+atualizado_em: e2f4840
 ---
 # Odontograma
 
@@ -22,13 +22,15 @@ atualizado_em: 41c614e
 
 ### Ver a legenda da clínica
 
-A legenda é a lista de itens que podem ser marcados no dente, como cárie, restauração ou implante. Cada item tem nome, cor, tipo e efeito no modelo 3D.
+A legenda é a lista de itens que podem ser marcados no dente, como cárie, restauração ou implante. Cada item tem nome, cor, tipo, efeito no modelo 3D e onde pinta: a coroa (a parte visível do dente) ou a raiz.
 
 Na primeira vez que a clínica usa o odontograma, o sistema cria uma legenda padrão com 11 itens:
 
 - **Patologia** (vermelho): Cárie (por face), Fratura (dente inteiro) e Ausente (dente inteiro).
 - **Planejado** (laranja, o que ainda será feito): Restauração a fazer (por face), Tratamento de canal a fazer (dente inteiro) e Extração indicada (dente inteiro).
 - **Realizado** (azul, o que já foi feito): Restauração (por face), Selante (por face), Tratamento de canal (dente inteiro), Coroa (dente inteiro) e Implante (dente inteiro).
+
+Os itens de tratamento de canal, a fazer e feito, pintam a raiz. Os demais itens pintam a coroa. Nas clínicas que já tinham legenda antes desta mudança, os itens de tratamento de canal, retratamento de canal e lesão periapical passaram para a raiz automaticamente.
 
 Quem vê a legenda: Administrador, Gestor, Dentista e ASB.
 
@@ -48,16 +50,16 @@ Para escolher a sua cor:
 
 Para voltar à cor da clínica, toque na setinha ↺ ao lado do item que tem cor pessoal. A cor pessoal é apagada e a cor da clínica volta a valer para você.
 
-Para mudar o nome, o tipo, a forma de marcar, o efeito no 3D, a ordem ou para ativar e desativar o item, é preciso ser Administrador ou Gestor. Dentista e ASB podem escolher só a cor pessoal.
+Para mudar o nome, o tipo, a forma de marcar, o efeito no 3D, onde o item pinta (coroa ou raiz), a ordem ou para ativar e desativar o item, é preciso ser Administrador ou Gestor. Dentista e ASB podem escolher só a cor pessoal.
 
 ### Criar ou alterar um item da legenda
 
 Quem pode: Administrador e Gestor.
 
-1. Para criar um item novo, informe o nome, a cor, o tipo (patologia, planejado ou realizado), se ele vale para o dente inteiro ou por face, o efeito no modelo 3D e a ordem em que aparece.
+1. Para criar um item novo, informe o nome, a cor, o tipo (patologia, planejado ou realizado), se ele vale para o dente inteiro ou por face, o efeito no modelo 3D, onde ele pinta (coroa ou raiz; raiz só para item de dente inteiro) e a ordem em que aparece.
 2. Cada item tem um código próprio. Ele não pode repetir o código de outro item da clínica.
-3. Para alterar um item existente, mude o nome, a cor, a ordem, o efeito no 3D ou ative e desative o item.
-4. O tipo e a forma de marcar (dente inteiro ou por face) só podem ser mudados enquanto o item nunca foi usado. Depois de usado, crie outro item e desative o antigo.
+3. Para alterar um item existente, mude o nome, a cor, a ordem, o efeito no 3D, onde ele pinta ou ative e desative o item.
+4. O tipo e a forma de marcar (dente inteiro ou por face) só podem ser mudados enquanto o item nunca foi usado. Depois de usado, crie outro item e desative o antigo. Já onde o item pinta (coroa ou raiz) pode ser mudado a qualquer momento.
 
 Itens não são apagados. Quando não forem mais usados, desative-os. Criar ou alterar um item, e cada troca de cor (da clínica ou pessoal), fica registrado no histórico de ações.
 
@@ -70,7 +72,7 @@ Quem pode: Administrador, Dentista e ASB.
 Na aba Odontograma do paciente, toque em **Editar odontograma ▾**. A área de edição abre logo abaixo da boca 2D, do 3D e da legenda, na mesma tela, com uma transição suave. Ela traz:
 
 - o cartão **1. Escolha o que marcar · 2. Toque na face do dente (aqui embaixo ou no 3D)**, com os itens da legenda, o campo **Vincular ao atendimento** (aparece só se houver atendimento aberto) e o botão **Arcada**;
-- o desenho por faces das duas arcadas, logo abaixo do cartão.
+- o desenho por faces das duas arcadas, logo abaixo do cartão. Nele, a marca da raiz aparece como um contorno grosso em volta do dente.
 
 Para marcar:
 
@@ -163,7 +165,7 @@ O odontograma mostra cada dente com marcas. Para cada dente, aparecem:
 
 Só aparecem os dentes que têm alguma marcação.
 
-Na aba Odontograma do paciente, a boca aparece em 2D: arcada superior em cima e inferior embaixo, com os dentes numerados e pintados com a cor da marcação. Toque em um dente para ver o detalhe dele e as anotações feitas nele (veja "Anotar um dente"). Tocar na boca 2D só seleciona o dente. Para marcar, use a área de edição (veja "Marcar um dente ou uma face").
+Na aba Odontograma do paciente, a boca aparece em 2D: arcada superior em cima e inferior embaixo, com os dentes numerados e pintados com a cor da coroa. Quando o dente tem marca na raiz, ela aparece como um contorno grosso, na cor da raiz, em volta do dente. Toque em um dente para ver o detalhe dele e as anotações feitas nele (veja "Anotar um dente"). No detalhe, um item que pinta a raiz aparece com "(raiz)" depois do nome. Tocar na boca 2D só seleciona o dente. Para marcar, use a área de edição (veja "Marcar um dente ou uma face").
 
 Você também pode ver como o odontograma estava em uma data e hora anteriores. Isso ajuda a comparar o antes e o depois de um tratamento.
 
@@ -176,7 +178,7 @@ Quem pode: Administrador, Gestor, Dentista e ASB.
 O sistema prepara uma única visão do odontograma que serve tanto para o desenho 2D (para registrar na cadeira) quanto para o modelo 3D (para mostrar ao paciente). Ela traz:
 
 - a arcada do paciente, na ordem de leitura (de 18 a 11 e de 21 a 28 na parte de cima; de 48 a 41 e de 31 a 38 na parte de baixo);
-- cada dente com as suas cinco faces (M, D, O, V e L) e a cor de cada uma;
+- cada dente com as suas cinco faces (M, D, O, V e L), a cor de cada uma, e as cores da coroa e da raiz;
 - os dentes que devem ser ocultados no modelo 3D;
 - a legenda apenas com os itens que aparecem no odontograma.
 
@@ -193,7 +195,7 @@ Quem vê o 3D pode usar estes controles. Eles mudam só a visão na tela; não m
 - **Arcadas:** uma lista de seleção que mostra a opção atual. Ao tocar nela, aparecem Ambas as arcadas, Arcada superior e Arcada inferior. Escolha uma delas.
 - **Abrir a boca / Fechar a boca:** afasta as arcadas de cima e de baixo, para ver como elas se encaixam. Toque de novo para fechar.
 - **Gengiva:** vem marcada por padrão e mostra a gengiva, que contorna cada dente. Desmarque para ver só os dentes.
-- **Raízes:** quando marcado, a gengiva fica transparente para as raízes aparecerem.
+- **Raízes:** quando marcado, a gengiva fica transparente para as raízes aparecerem. Mesmo com esta opção desligada, um dente com marca na raiz mostra a raiz colorida, e a gengiva daquela arcada fica transparente para ela aparecer.
 
 ### Anotar um dente
 
@@ -246,7 +248,12 @@ O histórico vem em páginas de até 500 registros por vez. O padrão são 100.
   - **V** é a face voltada para os lábios ou para a bochecha.
   - **L** é a face voltada para a língua. Nos dentes de cima ela aparece como **P** (palatina).
   - Ao registrar, você pode usar I no lugar de O e P no lugar de L.
-- **Cor de uma face ou de um dente.** Se a face tem marcações, a cor dela é a do item mais importante. Se não tem, vale a cor do item do dente inteiro. A ordem de importância é: patologia, depois planejado, depois realizado. Empatando, vale a ordem da legenda.
+- **Cor de cada dente.** O dente tem camadas de cor:
+  - **Raiz:** mostra o item mais importante que pinta a raiz. Por padrão, são os dois itens de tratamento de canal (a fazer e feito). A clínica pode criar outros itens com a região raiz, como retratamento e lesão periapical.
+  - **Coroa:** mostra o item mais importante, entre os de dente inteiro, que pinta a coroa.
+  - **Faces:** cada face marcada aparece com a cor do item mais importante dela, por cima da cor da coroa. Face sem marca mostra a cor da coroa.
+  - A ordem de importância é: patologia, depois planejado, depois realizado. Empatando, vale a ordem da legenda.
+  - Exemplo: dente com lesão periapical, tratamento de canal feito, coroa e restauração na face oclusal. A raiz mostra a cor da lesão, a coroa mostra a cor da coroa, e a face oclusal mostra a cor da restauração.
 - **Cor pessoal.** A cor que você vê é a sua cor pessoal, se você escolheu uma para aquele item; senão, a cor da clínica. A cor pessoal não muda o que os colegas veem. Ela não muda a ordem de importância acima.
 - **Efeito no 3D.** Cada item pode colorir o dente ou ocultá-lo no modelo 3D. Ocultar só vale para item de dente inteiro. Por padrão, "Ausente" oculta o dente e os demais coloridam.
 - **Dente fora da arcada.** Você pode marcar um dente que não está na arcada do paciente. Ele aparece no odontograma, marcado como fora da arcada.
@@ -281,4 +288,4 @@ Não. A arcada descreve a dentição do paciente. Marque o item "Ausente" no den
 O perfil Recepção não tem permissão para acessar dados clínicos do paciente.
 
 **Quem pode mudar a cor de uma marcação?**
-Administrador e Gestor podem trocar a cor da clínica de um item. A mudança vale para todas as marcações desse item, na clínica toda. Administrador, Gestor, Dentista e ASB podem escolher a própria cor de um item; ela vale só para quem escolheu, e a setinha ↺ volta à cor da clínica. Só Administrador e Gestor podem mudar o nome, o tipo, o efeito no 3D e ativar ou desativar o item.
+Administrador e Gestor podem trocar a cor da clínica de um item. A mudança vale para todas as marcações desse item, na clínica toda. Administrador, Gestor, Dentista e ASB podem escolher a própria cor de um item; ela vale só para quem escolheu, e a setinha ↺ volta à cor da clínica. Só Administrador e Gestor podem mudar o nome, o tipo, o efeito no 3D, onde o item pinta (coroa ou raiz) e ativar ou desativar o item.

@@ -10,6 +10,7 @@ from app.modules.odontograma.models import (
     Display3D,
     EventAction,
     StatusKind,
+    StatusRegion,
     StatusScope,
 )
 
@@ -41,6 +42,9 @@ class StatusCreate(BaseModel):
     display_3d: Display3D = Field(
         Display3D.COLORIR, description="No 3D: colorir, ou ocultar o dente (só dente inteiro)."
     )
+    region: StatusRegion = Field(
+        StatusRegion.COROA, description="Onde pinta: coroa, ou raiz (só dente inteiro; ex.: canal)."
+    )
 
 
 class StatusUpdate(BaseModel):
@@ -50,6 +54,7 @@ class StatusUpdate(BaseModel):
     scope: StatusScope | None = Field(None, description="Só enquanto o item não foi usado.")
     sort_order: int | None = Field(None, ge=0, le=10_000)
     display_3d: Display3D | None = None
+    region: StatusRegion | None = None
     active: bool | None = None
 
 
@@ -70,6 +75,7 @@ class StatusOut(BaseModel):
     scope: StatusScope
     sort_order: int
     display_3d: Display3D
+    region: StatusRegion
     active: bool
 
 
@@ -128,6 +134,7 @@ class MarkOut(BaseModel):
     name: str
     color: str
     kind: StatusKind
+    region: StatusRegion = StatusRegion.COROA
 
 
 class ToothOut(BaseModel):
@@ -222,7 +229,12 @@ class ToothViewOut(BaseModel):
     in_arch: bool = Field(description="false: marcado, mas fora da arcada do paciente.")
     hidden: bool = Field(description="Ocultar no 3D (item de dente inteiro com `ocultar`).")
     node: str = Field(description="Nó do dente no .glb (ex.: dente_11).")
-    color: str | None = Field(description="Cor do item mais importante do dente inteiro.")
+    color: str | None = Field(
+        description="Cor do item mais importante da coroa (itens de dente inteiro da coroa)."
+    )
+    root_color: str | None = Field(
+        description="Cor do item mais importante da raiz (canal, lesão periapical...)."
+    )
     whole: list[MarkOut]
     faces: dict[str, FaceViewOut] = Field(description="As cinco faces, pelo rótulo clínico.")
     placement: PlacementOut = Field(description="Posição na arcada deste paciente.")

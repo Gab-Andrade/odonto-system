@@ -32,6 +32,7 @@ class StatusLike(Protocol):
     kind: Any
     sort_order: int
     display_3d: Any
+    region: Any
 
 
 def _value(v: Any) -> str:
@@ -49,6 +50,7 @@ def mark(status: StatusLike) -> dict[str, Any]:
         "name": status.name,
         "color": status.color,
         "kind": _value(status.kind),
+        "region": _value(status.region),
     }
 
 
@@ -75,7 +77,11 @@ def build(
     out = []
     for tooth in arcada.sort_teeth(arch | set(whole) | {t for t, _ in faces}):
         tooth_marks = sorted(whole.get(tooth, []), key=priority)
-        whole_color = _best_color(tooth_marks)
+        # Duas camadas: a raiz (canal, lesão periapical) e a coroa; as faces marcadas ficam
+        # por cima da cor da coroa.
+        root = [s for s in tooth_marks if _value(s.region) == "raiz"]
+        crown = [s for s in tooth_marks if _value(s.region) != "raiz"]
+        whole_color = _best_color(crown)
         face_out = {}
         for face in FACES:
             face_marks = sorted(faces.get((tooth, face), []), key=priority)
@@ -93,6 +99,7 @@ def build(
                 "hidden": any(_value(s.display_3d) == "ocultar" for s in tooth_marks),
                 "node": f"dente_{tooth}",
                 "color": whole_color,
+                "root_color": _best_color(root),
                 "whole": [mark(s) for s in tooth_marks],
                 "faces": face_out,
             }

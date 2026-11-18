@@ -147,6 +147,7 @@ function montar(modelo: THREE.Group, dentes: DenteVis[]): Montagem {
     if (!g) continue;
     g.position.copy(dobradica).negate(); // geometria em coordenadas da arcada
     grupo.add(g);
+    g.userData.superior = ehSup;
     gengivas.push(g);
   }
   const zs = naArcada.map((d) => d.placement.translation[2]);
@@ -177,13 +178,17 @@ function pintar(
 ) {
   m.sup.visible = op.arcadas !== "inferior";
   m.inf.visible = op.arcadas !== "superior";
+  // Arcadas com raiz marcada (canal, lesão): a raiz aparece mesmo sem "Raízes" ligado.
+  const raizMarcada = new Set<boolean>();
+  for (const d of porDente.values()) if (d.root_color && d.in_arch) raizMarcada.add(superior(d.tooth));
   for (const g of m.gengivas) {
     g.visible = op.comGengiva;
     const mat = g.material as THREE.MeshStandardMaterial;
     // Com raízes à mostra, a gengiva fica translúcida para deixá-las aparecer.
-    mat.transparent = op.raizes;
-    mat.opacity = op.raizes ? 0.4 : 1;
-    mat.depthWrite = !op.raizes;
+    const veRaiz = op.raizes || raizMarcada.has(g.userData.superior as boolean);
+    mat.transparent = veRaiz;
+    mat.opacity = op.raizes ? 0.4 : veRaiz ? 0.55 : 1;
+    mat.depthWrite = !veRaiz;
     mat.needsUpdate = true;
   }
   m.raiz.traverse((obj) => {
@@ -196,9 +201,10 @@ function pintar(
     }
     if (!(obj instanceof THREE.Mesh)) return;
     const raiz = obj.name.endsWith("_raiz");
-    if (raiz) obj.visible = op.raizes;
+    if (raiz) obj.visible = op.raizes || !!d?.root_color;
     const face = info.face ? Object.values(d?.faces ?? {}).find((f) => f.face === info.face) : null;
-    const cor = raiz ? COR_RAIZ : (face?.color ?? d?.color ?? COR_NATURAL);
+    // Camadas: a raiz com a cor da raiz; a coroa com a da coroa, e as faces marcadas por cima.
+    const cor = raiz ? (d?.root_color ?? COR_RAIZ) : (face?.color ?? d?.color ?? COR_NATURAL);
     const material = new THREE.MeshStandardMaterial({ color: cor, roughness: 0.45, metalness: 0.05 });
     if (info.dente === op.selecionado) {
       material.emissive = COR_SELECAO;
