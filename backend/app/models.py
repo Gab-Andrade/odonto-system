@@ -9,8 +9,10 @@ from app.modules.agenda.models import Appointment, AppointmentEvent, Chair
 from app.modules.estoque.models import Material, StockLot, StockMovement
 from app.modules.financeiro.models import Payable, Payment, Receivable
 from app.modules.identidade.models import Clinic, ClinicMembership, User
+from app.modules.inteligencia.models import AlertDismissal, AlertRuleSetting
 from app.modules.odontograma.models import ArchConfig, OdontogramEvent, ToothStatus
 from app.modules.pacientes.models import Patient, PatientConsent
+from app.modules.painel.models import PanelGoal
 from app.modules.precificacao.models import (
     CostSheet,
     CostSheetItem,
@@ -40,6 +42,8 @@ from app.modules.tratamento.models import (
 )
 
 __all__ = [
+    "AlertDismissal",
+    "AlertRuleSetting",
     "AnamnesisResponse",
     "AnamnesisTemplate",
     "AnamnesisTemplateVersion",
@@ -64,6 +68,7 @@ __all__ = [
     "ImportProfile",
     "Material",
     "OdontogramEvent",
+    "PanelGoal",
     "Patient",
     "PatientConsent",
     "Payable",
