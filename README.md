@@ -188,7 +188,8 @@ O que já dá para testar no navegador está na tabela abaixo (atualizada a cada
 | Raio-X: anexar DICOM, lista com metadados, baixar o .dcm, invalidar | pronta |
 | Planos e orçamentos: procedimentos da tabela, a fazer/feito no odontograma, desconto, emitir, decisão parcial, realizar no atendimento, duplicar, imprimir | pronta |
 | Financeiro do paciente: extrato, parcelar orçamento aprovado, registrar recebimento | pronta |
-| Gestão (painel), precificação | nas próximas etapas |
+| Gestão: visão geral (com comparação mês a mês, metas e alertas), equipe, tendências em gráficos (com tabela), metas; dentista vê o próprio desempenho | pronta |
+| Precificação | na próxima etapa |
 
 ## Testes
 
