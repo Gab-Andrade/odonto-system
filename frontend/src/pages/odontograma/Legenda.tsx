@@ -7,6 +7,9 @@ type Item = Schemas["StatusOut"];
 
 const CHAVE = "odontograma.legenda.aberta";
 
+/** "clinica": muda para todos; "pessoal": só para quem está usando; null: só ver. */
+export type Modo = "clinica" | "pessoal" | null;
+
 function lerAberta(): boolean {
   try {
     return localStorage.getItem(CHAVE) !== "0";
@@ -16,17 +19,18 @@ function lerAberta(): boolean {
 }
 
 /**
- * Legenda compacta e recolhível. Quem administra a clínica troca a cor de um item (ex.: cárie
- * preta); a cor vale para a clínica toda e repinta todos os odontogramas.
+ * Legenda compacta e recolhível, com a cor de cada item editável. Admin e gestor mudam a cor
+ * da clínica toda; dentista e ASB escolhem uma cor só para si (ex.: cárie preta), que pode voltar
+ * para a da clínica.
  */
 export default function Legenda({
   itens,
   emUso,
-  podeEditar,
+  modo,
 }: {
   itens: Item[];
   emUso: Set<string>;
-  podeEditar: boolean;
+  modo: Modo;
 }) {
   const [aberta, setAberta] = useState(lerAberta);
   const [erro, setErro] = useState<string | null>(null);
@@ -59,11 +63,15 @@ export default function Legenda({
         <>
           <ul className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 lg:grid-cols-1">
             {itens.map((l) => (
-              <LinhaLegenda key={l.id} item={l} emUso={emUso.has(l.id)} podeEditar={podeEditar} aoErrar={setErro} />
+              <LinhaLegenda key={l.id} item={l} emUso={emUso.has(l.id)} modo={modo} aoErrar={setErro} />
             ))}
           </ul>
           {erro && <p className="mt-2 text-xs text-perigo">{erro}</p>}
-          {podeEditar && <p className="mt-2 text-xs text-texto-suave">Toque na cor para trocar (vale para a clínica).</p>}
+          {modo && (
+            <p className="mt-2 text-xs text-texto-suave">
+              Toque na cor para trocar {modo === "clinica" ? "(vale para a clínica toda)." : "(só para você)."}
+            </p>
+          )}
         </>
       )}
     </section>
@@ -73,50 +81,57 @@ export default function Legenda({
 function LinhaLegenda({
   item,
   emUso,
-  podeEditar,
+  modo,
   aoErrar,
 }: {
   item: Item;
   emUso: boolean;
-  podeEditar: boolean;
+  modo: Modo;
   aoErrar: (msg: string | null) => void;
 }) {
   const cliente = useQueryClient();
   // Cor escolhida e ainda não gravada; null = mostra a do servidor.
   const [rascunho, setRascunho] = useState<string | null>(null);
-  const cor = rascunho ?? item.color;
+  // Na edição da clínica, parte da cor da clínica; na pessoal, da que a pessoa vê.
+  const base = modo === "clinica" ? (item.clinic_color ?? item.color) : item.color;
+  const cor = rascunho ?? base;
+  const caminho = { params: { path: { status_id: item.id } } };
 
-  const salvar = useMutation({
-    mutationFn: async (color: string) =>
-      ok(
-        await api.PATCH("/odontograma/legenda/{status_id}", {
-          params: { path: { status_id: item.id } },
-          body: { color },
-        }),
-      ),
+  const aoSalvar = {
     onSuccess: async () => {
       aoErrar(null);
       await cliente.invalidateQueries({ queryKey: ["odontograma"] });
       setRascunho(null);
     },
-    onError: (e) => {
+    onError: (e: Error) => {
       aoErrar(e.message);
       setRascunho(null);
     },
+  };
+  const salvar = useMutation({
+    mutationFn: async (color: string) =>
+      modo === "clinica"
+        ? ok(await api.PATCH("/odontograma/legenda/{status_id}", { ...caminho, body: { color } }))
+        : ok(await api.PUT("/odontograma/legenda/{status_id}/minha-cor", { ...caminho, body: { color } })),
+    ...aoSalvar,
+  });
+  const restaurar = useMutation({
+    mutationFn: async () => ok(await api.DELETE("/odontograma/legenda/{status_id}/minha-cor", caminho)),
+    ...aoSalvar,
   });
   const { mutate } = salvar;
 
   // O seletor de cor dispara a cada arrasto: grava só quando a pessoa para de mexer.
   useEffect(() => {
-    if (!rascunho || rascunho === item.color.toUpperCase()) return;
+    if (!rascunho || rascunho === base.toUpperCase()) return;
     const t = setTimeout(() => mutate(rascunho), 600);
     return () => clearTimeout(t);
-  }, [rascunho, item.color, mutate]);
+  }, [rascunho, base, mutate]);
 
   const amostra = "size-4 shrink-0 rounded-sm border border-black/20";
   return (
     <li className={`flex min-w-0 items-center gap-2 text-xs ${emUso ? "font-semibold" : "text-texto-suave"}`}>
-      {podeEditar ? (
+      {modo ? (
         <label className={`${amostra} relative cursor-pointer overflow-hidden`} style={{ background: cor }} title={`Trocar a cor de "${item.name}"`}>
           <input
             type="color"
@@ -130,6 +145,18 @@ function LinhaLegenda({
         <span className={amostra} style={{ background: cor }} />
       )}
       <span className="truncate">{item.name}</span>
+      {modo === "pessoal" && item.personal && (
+        <button
+          type="button"
+          onClick={() => restaurar.mutate()}
+          disabled={restaurar.isPending}
+          className="ml-auto shrink-0 rounded px-1 text-sm text-texto-suave hover:text-marca"
+          title={`Voltar para a cor da clínica`}
+          aria-label={`Voltar ${item.name} para a cor da clínica`}
+        >
+          ↺
+        </button>
+      )}
     </li>
   );
 }

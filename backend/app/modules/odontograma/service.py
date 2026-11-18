@@ -19,7 +19,10 @@ from app.modules.odontograma.models import (
     Display3D,
     EventAction,
     OdontogramEvent,
+    PersonalColor,
+    StatusKind,
     StatusScope,
+    ToothNote,
     ToothStatus,
 )
 from app.modules.pacientes import service as pacientes_service
@@ -92,6 +95,104 @@ def list_statuses(db: Session, *, include_inactive: bool = True) -> list[ToothSt
     if not include_inactive:
         query = query.where(ToothStatus.active.is_(True))
     return list(db.scalars(query))
+
+
+@dataclass(frozen=True)
+class StatusView:
+    """Item da legenda como uma pessoa o vê: `color` é a pessoal, se houver; senão, a da
+    clínica. Cópia sem vínculo com a sessão, para não gravar a cor pessoal no item."""
+
+    id: uuid.UUID
+    code: str
+    name: str
+    color: str
+    clinic_color: str
+    personal: bool
+    kind: StatusKind
+    scope: StatusScope
+    sort_order: int
+    display_3d: Display3D
+    active: bool
+
+
+def statuses_for(
+    db: Session, user_id: uuid.UUID, *, include_inactive: bool = True
+) -> list[StatusView]:
+    personal = dict(
+        db.execute(
+            select(PersonalColor.status_id, PersonalColor.color).where(
+                PersonalColor.user_id == user_id
+            )
+        ).all()
+    )
+    return [
+        StatusView(
+            id=s.id,
+            code=s.code,
+            name=s.name,
+            color=personal.get(s.id, s.color),
+            clinic_color=s.color,
+            personal=s.id in personal,
+            kind=s.kind,
+            scope=s.scope,
+            sort_order=s.sort_order,
+            display_3d=s.display_3d,
+            active=s.active,
+        )
+        for s in list_statuses(db, include_inactive=include_inactive)
+    ]
+
+
+def set_personal_color(
+    db: Session, user: CurrentUser, status: ToothStatus, color: str | None
+) -> bool:
+    """Grava (ou, com `None`, apaga) a cor pessoal. Devolve se algo mudou."""
+    row = db.scalar(
+        select(PersonalColor).where(
+            PersonalColor.user_id == user.user_id, PersonalColor.status_id == status.id
+        )
+    )
+    if color is None:
+        if row is None:
+            return False
+        db.delete(row)
+    elif row is None:
+        db.add(
+            PersonalColor(
+                clinic_id=user.clinic_id, user_id=user.user_id, status_id=status.id, color=color
+            )
+        )
+    elif row.color == color:
+        return False
+    else:
+        row.color = color
+    db.flush()
+    return True
+
+
+def add_tooth_note(
+    db: Session, user: CurrentUser, patient: Patient, tooth: int, text: str
+) -> ToothNote:
+    if not patient.active:
+        raise RuleViolation("Paciente inativo: reative o cadastro antes.")
+    note = ToothNote(
+        clinic_id=user.clinic_id,
+        patient_id=patient.id,
+        tooth=tooth,
+        text=text,
+        created_by=user.user_id,
+    )
+    db.add(note)
+    db.flush()
+    db.refresh(note)  # created_at vem do banco
+    return note
+
+
+def tooth_notes(db: Session, patient: Patient, at: datetime | None = None) -> list[ToothNote]:
+    query = select(ToothNote).where(ToothNote.patient_id == patient.id)
+    if at is not None:
+        query = query.where(ToothNote.created_at <= at)
+    return list(db.scalars(query.order_by(ToothNote.created_at.desc())))
 
 
 def get_status(db: Session, status_id: uuid.UUID) -> ToothStatus:

@@ -5971,6 +5971,20 @@
         "title": "PerformIn",
         "type": "object"
       },
+      "PersonalColorIn": {
+        "properties": {
+          "color": {
+            "pattern": "^#[0-9A-Fa-f]{6}$",
+            "title": "Color",
+            "type": "string"
+          }
+        },
+        "required": [
+          "color"
+        ],
+        "title": "PersonalColorIn",
+        "type": "object"
+      },
       "PlacementOut": {
         "properties": {
           "mesial_x": {
@@ -8027,11 +8041,24 @@
             "title": "Active",
             "type": "boolean"
           },
+          "clinic_color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Cor da clínica (na listagem e na visualização).",
+            "title": "Clinic Color"
+          },
           "code": {
             "title": "Code",
             "type": "string"
           },
           "color": {
+            "description": "Cor que esta pessoa vê: a pessoal, se houver; senão, a da clínica.",
             "title": "Color",
             "type": "string"
           },
@@ -8049,6 +8076,12 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "personal": {
+            "default": false,
+            "description": "`color` é a cor pessoal de quem pediu.",
+            "title": "Personal",
+            "type": "boolean"
           },
           "scope": {
             "$ref": "#/components/schemas/StatusScope"
@@ -8725,6 +8758,75 @@
           "role"
         ],
         "title": "TokenResponse",
+        "type": "object"
+      },
+      "ToothNoteIn": {
+        "properties": {
+          "text": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          },
+          "tooth": {
+            "title": "Tooth",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "tooth",
+          "text"
+        ],
+        "title": "ToothNoteIn",
+        "type": "object"
+      },
+      "ToothNoteOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "patient_id": {
+            "format": "uuid",
+            "title": "Patient Id",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "tooth": {
+            "title": "Tooth",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "patient_id",
+          "tooth",
+          "text",
+          "created_by",
+          "created_at"
+        ],
+        "title": "ToothNoteOut",
         "type": "object"
       },
       "ToothOut": {
@@ -13719,6 +13821,7 @@
     },
     "/odontograma/legenda/{status_id}": {
       "patch": {
+        "description": "Altera o item para a clínica toda. Para mudar só a própria cor, use `minha-cor`.",
         "operationId": "update_status_odontograma_legenda__status_id__patch",
         "parameters": [
           {
@@ -13770,6 +13873,112 @@
           }
         ],
         "summary": "Update Status",
+        "tags": [
+          "odontograma"
+        ]
+      }
+    },
+    "/odontograma/legenda/{status_id}/minha-cor": {
+      "delete": {
+        "description": "Volta a usar a cor da clínica neste item.",
+        "operationId": "clear_my_color_odontograma_legenda__status_id__minha_cor_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "status_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Status Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Clear My Color",
+        "tags": [
+          "odontograma"
+        ]
+      },
+      "put": {
+        "description": "Cor do item só para quem pede (ex.: o dentista que prefere a cárie preta).",
+        "operationId": "set_my_color_odontograma_legenda__status_id__minha_cor_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "status_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Status Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonalColorIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Set My Color",
         "tags": [
           "odontograma"
         ]
@@ -13837,6 +14046,135 @@
           }
         ],
         "summary": "Get Odontogram",
+        "tags": [
+          "odontograma"
+        ]
+      }
+    },
+    "/odontograma/pacientes/{patient_id}/anotacoes": {
+      "get": {
+        "description": "Anotações livres dos dentes do paciente, da mais recente para a mais antiga.",
+        "operationId": "list_tooth_notes_odontograma_pacientes__patient_id__anotacoes_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "patient_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Patient Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Só as feitas até este momento.",
+            "in": "query",
+            "name": "em",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Só as feitas até este momento.",
+              "title": "Em"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ToothNoteOut"
+                  },
+                  "title": "Response List Tooth Notes Odontograma Pacientes  Patient Id  Anotacoes Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Tooth Notes",
+        "tags": [
+          "odontograma"
+        ]
+      },
+      "post": {
+        "description": "Nova anotação num dente. Não se edita nem apaga: corrige-se com outra.",
+        "operationId": "add_tooth_note_odontograma_pacientes__patient_id__anotacoes_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "patient_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Patient Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToothNoteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToothNoteOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Add Tooth Note",
         "tags": [
           "odontograma"
         ]

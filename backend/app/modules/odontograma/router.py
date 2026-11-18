@@ -29,9 +29,12 @@ from app.modules.odontograma.schemas import (
     EventsIn,
     MarkOut,
     OdontogramOut,
+    PersonalColorIn,
     StatusCreate,
     StatusOut,
     StatusUpdate,
+    ToothNoteIn,
+    ToothNoteOut,
     ToothOut,
     VisualizationOut,
 )
@@ -41,8 +44,6 @@ router = APIRouter(prefix="/odontograma", tags=["odontograma"])
 READ = (Role.ADMIN, Role.GESTOR, Role.DENTISTA, Role.ASB)
 MARK = (Role.ADMIN, Role.DENTISTA, Role.ASB)
 MANAGE = (Role.ADMIN, Role.GESTOR)
-# O dentista pode trocar só a cor de um item (ex.: cárie preta); o resto da legenda é da gestão.
-RECOLOR = (*MANAGE, Role.DENTISTA)
 
 
 def _http(exc: service.OdontogramError) -> HTTPException:
@@ -68,7 +69,7 @@ def list_legend(
 ):
     service.ensure_default_legend(db, user.clinic_id)
     db.commit()
-    return service.list_statuses(db, include_inactive=incluir_inativos)
+    return service.statuses_for(db, user.user_id, include_inactive=incluir_inativos)
 
 
 @router.post("/legenda", response_model=StatusOut, status_code=status.HTTP_201_CREATED)
@@ -95,18 +96,13 @@ def update_status(
     status_id: uuid.UUID,
     body: StatusUpdate,
     request: Request,
-    user: CurrentUser = Depends(require_roles(*RECOLOR)),
+    user: CurrentUser = Depends(require_roles(*MANAGE)),
     db: Session = Depends(get_tenant_db),
 ):
-    data = body.model_dump(exclude_unset=True)
-    if user.role not in MANAGE and set(data) - {"color"}:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Dentista só pode alterar a cor do item da legenda.",
-        )
+    """Altera o item para a clínica toda. Para mudar só a própria cor, use `minha-cor`."""
     try:
         item: ToothStatus = service.get_status(db, status_id)
-        changed = service.update_status(db, item, data)
+        changed = service.update_status(db, item, body.model_dump(exclude_unset=True))
     except service.OdontogramError as exc:
         raise _http(exc) from None
     if changed:
@@ -116,6 +112,56 @@ def update_status(
         )  # fmt: skip
         db.commit()
     return item
+
+
+def _personal(db: Session, user: CurrentUser, status_id: uuid.UUID) -> StatusOut:
+    view = next((s for s in service.statuses_for(db, user.user_id) if s.id == status_id), None)
+    if view is None:
+        raise HTTPException(status_code=404, detail="Item da legenda não encontrado.")
+    return StatusOut.model_validate(view, from_attributes=True)
+
+
+@router.put("/legenda/{status_id}/minha-cor", response_model=StatusOut)
+def set_my_color(
+    status_id: uuid.UUID,
+    body: PersonalColorIn,
+    request: Request,
+    user: CurrentUser = Depends(require_roles(*READ)),
+    db: Session = Depends(get_tenant_db),
+):
+    """Cor do item só para quem pede (ex.: o dentista que prefere a cárie preta)."""
+    try:
+        item = service.get_status(db, status_id)
+    except service.OdontogramError as exc:
+        raise _http(exc) from None
+    if service.set_personal_color(db, user, item, body.color):
+        audit.record(
+            db, user, "odontograma.cor_pessoal_alterada", entity_type="tooth_status",
+            entity_id=item.id, details={"cor": body.color}, request=request,
+        )  # fmt: skip
+        db.commit()
+    return _personal(db, user, item.id)
+
+
+@router.delete("/legenda/{status_id}/minha-cor", response_model=StatusOut)
+def clear_my_color(
+    status_id: uuid.UUID,
+    request: Request,
+    user: CurrentUser = Depends(require_roles(*READ)),
+    db: Session = Depends(get_tenant_db),
+):
+    """Volta a usar a cor da clínica neste item."""
+    try:
+        item = service.get_status(db, status_id)
+    except service.OdontogramError as exc:
+        raise _http(exc) from None
+    if service.set_personal_color(db, user, item, None):
+        audit.record(
+            db, user, "odontograma.cor_pessoal_removida", entity_type="tooth_status",
+            entity_id=item.id, request=request,
+        )  # fmt: skip
+        db.commit()
+    return _personal(db, user, item.id)
 
 
 # ---------- odontograma do paciente ----------
@@ -135,7 +181,7 @@ def get_odontogram(
         raise _http(exc) from None
     at: datetime = em or service.now()
     marks = service.current_marks(db, patient, at)
-    statuses = {s.id: s for s in service.list_statuses(db)}
+    statuses = {s.id: s for s in service.statuses_for(db, user.user_id)}
 
     teeth: dict[int, ToothOut] = {}
     for tooth, face, status_id in sorted(marks, key=lambda k: (k[0], k[1] or "", str(k[2]))):
@@ -274,6 +320,57 @@ def record_arch(
     return _arch_out(patient.id, arch)
 
 
+# ---------- anotações por dente ----------
+
+
+@router.get("/pacientes/{patient_id}/anotacoes", response_model=list[ToothNoteOut])
+def list_tooth_notes(
+    patient_id: uuid.UUID,
+    request: Request,
+    em: AwareDatetime | None = Query(None, description="Só as feitas até este momento."),
+    user: CurrentUser = Depends(require_roles(*READ)),
+    db: Session = Depends(get_tenant_db),
+):
+    """Anotações livres dos dentes do paciente, da mais recente para a mais antiga."""
+    try:
+        patient = service.get_patient(db, patient_id)
+    except service.OdontogramError as exc:
+        raise _http(exc) from None
+    notes = service.tooth_notes(db, patient, em)
+    audit.record(
+        db, user, "odontograma.anotacoes_lidas", entity_type="patient", entity_id=patient.id,
+        details={"em": em.isoformat()} if em else None, request=request,
+    )  # fmt: skip
+    db.commit()
+    return notes
+
+
+@router.post(
+    "/pacientes/{patient_id}/anotacoes",
+    response_model=ToothNoteOut,
+    status_code=status.HTTP_201_CREATED,
+)
+def add_tooth_note(
+    patient_id: uuid.UUID,
+    body: ToothNoteIn,
+    request: Request,
+    user: CurrentUser = Depends(require_roles(*MARK)),
+    db: Session = Depends(get_tenant_db),
+):
+    """Nova anotação num dente. Não se edita nem apaga: corrige-se com outra."""
+    try:
+        patient = service.get_patient(db, patient_id)
+        note = service.add_tooth_note(db, user, patient, body.tooth, body.text)
+    except service.OdontogramError as exc:
+        raise _http(exc) from None
+    audit.record(
+        db, user, "odontograma.anotacao_criada", entity_type="patient", entity_id=patient.id,
+        details={"dente": body.tooth, "anotacao": str(note.id)}, request=request,
+    )  # fmt: skip
+    db.commit()
+    return note
+
+
 # ---------- visualização 2D/3D e comparação ----------
 
 
@@ -293,7 +390,7 @@ def visualization(
     at: datetime = em or service.now()
     arch = service.effective_arch(db, patient, at)
     marks = service.current_marks(db, patient, at)
-    statuses = {s.id: s for s in service.list_statuses(db)}
+    statuses = {s.id: s for s in service.statuses_for(db, user.user_id)}
     deciduous_arch = arch.dentition == arcada.DECIDUA
     teeth = [
         t | {"placement": malha3d.placement_dict(t["tooth"], deciduous_arch)}
@@ -337,7 +434,7 @@ def compare(
     added, removed = visualizacao.diff(
         service.current_marks(db, patient, de), service.current_marks(db, patient, until)
     )
-    statuses = {s.id: s for s in service.list_statuses(db)}
+    statuses = {s.id: s for s in service.statuses_for(db, user.user_id)}
 
     def change(key: regras.Key) -> ChangeOut:
         tooth, face, status_id = key

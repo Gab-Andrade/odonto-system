@@ -1,15 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { lazy, Suspense, useMemo, useState } from "react";
+import { lazy, type ReactNode, Suspense, useMemo, useState } from "react";
 
 import { api, ok, type Schemas } from "../../api/client";
 import { temPapel, useSessao } from "../../auth/sessao";
 import { Aviso, Botao, Campo, Cartao, Carregando, ErroCarga, Etiqueta, Selecao } from "../../components/ui";
 import { dataHoraBR, instante } from "../../lib/datas";
+import AnotacoesDente from "./AnotacoesDente";
 import Arcada from "./Arcada";
 import Boca2D from "./Boca2D";
 import Dente2D, { type DenteVis } from "./Dente2D";
 import { LADO, superior } from "./geometria";
-import Legenda from "./Legenda";
+import Legenda, { type Modo as ModoCores } from "./Legenda";
 
 const Odontograma3D = lazy(() => import("./Odontograma3D"));
 
@@ -20,7 +21,8 @@ export default function Odontograma({ paciente }: { paciente: Paciente }) {
   const { papel } = useSessao();
   const cliente = useQueryClient();
   const podeMarcar = temPapel(papel, "admin", "dentista", "asb");
-  const podeEditarCores = temPapel(papel, "admin", "gestor", "dentista");
+  // Admin e gestor mudam a cor da clínica; dentista e ASB, só a própria.
+  const modoCores: ModoCores = temPapel(papel, "admin", "gestor") ? "clinica" : temPapel(papel, "dentista", "asb") ? "pessoal" : null;
   const [editando, setEditando] = useState(false);
   const [visao, setVisao] = useState<"2d" | "3d">("2d");
   const [item, setItem] = useState<Item | null>(null);
@@ -41,6 +43,16 @@ export default function Odontograma({ paciente }: { paciente: Paciente }) {
         }),
       ),
   });
+  const anotacoes = useQuery({
+    queryKey: ["odontograma", paciente.id, "anotacoes", em ?? "agora"],
+    queryFn: async () =>
+      ok(
+        await api.GET("/odontograma/pacientes/{patient_id}/anotacoes", {
+          params: { path: { patient_id: paciente.id }, query: { em } },
+        }),
+      ),
+  });
+  const anotados = useMemo(() => new Set((anotacoes.data ?? []).map((n) => n.tooth)), [anotacoes.data]);
   const legenda = useQuery({
     queryKey: ["odontograma", "legenda"],
     queryFn: async () => ok(await api.GET("/odontograma/legenda")),
@@ -95,7 +107,7 @@ export default function Odontograma({ paciente }: { paciente: Paciente }) {
   }
 
   const legendaLateral = (
-    <Legenda itens={ativos} emUso={emUso} podeEditar={podeEditarCores} />
+    <Legenda itens={ativos} emUso={emUso} modo={modoCores} />
   );
 
   if (!editando) {
@@ -116,8 +128,11 @@ export default function Odontograma({ paciente }: { paciente: Paciente }) {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
             <div className="grid min-w-0 flex-1 gap-4 md:grid-cols-2">
               <Cartao className="flex flex-col">
-                <Boca2D dentes={dentes} selecionado={dente} aoTocar={(d) => setDente(d.tooth)} />
+                <Boca2D dentes={dentes} selecionado={dente} anotados={anotados} aoTocar={(d) => setDente(d.tooth)} />
                 <p className="mt-2 text-center text-xs text-texto-suave">
+                  Toque num dente para ver as marcações e escrever anotações.
+                </p>
+                <p className="mt-1 text-center text-xs text-texto-suave">
                   Arcada {vis.data.arch.dentition} ({vis.data.arch.source === "padrao" ? "sugerida pela idade" : "registrada"}) ·
                   atualizado em {dataHoraBR(vis.data.at)}
                 </p>
@@ -134,7 +149,16 @@ export default function Odontograma({ paciente }: { paciente: Paciente }) {
             <Botao onClick={() => setEditando(true)}>Editar odontograma</Botao>
           </div>
         )}
-        {selecionado && <DetalheDente dente={selecionado} />}
+        {selecionado && (
+          <DetalheDente dente={selecionado}>
+            <AnotacoesDente
+              pacienteId={paciente.id}
+              dente={selecionado.tooth}
+              notas={(anotacoes.data ?? []).filter((n) => n.tooth === selecionado.tooth)}
+              podeEscrever={podeMarcar && !verEm}
+            />
+          </DetalheDente>
+        )}
       </div>
     );
   }
@@ -262,7 +286,7 @@ function Fileira({
   );
 }
 
-function DetalheDente({ dente }: { dente: DenteVis }) {
+function DetalheDente({ dente, children }: { dente: DenteVis; children?: ReactNode }) {
   const faces = Object.entries(dente.faces).filter(([, f]) => f.marks.length > 0);
   return (
     <Cartao titulo={`Dente ${dente.tooth}${dente.deciduous ? " (decíduo)" : ""}`}>
@@ -284,6 +308,7 @@ function DetalheDente({ dente }: { dente: DenteVis }) {
           )),
         )}
       </div>
+      {children}
     </Cartao>
   );
 }

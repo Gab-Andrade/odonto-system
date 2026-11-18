@@ -126,10 +126,13 @@ const COR_BASE = "#e5e7eb";
 export default function Boca2D({
   dentes,
   selecionado,
+  anotados,
   aoTocar,
 }: {
   dentes: DenteVis[];
   selecionado: number | null;
+  /** Dentes com anotação: ganham um marcador no canto. */
+  anotados?: Set<number>;
   aoTocar: (d: DenteVis) => void;
 }) {
   const pecas = montar(dentes);
@@ -191,6 +194,14 @@ export default function Boca2D({
                 pointerEvents="none"
               />
             ))}
+            {anotados?.has(d.tooth) && (
+              <g pointerEvents="none">
+                <circle cx={x + w * 0.38} cy={y - h * 0.38} r={6.5} fill="var(--color-marca)" stroke="#ffffff" strokeWidth={1.2} />
+                <text x={x + w * 0.38} y={y - h * 0.38 + 3.3} textAnchor="middle" fontSize={9} fontWeight={700} fill="#ffffff">
+                  ✎
+                </text>
+              </g>
+            )}
           </g>
         );
       })}

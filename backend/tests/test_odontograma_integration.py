@@ -94,13 +94,9 @@ def test_default_legend_and_editing(client, make_clinic, add_member):
                         headers=h["gestor"])  # fmt: skip
     assert resp.status_code == 200 and resp.json()["name"] == "Mancha branca"
 
-    # Dentista troca só a cor; ASB e recepção não mexem na legenda.
-    resp = client.patch(f"{L}/{sid}", json={"color": "#112233"}, headers=h["dent"])
-    assert resp.status_code == 200 and resp.json()["color"] == "#112233"
-    for body in ({"name": "Outro"}, {"color": "#000000", "active": False}):
-        assert client.patch(f"{L}/{sid}", json=body, headers=h["dent"]).status_code == 403
-    for who in ("asb", "recep"):
-        resp = client.patch(f"{L}/{sid}", json={"color": "#000000"}, headers=h[who])
+    # Só admin e gestor mudam o item para a clínica.
+    for who in ("dent", "asb", "recep"):
+        resp = client.patch(f"{L}/{sid}", json={"color": "#112233"}, headers=h[who])
         assert resp.status_code == 403
     assert client.post(L, json={**item, "code": "outro"}, headers=h["dent"]).status_code == 403
 
@@ -111,6 +107,126 @@ def test_default_legend_and_editing(client, make_clinic, add_member):
     assert "mancha" in {s["code"] for s in listed}
     _mark(client, ctx, [_ev(ctx, "mancha", 22, "V")], expect=409)
     _mark(client, ctx, [_ev(ctx, "mancha", 21, "V", action="remover")])
+
+
+def test_personal_color_only_for_who_chose(client, make_clinic, add_member):
+    ctx = _setup(client, make_clinic, add_member)
+    h = ctx["h"]
+    carie = ctx["legend"]["carie"]
+    _mark(client, ctx, [_ev(ctx, "carie", 36, "O")])
+    clinic_color = next(s for s in client.get(L, headers=h["admin"]).json() if s["id"] == carie)
+    clinic_color = clinic_color["color"]
+
+    def seen(who):
+        legend = {s["id"]: s for s in client.get(L, headers=h[who]).json()}[carie]
+        vis = client.get(
+            f"/odontograma/pacientes/{ctx['patient']}/visualizacao", headers=h[who]
+        ).json()
+        face = next(t for t in vis["teeth"] if t["tooth"] == 36)["faces"]["O"]
+        flat = client.get(f"/odontograma/pacientes/{ctx['patient']}", headers=h[who]).json()
+        mark = next(t for t in flat["teeth"] if t["tooth"] == 36)["faces"]["O"][0]
+        assert legend["color"] == face["color"] == mark["color"]
+        return legend
+
+    resp = client.put(f"{L}/{carie}/minha-cor", json={"color": "#000000"}, headers=h["dent"])
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["personal"] is True and resp.json()["clinic_color"] == clinic_color
+    mine = seen("dent")
+    assert mine["color"] == "#000000" and mine["personal"] is True
+    # Os outros continuam vendo a cor da clínica.
+    for who in ("admin", "asb"):
+        other = seen(who)
+        assert other["color"] == clinic_color and other["personal"] is False
+
+    # Admin muda a cor da clínica: vale para todos, menos para quem tem cor pessoal.
+    assert (
+        client.patch(f"{L}/{carie}", json={"color": "#00FF00"}, headers=h["admin"]).status_code
+        == 200
+    )
+    assert seen("asb")["color"] == "#00FF00"
+    assert seen("dent")["color"] == "#000000"
+
+    # Removida, volta para a da clínica; remover de novo não muda nada.
+    for _ in range(2):
+        resp = client.delete(f"{L}/{carie}/minha-cor", headers=h["dent"])
+        assert resp.status_code == 200 and resp.json()["color"] == "#00FF00"
+    assert seen("dent")["personal"] is False
+
+    assert (
+        client.put(f"{L}/{carie}/minha-cor", json={"color": "preto"}, headers=h["dent"]).status_code
+        == 422
+    )
+    resp = client.put(f"{L}/{uuid.uuid4()}/minha-cor", json={"color": "#000000"}, headers=h["dent"])
+    assert resp.status_code == 404
+    resp = client.put(f"{L}/{carie}/minha-cor", json={"color": "#000000"}, headers=h["recep"])
+    assert resp.status_code == 403
+
+    # Outra clínica não enxerga o item nem a cor pessoal.
+    _, admin2, pw2 = make_clinic(role=Role.ADMIN)
+    h2 = _auth(_login(client, admin2.email, pw2).json()["access_token"])
+    resp = client.put(f"{L}/{carie}/minha-cor", json={"color": "#123456"}, headers=h2)
+    assert resp.status_code == 404
+    with tenant_session(ctx["clinic"].id) as s:
+        actions = set(s.scalars(select(AuditLog.action)))
+    assert {"odontograma.cor_pessoal_alterada", "odontograma.cor_pessoal_removida"} <= actions
+
+
+# ---------- anotações por dente ----------
+
+
+def test_tooth_notes(client, make_clinic, add_member):
+    ctx = _setup(client, make_clinic, add_member)
+    h = ctx["h"]
+    url = f"/odontograma/pacientes/{ctx['patient']}/anotacoes"
+
+    first = client.post(url, json={"tooth": 16, "text": "  Sensível ao frio  "}, headers=h["dent"])
+    assert first.status_code == 201, first.text
+    assert first.json()["text"] == "Sensível ao frio" and first.json()["created_by"]
+    assert (
+        client.post(url, json={"tooth": 75, "text": "Mobilidade"}, headers=h["asb"]).status_code
+        == 201
+    )
+
+    for body, code in (
+        ({"tooth": 19, "text": "x"}, 422),  # fora da FDI
+        ({"tooth": 16, "text": "   "}, 422),
+        ({"tooth": 16, "text": "x" * 2001}, 422),
+    ):
+        assert client.post(url, json=body, headers=h["dent"]).status_code == code
+    for who in ("gestor", "recep"):
+        resp = client.post(url, json={"tooth": 16, "text": "x"}, headers=h[who])
+        assert resp.status_code == 403
+
+    notes = client.get(url, headers=h["gestor"]).json()
+    assert [n["tooth"] for n in notes] == [75, 16]  # mais recente primeiro
+    before = client.get(url, params={"em": first.json()["created_at"]}, headers=h["dent"]).json()
+    assert [n["tooth"] for n in before] == [16]
+    assert client.get(url, headers=h["recep"]).status_code == 403
+    missing = f"/odontograma/pacientes/{uuid.uuid4()}/anotacoes"
+    assert client.get(missing, headers=h["dent"]).status_code == 404
+
+    # Paciente inativo: lê, mas não recebe anotação nova.
+    resp = client.patch(f"/pacientes/{ctx['patient']}", json={"active": False}, headers=h["admin"])
+    assert resp.status_code == 200, resp.text
+    assert client.post(url, json={"tooth": 11, "text": "x"}, headers=h["dent"]).status_code == 409
+    assert len(client.get(url, headers=h["dent"]).json()) == 2
+
+    # Append-only no banco.
+    cid = ctx["clinic"].id
+    for sql in ("UPDATE tooth_notes SET text = 'x'", "DELETE FROM tooth_notes"):
+        with tenant_session(cid) as s:
+            s.execute(select(1))
+            with pytest.raises(DBAPIError, match="permission denied"):
+                s.execute(text(sql))
+
+    # Outra clínica não vê nem escreve no paciente.
+    _, admin2, pw2 = make_clinic(role=Role.ADMIN)
+    h2 = _auth(_login(client, admin2.email, pw2).json()["access_token"])
+    assert client.get(url, headers=h2).status_code == 404
+    assert client.post(url, json={"tooth": 11, "text": "x"}, headers=h2).status_code == 404
+    with tenant_session(cid) as s:
+        actions = set(s.scalars(select(AuditLog.action)))
+    assert {"odontograma.anotacao_criada", "odontograma.anotacoes_lidas"} <= actions
 
 
 # ---------- marcações ----------

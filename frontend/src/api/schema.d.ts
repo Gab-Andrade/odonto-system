@@ -831,8 +831,35 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Update Status */
+        /**
+         * Update Status
+         * @description Altera o item para a clínica toda. Para mudar só a própria cor, use `minha-cor`.
+         */
         patch: operations["update_status_odontograma_legenda__status_id__patch"];
+        trace?: never;
+    };
+    "/odontograma/legenda/{status_id}/minha-cor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set My Color
+         * @description Cor do item só para quem pede (ex.: o dentista que prefere a cárie preta).
+         */
+        put: operations["set_my_color_odontograma_legenda__status_id__minha_cor_put"];
+        post?: never;
+        /**
+         * Clear My Color
+         * @description Volta a usar a cor da clínica neste item.
+         */
+        delete: operations["clear_my_color_odontograma_legenda__status_id__minha_cor_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/odontograma/pacientes/{patient_id}": {
@@ -846,6 +873,30 @@ export interface paths {
         get: operations["get_odontogram_odontograma_pacientes__patient_id__get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/odontograma/pacientes/{patient_id}/anotacoes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Tooth Notes
+         * @description Anotações livres dos dentes do paciente, da mais recente para a mais antiga.
+         */
+        get: operations["list_tooth_notes_odontograma_pacientes__patient_id__anotacoes_get"];
+        put?: never;
+        /**
+         * Add Tooth Note
+         * @description Nova anotação num dente. Não se edita nem apaga: corrige-se com outra.
+         */
+        post: operations["add_tooth_note_odontograma_pacientes__patient_id__anotacoes_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4382,6 +4433,11 @@ export interface components {
              */
             encounter_id: string;
         };
+        /** PersonalColorIn */
+        PersonalColorIn: {
+            /** Color */
+            color: string;
+        };
         /** PlacementOut */
         PlacementOut: {
             /**
@@ -5247,9 +5303,17 @@ export interface components {
         StatusOut: {
             /** Active */
             active: boolean;
+            /**
+             * Clinic Color
+             * @description Cor da clínica (na listagem e na visualização).
+             */
+            clinic_color?: string | null;
             /** Code */
             code: string;
-            /** Color */
+            /**
+             * Color
+             * @description Cor que esta pessoa vê: a pessoal, se houver; senão, a da clínica.
+             */
             color: string;
             display_3d: components["schemas"]["Display3D"];
             /**
@@ -5260,6 +5324,12 @@ export interface components {
             kind: components["schemas"]["StatusKind"];
             /** Name */
             name: string;
+            /**
+             * Personal
+             * @description `color` é a cor pessoal de quem pediu.
+             * @default false
+             */
+            personal: boolean;
             scope: components["schemas"]["StatusScope"];
             /** Sort Order */
             sort_order: number;
@@ -5478,6 +5548,37 @@ export interface components {
              * @default bearer
              */
             token_type: string;
+        };
+        /** ToothNoteIn */
+        ToothNoteIn: {
+            /** Text */
+            text: string;
+            /** Tooth */
+            tooth: number;
+        };
+        /** ToothNoteOut */
+        ToothNoteOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By */
+            created_by: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Patient Id
+             * Format: uuid
+             */
+            patient_id: string;
+            /** Text */
+            text: string;
+            /** Tooth */
+            tooth: number;
         };
         /** ToothOut */
         ToothOut: {
@@ -8073,6 +8174,72 @@ export interface operations {
             };
         };
     };
+    set_my_color_odontograma_legenda__status_id__minha_cor_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                status_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PersonalColorIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatusOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    clear_my_color_odontograma_legenda__status_id__minha_cor_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                status_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatusOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_odontogram_odontograma_pacientes__patient_id__get: {
         parameters: {
             query?: {
@@ -8094,6 +8261,75 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OdontogramOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_tooth_notes_odontograma_pacientes__patient_id__anotacoes_get: {
+        parameters: {
+            query?: {
+                /** @description Só as feitas até este momento. */
+                em?: string | null;
+            };
+            header?: never;
+            path: {
+                patient_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ToothNoteOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_tooth_note_odontograma_pacientes__patient_id__anotacoes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                patient_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ToothNoteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ToothNoteOut"];
                 };
             };
             /** @description Validation Error */

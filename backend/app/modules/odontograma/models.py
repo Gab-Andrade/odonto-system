@@ -19,6 +19,7 @@ from enum import StrEnum
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     DateTime,
     Enum,
     ForeignKey,
@@ -86,6 +87,56 @@ class ToothStatus(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
         _enum(Display3D), default=Display3D.COLORIR, server_default="colorir"
     )
     active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
+
+
+class PersonalColor(UUIDPkMixin, TenantMixin, TimestampMixin, Base):
+    """Cor que uma pessoa escolheu para um item da legenda: vale só para ela e tem
+    prioridade sobre a cor da clínica (ex.: o dentista que prefere a cárie preta)."""
+
+    __tablename__ = "tooth_status_user_colors"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["status_id", "clinic_id"],
+            ["tooth_statuses.id", "tooth_statuses.clinic_id"],
+            name="fk_tooth_status_user_colors_status_same_clinic",
+            ondelete="CASCADE",
+        ),
+        UniqueConstraint(
+            "clinic_id", "user_id", "status_id", name="uq_tooth_status_user_colors_user_status"
+        ),
+        CheckConstraint("color ~ '^#[0-9A-F]{6}$'", name="color_valid"),
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    status_id: Mapped[uuid.UUID] = mapped_column()
+    color: Mapped[str] = mapped_column(String(7))  # #RRGGBB
+
+
+class ToothNote(UUIDPkMixin, TenantMixin, Base):
+    """Anotação livre num dente do paciente. Append-only (migração 0024): corrige-se com
+    uma anotação nova, como na evolução clínica."""
+
+    __tablename__ = "tooth_notes"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["patient_id", "clinic_id"],
+            ["patients.id", "patients.clinic_id"],
+            name="fk_tooth_notes_patient_same_clinic",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint("length(btrim(text)) > 0", name="text_not_blank"),
+        Index("ix_tooth_notes_patient", "patient_id", "created_at"),
+    )
+
+    patient_id: Mapped[uuid.UUID] = mapped_column()
+    tooth: Mapped[int] = mapped_column(SmallInteger)
+    text: Mapped[str] = mapped_column(String(2000))
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.clock_timestamp()
+    )
 
 
 class OdontogramEvent(UUIDPkMixin, TenantMixin, Base):

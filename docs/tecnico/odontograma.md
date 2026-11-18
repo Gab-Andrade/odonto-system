@@ -1,16 +1,18 @@
 ---
 modulo: odontograma
-atualizado_em: 53c3930
+atualizado_em: 3b9b648
 ---
 # Odontograma
 
-> Legenda de marcações por clínica, histórico append-only de marcações e da arcada de cada paciente, e a visualização 2D/3D (biblioteca de dentes gerada por código) construída sobre eles.
+> Legenda de marcações por clínica, histórico append-only de marcações, anotações por dente e arcada de cada paciente, e a visualização 2D/3D (biblioteca de dentes gerada por código) construída sobre eles.
 
 ## Responsabilidades
 
 - Legenda da clínica (`tooth_statuses`): itens com cor, tipo (patologia, planejado, realizado), escopo (dente inteiro ou face) e efeito no 3D (colorir ou ocultar o dente).
+- Cor pessoal (`tooth_status_user_colors`): cada usuário pode sobrescrever a cor de um item só para si; as leituras devolvem a cor efetiva de quem pede.
 - Marcar e remover itens em dentes/faces de um paciente, em lotes, opcionalmente vinculados a um atendimento aberto.
 - Consultar o odontograma atual ou "como estava em" um momento, o histórico de eventos e a comparação entre dois momentos.
+- Anotações livres por dente (`tooth_notes`): texto datado, append-only, independente das marcações e do atendimento.
 - Arcada do paciente (`dental_arch_configs`): quais dentes o modelo do paciente tem (decídua, mista, permanente, com 0 a 4 sisos). Sem registro, é sugerida pela idade.
 - Visualização pronta para desenhar (`/visualizacao`), a mesma para 2D e 3D, e biblioteca 3D genérica (`.glb` gerado em memória).
 - **Fora do módulo:** cadastro do paciente (`pacientes`), atendimento e evolução (`prontuario`; aqui só se referencia `encounters`), plano de tratamento e preço (`tratamento`). Item "planejado" é só marcação visual; não gera orçamento. O `tratamento` é quem **consome** este módulo (`odontograma.service.current_marks` e `record_events` ao realizar item do plano).
@@ -20,7 +22,9 @@ atualizado_em: 53c3930
 | Tabela | Tenant (RLS) | Papel |
 |---|---|---|
 | `tooth_statuses` | sim | Legenda da clínica |
+| `tooth_status_user_colors` | sim | Cor pessoal por (usuário, item); única por `(clinic_id, user_id, status_id)` |
 | `odontogram_events` | sim | Eventos marcar/remover, append-only |
+| `tooth_notes` | sim | Anotações livres por dente do paciente, append-only |
 | `dental_arch_configs` | sim | Composição da arcada do paciente, append-only; a mais recente é a vigente |
 
 - `odontogram_events` não tem estado: não existe "marcação atual" gravada. O estado é sempre derivado dos eventos (`regras.py:rebuild`).
@@ -30,7 +34,9 @@ atualizado_em: 53c3930
 - Gatilhos (migração 0011, `check_violation`):
   - `odontogram_event_guard` (BEFORE INSERT): a presença de face tem de bater com o escopo do item; só `marcar` item ativo. Usa `FOR SHARE` no item para serializar com mudança concorrente de escopo.
   - `tooth_status_guard` (BEFORE UPDATE): `kind`, `scope`, `code` e `clinic_id` não mudam se já existe evento com o item. `display_3d` e `active` podem mudar mesmo com o item em uso.
-- `created_at` de eventos e de arcadas usa `clock_timestamp()` (model e migração) e não `now()`. A ordem real define o estado (eventos) e qual arcada é a vigente; `now()` (início da transação) ficaria anterior à espera do lock e poderia inverter a ordem.
+- `tooth_status_user_colors` (migração 0023): FK composta `(status_id, clinic_id)` com `ON DELETE CASCADE` e CHECK `color_valid`. O RLS isola só por clínica; **o isolamento por usuário é da aplicação** (`service.py:statuses_for` e `set_personal_color` filtram por `user_id`). Não há trigger nem política por usuário, então qualquer código novo que leia a tabela precisa filtrar.
+- `tooth_notes` (migração 0024): FK composta `(patient_id, clinic_id)` → `patients` com `RESTRICT`; `created_by` vai a `NULL` se o usuário for removido. CHECKs de dente FDI e de texto não vazio (`btrim`). A 0024 revoga UPDATE/DELETE/TRUNCATE do `odonto_app`: errou, corrige-se com anotação nova, como na evolução. O índice `(patient_id, created_at)` serve à listagem.
+- `created_at` de eventos, de arcadas e de anotações usa `clock_timestamp()` (model e migração) e não `now()`. A ordem real define o estado (eventos) e qual arcada é a vigente; `now()` (início da transação) ficaria anterior à espera do lock e poderia inverter a ordem.
 
 ## API
 
@@ -40,19 +46,23 @@ Prefixo `/odontograma`.
 |---|---|---|---|
 | GET | `/legenda` | admin, gestor, dentista, asb | Lista a legenda (`incluir_inativos`); cria a legenda padrão na primeira leitura |
 | POST | `/legenda` | admin, gestor | Cria item |
-| PATCH | `/legenda/{id}` | admin, gestor; dentista só o campo `color` | Edita nome, cor, ordem, efeito 3D, ativo e, se nunca usado, tipo/escopo |
+| PATCH | `/legenda/{id}` | admin, gestor | Edita nome, cor (da clínica), ordem, efeito 3D, ativo e, se nunca usado, tipo/escopo |
+| PUT | `/legenda/{id}/minha-cor` | admin, gestor, dentista, asb | Define a cor pessoal de quem pede; devolve o item já com a cor efetiva |
+| DELETE | `/legenda/{id}/minha-cor` | admin, gestor, dentista, asb | Remove a cor pessoal (idempotente); volta à cor da clínica |
 | GET | `/pacientes/{id}` | admin, gestor, dentista, asb | Odontograma atual ou em `?em=<datetime com fuso>`; só dentes com marcação |
 | POST | `/pacientes/{id}/eventos` | admin, dentista, asb | Grava lote de 1 a 200 eventos (201) |
 | GET | `/pacientes/{id}/historico` | admin, gestor, dentista, asb | Eventos do mais novo ao mais antigo (`limit` até 500, `offset`) |
 | GET | `/pacientes/{id}/arcada` | admin, gestor, dentista, asb | Arcada vigente (registrada ou sugerida pela idade), opcional `?em=` |
 | POST | `/pacientes/{id}/arcada` | admin, dentista, asb | Registra nova arcada (201) |
+| GET | `/pacientes/{id}/anotacoes` | admin, gestor, dentista, asb | Anotações por dente, da mais recente à mais antiga; `?em=` (com fuso) limita às feitas até o momento |
+| POST | `/pacientes/{id}/anotacoes` | admin, dentista, asb | Cria anotação `{tooth, text}` (201) |
 | GET | `/pacientes/{id}/visualizacao` | admin, gestor, dentista, asb | Arcada + marcações resolvidas (cor por face, dente oculto, posição 3D) |
 | GET | `/pacientes/{id}/comparacao?de=&ate=` | admin, gestor, dentista, asb | Marcações que entraram e saíram entre dois momentos |
 | GET | `/3d/biblioteca` | admin, gestor, dentista, asb | Manifesto da biblioteca 3D |
 | GET | `/3d/dentes/{fdi}.glb` | idem | Dente isolado |
 | GET | `/3d/arcada.glb?dentes=11,12,...` | idem | Arcada montada; sem `dentes`, permanente com 32 dentes |
 
-Recepção não acessa nada. Gestor lê e edita a legenda, mas não marca. O dentista só recolore itens: o `PATCH` aceita o papel (`router.py:RECOLOR`), mas qualquer campo além de `color` no corpo dá 403 (`router.py:update_status`). `NotFound` vira 404; `RuleViolation` vira 409 (`router.py:_http`). `comparacao` com `de > ate` devolve 422. Os `.glb` respondem 304 com `If-None-Match` e 404 para dente fora do FDI; `dentes` inválido dá 422 (`biblioteca_router.py:parse_teeth`).
+Recepção não acessa nada. Gestor lê e edita a legenda, mas não marca. Dentista e ASB não editam a legenda da clínica (o `PATCH` é só `MANAGE`); mudam apenas a própria cor por `minha-cor`. `NotFound` vira 404; `RuleViolation` vira 409 (`router.py:_http`). `comparacao` com `de > ate` devolve 422. Os `.glb` respondem 304 com `If-None-Match` e 404 para dente fora do FDI; `dentes` inválido dá 422 (`biblioteca_router.py:parse_teeth`).
 
 ## Regras de negócio e invariantes
 
@@ -71,6 +81,10 @@ Recepção não acessa nada. Gestor lê e edita a legenda, mas não marca. O den
 - Cor de uma face: item mais importante da face; sem ele, o mais importante do dente inteiro; sem nenhum, `null`. Importância: patologia > planejado > realizado, desempate por `sort_order` e `code` (`visualizacao.py:priority`). Dente é `hidden` se tem marcação de dente inteiro com `display_3d = ocultar`.
 - `display_3d = ocultar` só em item de dente inteiro: validado em `service.py:_check_display` e pelo CHECK.
 - Tipo/escopo mudam só enquanto o item não tem evento (`service.py:update_status`, gatilho).
+- Anotação: dente validado por `Tooth` no schema e pelo CHECK; texto aparado e de 1 a 2000 caracteres (`schemas.py:ToothNoteIn`). Todos os papéis de leitura veem todas as anotações do paciente (sem filtro por autor). `em` usa `created_at <= em` (`service.py:tooth_notes`); `add_tooth_note` faz `refresh` para trazer o `created_at` do banco.
+- Cor efetiva = cor pessoal do usuário que pede, senão a da clínica (`service.py:statuses_for`). Usada em `GET /legenda`, `GET /pacientes/{id}`, `/visualizacao` e `/comparacao`; a decisão de cor por face em `visualizacao.py` já recebe a cor resolvida, então 2D e 3D seguem iguais para a mesma pessoa. Mudar a cor da clínica não afeta quem tem cor pessoal naquele item.
+- `statuses_for` devolve `StatusView` (dataclass congelada), cópia desacoplada da sessão. Não devolva o `ToothStatus` com `color` trocada: o autoflush gravaria a cor pessoal na legenda da clínica.
+- `set_personal_color` devolve se algo mudou; só então a rota audita e comita. Repetir o mesmo valor ou remover o inexistente é 200 sem auditoria.
 
 ## Tenancy e auditoria
 
@@ -78,11 +92,13 @@ Recepção não acessa nada. Gestor lê e edita a legenda, mas não marca. O den
 - Rotas `/odontograma/3d/*` usam só `require_roles(*READ)` (sessão global, sem tenant): o conteúdo é genérico, sem dado de clínica ou paciente. Não são auditadas.
 - Ações auditadas:
   - `odontograma.legenda_criada`, `odontograma.legenda_alterada` (`details.campos`; só se algo mudou)
+  - `odontograma.cor_pessoal_alterada` (`details.cor`), `odontograma.cor_pessoal_removida` (entidade `tooth_status`)
   - `odontograma.lido` (odontograma; `details.em` se informado; `/visualizacao` grava a mesma ação com `details.visualizacao = true`)
   - `odontograma.marcado` (`details.eventos`, `details.atendimento`)
   - `odontograma.historico_lido`
   - `odontograma.arcada_lida`, `odontograma.arcada_registrada` (`details.denticao`, `details.dentes`)
   - `odontograma.comparado` (`details.de`, `details.ate`)
+  - `odontograma.anotacoes_lidas` (`details.em` se informado) e `odontograma.anotacao_criada` (`details.dente`, `details.anotacao` = id); entidade `patient` nas duas
 - A leitura da legenda não é auditada (sem dado de paciente).
 
 ## Decisões
@@ -95,6 +111,8 @@ Recepção não acessa nada. Gestor lê e edita a legenda, mas não marca. O den
 | Legenda padrão criada na primeira leitura/uso, com `ON CONFLICT DO NOTHING` | Não exige seed por clínica; seguro sob concorrência |
 | "Sem itens" significa "nunca inicializada" | Itens nunca são apagados, só desativados |
 | Tipo/escopo imutáveis após uso, por serviço e por gatilho | Mudar escopo reinterpretaria eventos antigos |
+| Cor pessoal em tabela própria, não campo no item | A legenda é da clínica; a preferência (ex.: cárie preta) é de cada pessoa e não deve alterar o que os outros veem. Substitui o "dentista só recolore a legenda" (commit 3b9b648), que mudava a cor para todos |
+| Anotação por dente em tabela própria e append-only, fora de `odontogram_events` | Texto livre não é estado de marcação (não entra em `rebuild`, comparação nem visualização) e o registro clínico não pode ser reescrito |
 | Face O e L guardam também incisal e palatina | Evita duplicar faces; o rótulo depende do dente |
 | Lock na linha do paciente | Serializar validação e inserção do lote |
 | `/visualizacao` única para 2D e 3D, com decisão de cor no backend | As duas visões não divergem; o frontend só pinta |
@@ -107,6 +125,7 @@ Recepção não acessa nada. Gestor lê e edita a legenda, mas não marca. O den
 - Nova face ou tipo: atualizar enum no model, schema, CHECK numa nova migração (inclusive nos gatilhos, se afetar a regra) e `regras.py`. Nova face também exige nós e materiais em `malha3d.py`.
 - Trocar a geometria dos dentes: mude `malha3d.py` e incremente `VERSION` (o frontend usa `library_version`). Para modelos externos, preserve nomes de nós, orientação (convenções em `malha3d.CONVENTIONS`) e `extras`.
 - Nova regra de composição da arcada: `arcada.py:validate`/`preset`; só a numeração/tamanho está no CHECK.
+- Nova informação textual por dente: seguir `tooth_notes`. Ela não aparece em `/visualizacao`; o frontend busca `/anotacoes` à parte.
 - Novo model: importar em `app/models.py`, RLS na migração e `TRUNCATE` em `tests/conftest.py`.
 - Vincular a plano de tratamento: já feito em `tratamento` (referencia o item da legenda e chama `record_events`); novos consumidores devem usar `service.py`, não escrever eventos direto.
 
@@ -115,7 +134,8 @@ Recepção não acessa nada. Gestor lê e edita a legenda, mas não marca. O den
 - O GET da legenda escreve (cria a legenda padrão) e faz commit, apesar de ser leitura. Papéis de leitura (inclusive ASB) disparam essa escrita. O mesmo vale para `create_status` e `record_events`, que também chamam `ensure_default_legend`. `/visualizacao`, `/comparacao` e `GET /odontograma/pacientes/{id}` **não** inicializam a legenda (sem eventos não precisam dela).
 - `ensure_default_legend` só checa se existe algum item.
 - `IntegrityError` não tratado (incluindo `check_violation` dos gatilhos e corrida no código da legenda) vira 409 pelo handler global de `app/main.py`, não 500. A checagem de código duplicado em `create_status` é só mensagem amigável.
-- O 403 do dentista por campo proibido é checado **antes** de `get_status`: id inexistente com campo proibido dá 403, não 404. A auditoria (`legenda_alterada`) é a mesma dos outros papéis.
+- `StatusOut.clinic_color` e `personal` só são preenchidos quando a resposta vem de `StatusView` (`GET /legenda`, `minha-cor`). `POST` e `PATCH /legenda` devolvem o `ToothStatus` direto: `clinic_color` vem `null` e `personal` `false`, e `color` é a da clínica (mesmo para o admin que tem cor pessoal no item).
+- Cor pessoal não é checada contra `active` e sobrevive à desativação do item; `minha-cor` também funciona em item inativo (`_personal` lista com inativos). O `user_id` tem `ON DELETE CASCADE` para `users`, mas a unicidade inclui `clinic_id`: quem pertence a duas clínicas tem cores separadas.
 - `PATCH` com campo `null` explícito retorna 409 ("não pode ficar vazio"); campo omitido é ignorado. `code` não é editável.
 - Remover uma marcação grava novo evento `remover`; não há como corrigir ou apagar um evento errado.
 - `GET /pacientes/{id}` não pagina e devolve só dentes com marcação; já `/visualizacao` devolve todos os dentes da arcada mais os marcados fora dela.
@@ -126,4 +146,7 @@ Recepção não acessa nada. Gestor lê e edita a legenda, mas não marca. O den
 - `arch_model_url` em `/visualizacao` é um caminho relativo sem prefixo de versão; o `.glb` exige login (Bearer), então o frontend não pode usar uma tag de carregamento direto sem o header.
 - Cache dos `.glb`: `private, no-cache` com ETag por hash do conteúdo: o navegador guarda o arquivo, mas revalida a cada uso (304 quando não mudou), então uma geometria nova chega na hora. Os caches em memória (`lru_cache` em `malha3d.py`) são por processo.
 - `parse_teeth` deduz a dentição dos dentes do query string e aplica `arcada.validate`; `dentes` vazio (`?dentes=`) cai em lista vazia e dá 422 ("ao menos um dente"), enquanto parâmetro ausente dá o padrão permanente.
+- `add_tooth_note` não checa paciente inativo (diferente de `record_events` e `record_arch`) nem vincula atendimento; qualquer papel de `MARK` anota.
+- `GET /anotacoes` não pagina e devolve as anotações de todos os dentes; o filtro por dente é do cliente. O model `ToothNote` não declara o CHECK `tooth_fdi` nem o índice por `clinic_id` (só a migração 0024 os cria); como o banco vem das migrações não há divergência, mas `create_all` não os criaria.
+- Frontend (contexto): a gengiva do 3D é desenhada no cliente (seção superelipse, borda recortada com papilas) a partir dos colos dos dentes; não vem do backend nem dos `.glb`.
 - A marcação "ausente" da legenda e a arcada são conceitos diferentes (dente perdido x dente que não existe na dentição); não use um para o outro.

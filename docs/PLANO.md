@@ -495,3 +495,5 @@ odonto-system/
 | 2026-11-17 | Estoque mínimo (materiais com custo) criado antes da Fase 3 e consumido pela precificação só via `estoque.service` — primeira dependência entre módulos. Lotes, validade e baixa entram no mesmo módulo depois. |
 | 2026-11-16 | Violação de constraint por concorrência (`IntegrityError`) responde 409 em toda a API, via handler global. |
 | 2026-11-16 | Redis e object storage entram no compose só quando a Fase 1 precisar. Escolha do storage S3 local em aberto: a MinIO deixou de distribuir imagens da edição comunitária, então avaliar alternativas (ex.: Garage, SeaweedFS). |
+| 2026-11-18 | Cor da legenda em dois níveis: a da clínica (admin/gestor) e uma pessoal por usuário (`tooth_status_user_colors`), resolvida no backend; o RLS isola por clínica e a separação por usuário é feita na aplicação. |
+| 2026-11-18 | Anotações por dente em tabela própria e append-only (`tooth_notes`), separadas do histórico de marcações; corrige-se com uma anotação nova. |

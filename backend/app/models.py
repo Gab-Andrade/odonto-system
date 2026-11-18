@@ -11,7 +11,13 @@ from app.modules.financeiro.models import FinancialSettings, Payable, Payment, R
 from app.modules.identidade.models import Clinic, ClinicMembership, User
 from app.modules.imagens.models import ImagingExam
 from app.modules.inteligencia.models import AlertDismissal, AlertRuleSetting
-from app.modules.odontograma.models import ArchConfig, OdontogramEvent, ToothStatus
+from app.modules.odontograma.models import (
+    ArchConfig,
+    OdontogramEvent,
+    PersonalColor,
+    ToothNote,
+    ToothStatus,
+)
 from app.modules.pacientes.models import Patient, PatientConsent
 from app.modules.painel.models import PanelGoal
 from app.modules.precificacao.models import (
@@ -76,6 +82,7 @@ __all__ = [
     "PatientConsent",
     "Payable",
     "Payment",
+    "PersonalColor",
     "PriceAssignment",
     "PriceItem",
     "PriceSnapshot",
@@ -85,6 +92,7 @@ __all__ = [
     "Receivable",
     "StockLot",
     "StockMovement",
+    "ToothNote",
     "ToothStatus",
     "TreatmentPlan",
     "TreatmentPlanItem",

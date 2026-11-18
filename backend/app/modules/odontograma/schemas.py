@@ -59,12 +59,38 @@ class StatusOut(BaseModel):
     id: uuid.UUID
     code: str
     name: str
-    color: str
+    color: str = Field(
+        description="Cor que esta pessoa vê: a pessoal, se houver; senão, a da clínica."
+    )
+    clinic_color: str | None = Field(
+        None, description="Cor da clínica (na listagem e na visualização)."
+    )
+    personal: bool = Field(False, description="`color` é a cor pessoal de quem pediu.")
     kind: StatusKind
     scope: StatusScope
     sort_order: int
     display_3d: Display3D
     active: bool
+
+
+class PersonalColorIn(BaseModel):
+    color: Color
+
+
+class ToothNoteIn(BaseModel):
+    tooth: Tooth
+    text: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2000)]
+
+
+class ToothNoteOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    patient_id: uuid.UUID
+    tooth: int
+    text: str
+    created_by: uuid.UUID | None
+    created_at: datetime
 
 
 class EventIn(BaseModel):

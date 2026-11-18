@@ -1,6 +1,6 @@
 ---
 modulo: odontograma
-atualizado_em: 53c3930
+atualizado_em: 3b9b648
 ---
 # Odontograma
 
@@ -10,10 +10,10 @@ atualizado_em: 53c3930
 
 | Perfil | O que pode fazer |
 |---|---|
-| Administrador | Ver o odontograma, o histórico, a arcada e a comparação antes e depois; marcar e remover dentes e faces; registrar a arcada; criar e alterar os itens da legenda |
-| Gestor | Ver o odontograma, o histórico, a arcada e a comparação antes e depois; criar e alterar os itens da legenda |
-| Dentista | Ver o odontograma, o histórico, a arcada e a comparação antes e depois; marcar e remover dentes e faces; registrar a arcada; trocar a cor de um item da legenda |
-| ASB | Ver o odontograma, o histórico, a arcada e a comparação antes e depois; marcar e remover dentes e faces; registrar a arcada |
+| Administrador | Ver o odontograma, o histórico, a arcada, a comparação antes e depois e as anotações dos dentes; marcar e remover dentes e faces; registrar a arcada; escrever anotações nos dentes; criar e alterar os itens da legenda, inclusive a cor da clínica; escolher a própria cor de um item |
+| Gestor | Ver o odontograma, o histórico, a arcada, a comparação antes e depois e as anotações dos dentes; criar e alterar os itens da legenda, inclusive a cor da clínica; escolher a própria cor de um item |
+| Dentista | Ver o odontograma, o histórico, a arcada, a comparação antes e depois e as anotações dos dentes; marcar e remover dentes e faces; registrar a arcada; escrever anotações nos dentes; escolher a própria cor de um item da legenda |
+| ASB | Ver o odontograma, o histórico, a arcada, a comparação antes e depois e as anotações dos dentes; marcar e remover dentes e faces; registrar a arcada; escrever anotações nos dentes; escolher a própria cor de um item da legenda |
 | Recepção | Não tem acesso ao odontograma |
 
 (Perfis do sistema: Administrador, Gestor, Dentista, ASB (auxiliar de saúde bucal) e Recepção.)
@@ -36,14 +36,19 @@ Na aba Odontograma do paciente, a legenda aparece ao lado da boca, em versão co
 
 ### Trocar a cor de um item da legenda
 
-Quem pode: Administrador, Gestor e Dentista.
+Há dois tipos de cor para cada item:
+
+- **Cor da clínica:** é a mesma para todo mundo. Quem pode trocar: Administrador e Gestor. A mudança vale para todas as marcações desse item, antigas e novas, em todos os pacientes.
+- **Cor pessoal:** é a cor que uma pessoa escolhe para si, como o dentista que prefere a cárie em preto. Quem pode escolher: Administrador, Gestor, Dentista e ASB. Ela vale em todos os pacientes, só para quem escolheu, e tem prioridade sobre a cor da clínica. Os outros continuam vendo a cor da clínica.
+
+Para escolher a sua cor:
 
 1. Na aba Odontograma do paciente, toque na cor do item na legenda.
-2. Escolha a nova cor.
+2. Escolha a nova cor. O sistema grava pouco depois de você escolher.
 
-A cor vale para a clínica toda: todas as marcações desse item, antigas e novas, passam a usar a nova cor.
+Para voltar à cor da clínica, toque na setinha ↺ ao lado do item que tem cor pessoal. A cor pessoal é apagada e a cor da clínica volta a valer para você.
 
-O Dentista pode trocar só a cor. Para mudar o nome, o tipo, a forma de marcar, o efeito no 3D, a ordem ou para ativar e desativar o item, é preciso ser Administrador ou Gestor. Se o Dentista tentar mudar outra coisa, o sistema recusa.
+Para mudar o nome, o tipo, a forma de marcar, o efeito no 3D, a ordem ou para ativar e desativar o item, é preciso ser Administrador ou Gestor. Dentista e ASB podem escolher só a cor pessoal.
 
 ### Criar ou alterar um item da legenda
 
@@ -54,7 +59,7 @@ Quem pode: Administrador e Gestor.
 3. Para alterar um item existente, mude o nome, a cor, a ordem, o efeito no 3D ou ative e desative o item.
 4. O tipo e a forma de marcar (dente inteiro ou por face) só podem ser mudados enquanto o item nunca foi usado. Depois de usado, crie outro item e desative o antigo.
 
-Itens não são apagados. Quando não forem mais usados, desative-os. Criar ou alterar um item fica registrado no histórico de ações.
+Itens não são apagados. Quando não forem mais usados, desative-os. Criar ou alterar um item, e cada troca de cor (da clínica ou pessoal), fica registrado no histórico de ações.
 
 *Tela em construção.*
 
@@ -146,7 +151,7 @@ O odontograma mostra cada dente com marcas. Para cada dente, aparecem:
 
 Só aparecem os dentes que têm alguma marcação.
 
-Na aba Odontograma do paciente, a boca aparece em 2D: arcada superior em cima e inferior embaixo, com os dentes numerados e pintados com a cor da marcação. Toque em um dente para ver o detalhe dele.
+Na aba Odontograma do paciente, a boca aparece em 2D: arcada superior em cima e inferior embaixo, com os dentes numerados e pintados com a cor da marcação. Toque em um dente para ver o detalhe dele e as anotações feitas nele (veja "Anotar um dente").
 
 Você também pode ver como o odontograma estava em uma data e hora anteriores. Isso ajuda a comparar o antes e o depois de um tratamento.
 
@@ -168,6 +173,32 @@ Na aba Odontograma do paciente, o 3D aparece ao lado do 2D, só para ver. Para m
 Você também pode ver essa visão como estava em uma data anterior.
 
 Na aba Odontograma, preencha **Ver como estava em** com a data; para voltar, toque em **Voltar para hoje**. A tela escolhe só o dia (mostra como estava no fim daquele dia).
+
+#### Controles do modelo 3D
+
+Quem vê o 3D pode usar estes controles. Eles mudam só a visão na tela; não mudam nenhum registro.
+
+- **Arcadas:** uma lista de seleção que mostra a opção atual. Ao tocar nela, aparecem Ambas as arcadas, Arcada superior e Arcada inferior. Escolha uma delas.
+- **Abrir a boca / Fechar a boca:** afasta as arcadas de cima e de baixo, para ver como elas se encaixam. Toque de novo para fechar.
+- **Gengiva:** vem marcada por padrão e mostra a gengiva, que contorna cada dente. Desmarque para ver só os dentes.
+- **Raízes:** quando marcado, a gengiva fica transparente para as raízes aparecerem.
+
+### Anotar um dente
+
+Quem pode escrever: Administrador, Dentista e ASB. Quem pode ler: Administrador, Gestor, Dentista e ASB.
+
+Anotação é um texto livre sobre um dente, como "sensível ao frio" ou "prefere anestesia sem adrenalina".
+
+1. Na aba Odontograma do paciente, toque no dente na boca 2D ou no 3D.
+2. O sistema mostra o detalhe do dente, com as anotações dele. Cada uma traz o texto, a data e o autor, da mais recente para a mais antiga.
+3. Para escrever uma nova, preencha o campo **Nova anotação** e envie.
+
+Regras:
+
+- A anotação pode ter até 2000 caracteres. Espaços no início e no fim são retirados, e texto vazio não é aceito.
+- Dentes com anotação ganham o marcador ✎ na boca 2D.
+- Anotação não pode ser editada nem apagada, como o prontuário. Para corrigir, escreva outra.
+- Vendo o odontograma em uma data anterior, aparecem só as anotações feitas até aquela data, e não dá para escrever.
 
 ### Comparar antes e depois
 
@@ -195,7 +226,7 @@ O histórico vem em páginas de até 500 registros por vez. O padrão são 100.
 
 ## Bom saber
 
-- **Nada é apagado.** Cada marcação, remoção e registro de arcada fica guardado com data e autor. Para corrigir um erro, registre a remoção daquela marcação ou um novo registro de arcada.
+- **Nada é apagado.** Cada marcação, remoção, registro de arcada e anotação fica guardado com data e autor. Para corrigir um erro, registre a remoção daquela marcação, um novo registro de arcada ou uma nova anotação.
 - **Faces.** Por face, o sistema usa as letras M, D, O, V e L:
   - **M** e **D**: faces de contato com os dentes vizinhos. M é a face voltada para o meio do rosto e D é a face voltada para trás.
   - **O** é a face de mastigação. Nos dentes da frente ela aparece como **I** (incisal), que é a borda de corte.
@@ -203,13 +234,14 @@ O histórico vem em páginas de até 500 registros por vez. O padrão são 100.
   - **L** é a face voltada para a língua. Nos dentes de cima ela aparece como **P** (palatina).
   - Ao registrar, você pode usar I no lugar de O e P no lugar de L.
 - **Cor de uma face ou de um dente.** Se a face tem marcações, a cor dela é a do item mais importante. Se não tem, vale a cor do item do dente inteiro. A ordem de importância é: patologia, depois planejado, depois realizado. Empatando, vale a ordem da legenda.
+- **Cor pessoal.** A cor que você vê é a sua cor pessoal, se você escolheu uma para aquele item; senão, a cor da clínica. A cor pessoal não muda o que os colegas veem. Ela não muda a ordem de importância acima.
 - **Efeito no 3D.** Cada item pode colorir o dente ou ocultá-lo no modelo 3D. Ocultar só vale para item de dente inteiro. Por padrão, "Ausente" oculta o dente e os demais coloridam.
 - **Dente fora da arcada.** Você pode marcar um dente que não está na arcada do paciente. Ele aparece no odontograma, marcado como fora da arcada.
 - **Item desativado.** Ele some das opções para novas marcações, mas as marcações antigas continuam aparecendo.
 - **Paciente inativo.** Não recebe novas marcações. Reative o cadastro antes de marcar.
 - **Atendimento aberto.** Quando você informa um atendimento, ele precisa ser deste paciente e estar aberto. Uma vez fechado, não recebe mais marcações.
 - **Plano de tratamento.** Quando um procedimento do plano é marcado como feito, o odontograma é atualizado: o item "a fazer" sai e o item "feito" entra. Veja [Plano de tratamento e orçamento](tratamento.md).
-- **Leitura é registrada.** Cada vez que alguém consulta o odontograma, o histórico, a arcada, a visão 2D e 3D ou a comparação de um paciente, isso fica no histórico de ações, para segurança e para a LGPD. A lista da legenda não é registrada, porque não tem dado de paciente.
+- **Leitura é registrada.** Cada vez que alguém consulta o odontograma, o histórico, a arcada, a visão 2D e 3D , a comparação ou as anotações de um paciente, isso fica no histórico de ações, para segurança e para a LGPD. A lista da legenda não é registrada, porque não tem dado de paciente.
 - **Cada clínica só vê os próprios dados.**
 
 ## Perguntas frequentes
@@ -219,6 +251,9 @@ Pode ser que o paciente esteja inativo, que o item esteja desativado, que a marc
 
 **Marquei a face errada. Como corrijo?**
 Registre a remoção daquela marcação. Não é possível apagar o registro. A remoção fica no histórico junto com a marcação errada.
+
+**Escrevi uma anotação com erro. Como corrijo?**
+Não é possível editar nem apagar a anotação. Escreva outra explicando a correção. As duas ficam guardadas, com data e autor.
 
 **Qual a diferença entre O e I?**
 São a mesma face. Nos dentes da frente o nome clínico é incisal (I). Nos demais, é oclusal (O), a superfície de mastigação. O sistema mostra o nome certo para cada dente.
@@ -233,4 +268,4 @@ Não. A arcada descreve a dentição do paciente. Marque o item "Ausente" no den
 O perfil Recepção não tem permissão para acessar dados clínicos do paciente.
 
 **Quem pode mudar a cor de uma marcação?**
-Administrador, Gestor e Dentista podem trocar a cor de um item da legenda. A mudança vale para todas as marcações desse item, na clínica toda. Só Administrador e Gestor podem mudar o nome, o tipo, o efeito no 3D e ativar ou desativar o item.
+Administrador e Gestor podem trocar a cor da clínica de um item. A mudança vale para todas as marcações desse item, na clínica toda. Administrador, Gestor, Dentista e ASB podem escolher a própria cor de um item; ela vale só para quem escolheu, e a setinha ↺ volta à cor da clínica. Só Administrador e Gestor podem mudar o nome, o tipo, o efeito no 3D e ativar ou desativar o item.
