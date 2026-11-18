@@ -3,7 +3,6 @@ import { Navigate, NavLink, Outlet, useLocation } from "react-router-dom";
 
 import {
   AGENDA,
-
   GESTAO,
   NOME_PAPEL,
   sessaoValida,
@@ -12,6 +11,7 @@ import {
   type Papel,
 } from "../auth/sessao";
 import { useQueryClient } from "@tanstack/react-query";
+import { type Tema, useTema } from "../lib/tema";
 
 interface ItemMenu {
   para: string;
@@ -19,6 +19,12 @@ interface ItemMenu {
   icone: string;
   papeis: Papel[];
 }
+
+const TEMAS: { id: Tema; rotulo: string; icone: string; dica: string }[] = [
+  { id: "claro", rotulo: "Claro", icone: "☀", dica: "Tema claro" },
+  { id: "sistema", rotulo: "Auto", icone: "◐", dica: "Segue o tema do aparelho" },
+  { id: "escuro", rotulo: "Escuro", icone: "☾", dica: "Tema escuro" },
+];
 
 const MENU: ItemMenu[] = [
   { para: "/", rotulo: "Início", icone: "⌂", papeis: AGENDA },
@@ -34,6 +40,7 @@ export default function AppLayout() {
   const local = useLocation();
   const cliente = useQueryClient();
   const [menuAberto, setMenuAberto] = useState(false);
+  const [tema, setTema] = useTema();
 
   if (!sessaoValida(sessao)) {
     return <Navigate to="/login" replace state={{ de: local.pathname }} />;
@@ -84,6 +91,24 @@ export default function AppLayout() {
           ))}
         </ul>
         <div className="border-t border-borda pt-3">
+          <div role="radiogroup" aria-label="Tema" className="mb-3 flex rounded-lg border border-borda p-1">
+            {TEMAS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="radio"
+                aria-checked={tema === t.id}
+                title={t.dica}
+                onClick={() => setTema(t.id)}
+                className={`flex min-h-9 flex-1 items-center justify-center gap-1 rounded-md text-xs font-semibold ${
+                  tema === t.id ? "bg-marca-suave text-marca" : "text-texto-suave hover:text-texto"
+                }`}
+              >
+                <span aria-hidden>{t.icone}</span>
+                {t.rotulo}
+              </button>
+            ))}
+          </div>
           <p className="truncate px-3 text-xs text-texto-suave">{sessao.usuario?.nome}</p>
           <button
             type="button"
@@ -122,5 +147,3 @@ export default function AppLayout() {
     </div>
   );
 }
-
-

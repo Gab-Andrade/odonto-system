@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
-/* Tokens de cor: claro por padrão, escuro pela preferência do sistema. */
+/* Tokens de cor: claro por padrão; escuro com <html data-tema="escuro"> (src/lib/tema.ts:
+   escolha da pessoa ou preferência do sistema). A variante dark: segue o mesmo atributo. */
+@custom-variant dark (&:where([data-tema="escuro"], [data-tema="escuro"] *));
 @theme {
   --color-marca: #0f766e;
   --color-marca-forte: #115e59;
@@ -19,23 +21,21 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-marca: #2dd4bf;
-    --color-marca-forte: #5eead4;
-    --color-marca-suave: #134e4a;
-    --color-fundo: #0b1220;
-    --color-painel: #111a2e;
-    --color-borda: #24314d;
-    --color-texto: #e2e8f0;
-    --color-texto-suave: #94a3b8;
-    --color-perigo: #f87171;
-    --color-perigo-suave: #450a0a;
-    --color-alerta: #fbbf24;
-    --color-alerta-suave: #451a03;
-    --color-sucesso: #4ade80;
-    --color-sucesso-suave: #052e16;
-  }
+:root[data-tema="escuro"] {
+  --color-marca: #2dd4bf;
+  --color-marca-forte: #5eead4;
+  --color-marca-suave: #134e4a;
+  --color-fundo: #0b1220;
+  --color-painel: #111a2e;
+  --color-borda: #24314d;
+  --color-texto: #e2e8f0;
+  --color-texto-suave: #94a3b8;
+  --color-perigo: #f87171;
+  --color-perigo-suave: #450a0a;
+  --color-alerta: #fbbf24;
+  --color-alerta-suave: #451a03;
+  --color-sucesso: #4ade80;
+  --color-sucesso-suave: #052e16;
 }
 
 html,
