@@ -6,17 +6,10 @@ import { temPapel, useSessao } from "../../auth/sessao";
 import Modal from "../../components/Modal";
 import { Aviso, Botao, Campo, Cartao, Carregando, ErroCarga, Etiqueta, Selecao, Vazio } from "../../components/ui";
 import { dataBR, dinheiro } from "../../lib/datas";
+import { METODOS } from "../../lib/pagamento";
 
 type Conta = Schemas["ReceivableOut"];
 
-const METODOS: Record<string, string> = {
-  pix: "Pix",
-  dinheiro: "Dinheiro",
-  debito: "Débito",
-  credito: "Crédito",
-  boleto: "Boleto",
-  transferencia: "Transferência",
-};
 const TOM: Record<string, "info" | "alerta" | "perigo" | "sucesso"> = {
   aberta: "info",
   parcial: "alerta",

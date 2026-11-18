@@ -34,6 +34,7 @@ const MENU: ItemMenu[] = [
   { para: "/alertas", rotulo: "Alertas", icone: "!", papeis: AGENDA },
   { para: "/gestao", rotulo: "Gestão", icone: "▲", papeis: [...GESTAO, "dentista"] },
   { para: "/estoque", rotulo: "Estoque", icone: "▤", papeis: CLINICOS },
+  { para: "/financeiro", rotulo: "Financeiro", icone: "¤", papeis: [...GESTAO, "dentista"] },
   { para: "/precificacao", rotulo: "Precificação", icone: "$", papeis: GESTAO },
 ];
 
