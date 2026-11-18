@@ -1,6 +1,6 @@
 ---
 modulo: identidade
-atualizado_em: 0207683
+atualizado_em: 5500fea
 ---
 # Acesso e login
 
@@ -10,7 +10,7 @@ atualizado_em: 0207683
 
 | Perfil | O que pode fazer |
 |---|---|
-| Todos | Entrar no sistema e ver os próprios dados de acesso |
+| Todos | Entrar no sistema, ver os próprios dados de acesso e ver a lista da equipe da clínica |
 
 ## O que dá para fazer
 
@@ -26,6 +26,11 @@ Depois de entrar, você pode conferir seu nome, e-mail, CRO (para dentistas), a 
 
 *Tela em construção.*
 
+### Ver quem faz parte da equipe
+Depois de entrar, você pode ver a lista das pessoas ativas da sua clínica, com nome, perfil e CRO (para dentistas). O e-mail não aparece nessa lista. Quem foi desativado não aparece.
+
+*Tela em construção.*
+
 ### Cadastrar uma clínica nova
 A primeira clínica e o seu Administrador são criados pela equipe de suporte do sistema.
 
@@ -36,6 +41,8 @@ A primeira clínica e o seu Administrador são criados pela equipe de suporte do
 - **Acesso cortado na hora:** se o acesso de alguém for desativado, ou se o perfil mudar, isso vale imediatamente, mesmo que a pessoa já esteja dentro do sistema.
 - **Mensagem de erro igual para tudo:** se o e-mail ou a senha estiverem errados, o sistema não diz qual dos dois. Isso protege contra quem tenta descobrir e-mails cadastrados.
 - **Senhas protegidas:** as senhas são guardadas de forma que nem a equipe do sistema consegue lê-las.
+- **Equipe à vista de todos, sem dados pessoais de contato:** a lista da equipe mostra nome, perfil e CRO, mas não mostra e-mail.
+- Previsto: a lista da equipe servirá para escolher o dentista na agenda e no plano de tratamento.
 - Previsto: tela para o Administrador cadastrar e gerenciar a equipe da clínica.
 
 ## Perguntas frequentes

@@ -1,6 +1,6 @@
 ---
 modulo: identidade
-atualizado_em: 0207683
+atualizado_em: 5500fea
 ---
 # Identidade
 
@@ -34,8 +34,10 @@ Fora daqui: hash e JWT ficam em `app/core/security.py`, a sessão de tenant em `
 |---|---|---|---|
 | POST | `/auth/login` | público | autentica e devolve `access_token` + clínica + papel |
 | GET | `/auth/me` | qualquer autenticado | dados do usuário e da clínica do token |
+| GET | `/auth/equipe` | qualquer autenticado | membros ativos da clínica do token (nome, papel, CRO), para escolher dentista na agenda, no plano etc. |
 
 - `POST /auth/login` responde **409** com `ClinicSelectionResponse` (lista de clínicas) quando o usuário tem mais de um vínculo ativo e não enviou `clinic_id`. O cliente deve reenviar o login com `clinic_id`.
+- `GET /auth/equipe` (`router.py:team`, `service.py:team`) não devolve e-mail de propósito. Como as tabelas são globais, o filtro por `clinic_id` é explícito na query, e só entram vínculo ativo **e** usuário ativo (a clínica inativa já é barrada em `get_current_user`). Qualquer papel lê a equipe, inclusive `asb` e `recepcao`. Teste: `test_auth_integration.py:test_team_lists_only_active_members_of_own_clinic`.
 - Credencial errada, usuário inativo, sem vínculo ativo ou `clinic_id` inválido: tudo vira o mesmo **401** genérico.
 
 ## Regras de negócio e invariantes
@@ -48,7 +50,7 @@ Fora daqui: hash e JWT ficam em `app/core/security.py`, a sessão de tenant em `
 
 ## Tenancy e auditoria
 
-- `login` e `me` usam `get_db` (sessão global), porque leem só tabelas globais.
+- `login`, `me` e `equipe` usam `get_db` (sessão global), porque leem só tabelas globais.
 - Login bem-sucedido abre uma `tenant_session` da clínica escolhida só para gravar `audit.record(..., "auth.login", request=request)`.
 - Outros módulos devem usar `get_tenant_db` (que já depende de `get_current_user`) e nunca `get_db`.
 
