@@ -11,12 +11,21 @@ def _counts(clinic_id):
     from app.modules.agenda.models import Appointment
     from app.modules.odontograma.models import ArchConfig, OdontogramEvent
     from app.modules.pacientes.models import Patient
+    from app.modules.prontuario.models import AnamnesisResponse, Encounter
     from app.modules.tratamento.models import TreatmentPlan
 
     with tenant_session(clinic_id) as s:
         return {
             m.__name__: s.scalar(select(func.count()).select_from(m))
-            for m in (Patient, ArchConfig, OdontogramEvent, TreatmentPlan, Appointment)
+            for m in (
+                Patient,
+                ArchConfig,
+                OdontogramEvent,
+                TreatmentPlan,
+                Appointment,
+                Encounter,
+                AnamnesisResponse,
+            )
         }
 
 
@@ -35,6 +44,8 @@ def test_demo_creates_clinic_and_is_idempotent(clean_db):
     assert counts["TreatmentPlan"] == 2
     assert counts["Appointment"] == 3
     assert counts["OdontogramEvent"] > 10
+    assert counts["Encounter"] == 2
+    assert counts["AnamnesisResponse"] == 1
 
     second = demo.seed("demo-teste")
     assert second.created == []

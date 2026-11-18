@@ -30,12 +30,16 @@ from app.modules.pacientes import service as pacientes
 from app.modules.pacientes.models import ConsentGivenBy, ConsentPurpose, Patient, Sex
 from app.modules.precificacao import service as pricing
 from app.modules.precificacao.models import PriceAssignment, PriceTable, ScopeType
+from app.modules.prontuario import atendimento_service as atendimento
+from app.modules.prontuario import service as prontuario
+from app.modules.prontuario.models import AnamnesisTemplate, Encounter, VersionStatus
 from app.modules.tratamento import service as tratamento
 from app.modules.tratamento.models import TreatmentPlan
 
 DEMO_PASSWORD = "demo-odonto-2026"  # noqa: S105 - só para dados locais de demonstração
 DEMO_TABLE = "Tabela Demo"
 DEMO_CHAIR = "Cadeira Demo"
+DEMO_ANAMNESE = "Anamnese geral (demo)"
 
 # Procedimentos da tabela de demonstração (código, descrição, categoria, preço).
 PROCEDURES = (
@@ -46,6 +50,62 @@ PROCEDURES = (
     ("DEMO-SEL", "Selante (por dente)", "Prevenção", "90.00"),
     ("DEMO-COROA", "Coroa em porcelana", "Prótese", "1800.00"),
 )
+
+ANAMNESE = [
+    {
+        "id": "alergia",
+        "text": "Tem alergia a algum medicamento ou material?",
+        "type": "sim_nao",
+        "section": "Saúde geral",
+        "required": True,
+        "alert": True,
+    },
+    {"id": "alergia_quais", "text": "Se sim, quais?", "type": "texto", "section": "Saúde geral"},
+    {
+        "id": "medicamentos",
+        "text": "Usa algum medicamento?",
+        "type": "texto",
+        "section": "Saúde geral",
+    },
+    {
+        "id": "anticoagulante",
+        "text": "Usa anticoagulante?",
+        "type": "sim_nao",
+        "section": "Saúde geral",
+        "alert": True,
+    },
+    {
+        "id": "diabetes",
+        "text": "Tem diabetes?",
+        "type": "sim_nao",
+        "section": "Saúde geral",
+        "alert": True,
+    },
+    {
+        "id": "pressao",
+        "text": "Pressão arterial",
+        "type": "escolha_unica",
+        "section": "Saúde geral",
+        "options": ["Normal", "Alta", "Baixa", "Não sabe"],
+        "alert": True,
+        "alert_options": ["Alta"],
+    },
+    {
+        "id": "fumante",
+        "text": "Fuma?",
+        "type": "escolha_unica",
+        "section": "Hábitos",
+        "options": ["Não", "Sim", "Ex-fumante"],
+    },
+    {"id": "escovacoes", "text": "Escovações por dia", "type": "numero", "section": "Hábitos"},
+    {
+        "id": "queixa",
+        "text": "Queixa principal",
+        "type": "texto",
+        "section": "Motivo da consulta",
+        "required": True,
+    },
+]
 
 TEAM = (
     ("beatriz.demo@example.com", "Dra. Beatriz Demo", Role.DENTISTA, "CRO-SP 00001"),
@@ -178,6 +238,63 @@ def _price_table(db: Session, actor: CurrentUser, report: Report) -> None:
         pricing.create_assignment(
             db, actor, table_id=table.id, scope_type=ScopeType.CLINICA, scope_id=None, priority=None
         )
+
+
+def _anamnese(db: Session, actor: CurrentUser, report: Report) -> AnamnesisTemplate:
+    template = db.scalar(select(AnamnesisTemplate).where(AnamnesisTemplate.name == DEMO_ANAMNESE))
+    if template is None:
+        template, draft = prontuario.create_template(
+            db, actor, DEMO_ANAMNESE, "Criado pelo comando de demonstração.", ANAMNESE
+        )
+        prontuario.publish(db, actor, draft)
+        report.created.append(f"modelo de anamnese publicado: {DEMO_ANAMNESE}")
+    return template
+
+
+def _clinical_history(
+    db: Session,
+    dentist: CurrentUser,
+    template: AnamnesisTemplate,
+    patient: Patient,
+    report: Report,
+) -> None:
+    """Anamnese respondida (com alerta de alergia) e atendimentos do adulto: um fechado
+    com evolução e um aberto há 3 dias (aparece no alerta "atendimento aberto")."""
+    if db.scalar(select(Encounter.id).where(Encounter.patient_id == patient.id)) is not None:
+        return
+    version = prontuario.open_versions(db, [template.id])[template.id][VersionStatus.PUBLICADA]
+    prontuario.record_response(
+        db,
+        dentist,
+        patient,
+        template.id,
+        version.id,
+        {
+            "alergia": True,
+            "alergia_quais": "Dipirona",
+            "medicamentos": "Losartana 50 mg",
+            "anticoagulante": False,
+            "diabetes": False,
+            "pressao": "Alta",
+            "fumante": "Ex-fumante",
+            "escovacoes": 2,
+            "queixa": "Sensibilidade no dente 16 ao tomar gelado.",
+        },
+    )
+    first = atendimento.open_encounter(
+        db, dentist, patient.id, None, atendimento.now() - timedelta(days=6)
+    )
+    atendimento.add_note(
+        db,
+        dentist,
+        first,
+        "Avaliação inicial. Cárie oclusal no 16 e distal no 25; 47 com indicação de "
+        "tratamento de canal. Orientada higiene e solicitado raio-X panorâmico.",
+        None,
+    )
+    atendimento.close_encounter(db, dentist, first)
+    atendimento.open_encounter(db, dentist, patient.id, None, atendimento.now() - timedelta(days=3))
+    report.created.append(f"anamnese e atendimentos de {patient.full_name}")
 
 
 def _legend(db: Session, clinic_id: uuid.UUID) -> dict[str, uuid.UUID]:
@@ -431,6 +548,9 @@ def seed(slug: str) -> Report:
             patient, _ = _patient(db, actor, demo, legend, report)
             created[demo.data["full_name"]] = patient
         adult = created["Carlos Demo Andrade"]
+        template = _anamnese(db, actor, report)
+        as_dentist = CurrentUser(user_id=dentist.id, clinic_id=clinic.id, role=Role.DENTISTA)
+        _clinical_history(db, as_dentist, template, adult, report)
         _plan_for_adult(db, actor, adult, dentist.id, legend, report)
         tomorrow = today + timedelta(days=1)
         _appointments(

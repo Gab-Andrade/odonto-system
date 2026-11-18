@@ -93,7 +93,9 @@ idempotente (pode rodar de novo sem duplicar nada) e usa a clínica do `--slug` 
 - pacientes: **Carlos** (adulto, 30 dentes, cáries, restaurações, canal, coroa e um
   ausente), **Laura** (4 anos, decídua, com responsável) e **Pedro** (9 anos, mista);
 - a "Tabela Demo" de preços, um plano aprovado e um orçamento aguardando resposta do
-  Carlos, a "Cadeira Demo" e consultas para amanhã e depois de amanhã.
+  Carlos, a "Cadeira Demo" e consultas para amanhã e depois de amanhã;
+- um modelo de anamnese publicado, a anamnese do Carlos (alergia e pressão alta viram
+  alerta), um atendimento fechado com evolução e outro aberto há 3 dias (aparece em Alertas).
 
 O comando recusa rodar com `ENVIRONMENT=production`.
 
@@ -164,6 +166,7 @@ senha `demo-odonto-2026`) ou com o admin da clínica.
 | `npm run dev` | servidor de desenvolvimento |
 | `npm run lint` | ESLint |
 | `npm run build` | checagem de tipos + build de produção (com o service worker do PWA) |
+| `node scripts/conferir-glb.mjs arquivo.glb` | confere um .glb da arcada com o mesmo carregador do app (nós e faces) |
 | `npm run atualizar-api` | exporta o OpenAPI do backend (`python -m app.cli openapi`) e regenera `src/api/schema.d.ts` |
 
 O cliente da API é gerado do OpenAPI (`openapi-typescript` + `openapi-fetch`): ao mudar uma
@@ -179,7 +182,13 @@ O que já dá para testar no navegador está na tabela abaixo (atualizada a cada
 | Pacientes: busca, cadastro/edição (responsável para menor), consentimentos LGPD, consultas do paciente | pronta |
 | Agenda do dia por dentista: agendar (toque no horário), bloquear, confirmar, falta, cancelar, remarcar, iniciar atendimento | pronta |
 | Alertas: lista por regra, dispensar/voltar a mostrar, configurar regras (admin/gestor) | pronta |
-| Prontuário (anamnese, atendimento, evolução), odontograma 2D/3D, planos, raio-X, gestão, precificação | nas próximas etapas |
+| Prontuário: anamnese (formulário do modelo publicado, alertas no cabeçalho), atendimentos com evolução, adendo, fechar e imprimir para assinar à mão | pronta |
+| Odontograma 2D: marcação em 2 toques (item da legenda → face ou dente), remover tocando de novo, ver como estava numa data, vincular ao atendimento, arcada | pronta |
+| Odontograma 3D (mesmos dados do 2D): faces pintadas pelos nós do .glb, dente ausente escondido, raízes opcionais, toque para marcar | pronta |
+| Raio-X: anexar DICOM, lista com metadados, baixar o .dcm, invalidar | pronta |
+| Planos e orçamentos: procedimentos da tabela, a fazer/feito no odontograma, desconto, emitir, decisão parcial, realizar no atendimento, duplicar, imprimir | pronta |
+| Financeiro do paciente: extrato, parcelar orçamento aprovado, registrar recebimento | pronta |
+| Gestão (painel), precificação | nas próximas etapas |
 
 ## Testes
 

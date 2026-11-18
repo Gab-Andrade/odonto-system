@@ -16,15 +16,25 @@ const Atendimentos = lazy(() => import("../prontuario/Atendimentos"));
 const Odontograma = lazy(() => import("../odontograma/Odontograma"));
 const Planos = lazy(() => import("../tratamento/Planos"));
 const Exames = lazy(() => import("../prontuario/Exames"));
+const Financeiro = lazy(() => import("../financeiro/FinanceiroPaciente"));
 
-type Aba = "cadastro" | "consultas" | "anamnese" | "atendimentos" | "odontograma" | "planos" | "exames";
+type Aba =
+  | "cadastro"
+  | "consultas"
+  | "anamnese"
+  | "atendimentos"
+  | "odontograma"
+  | "planos"
+  | "exames"
+  | "financeiro";
 
 export default function Paciente() {
   const { id = "" } = useParams();
   const { papel } = useSessao();
   const [params, setParams] = useSearchParams();
   const clinico = temPapel(papel, ...CLINICOS);
-  const planos = temPapel(papel, "admin", "gestor", "dentista", "recepcao");
+  const caixa = temPapel(papel, "admin", "gestor", "recepcao");
+  const planos = temPapel(papel, "admin", "gestor", "dentista", "asb", "recepcao");
 
   const abas: { id: Aba; rotulo: string }[] = [
     ...(clinico ? [{ id: "odontograma" as Aba, rotulo: "Odontograma" }] : []),
@@ -32,6 +42,7 @@ export default function Paciente() {
     ...(clinico ? [{ id: "anamnese" as Aba, rotulo: "Anamnese" }] : []),
     ...(planos ? [{ id: "planos" as Aba, rotulo: "Planos e orçamentos" }] : []),
     ...(clinico ? [{ id: "exames" as Aba, rotulo: "Raio-X" }] : []),
+    ...(caixa ? [{ id: "financeiro" as Aba, rotulo: "Financeiro" }] : []),
     { id: "consultas", rotulo: "Consultas" },
     { id: "cadastro", rotulo: "Cadastro" },
   ];
@@ -107,6 +118,7 @@ export default function Paciente() {
         {aba === "odontograma" && <Odontograma paciente={p} />}
         {aba === "planos" && <Planos paciente={p} />}
         {aba === "exames" && <Exames pacienteId={p.id} />}
+        {aba === "financeiro" && <Financeiro pacienteId={p.id} />}
       </Suspense>
     </div>
   );
