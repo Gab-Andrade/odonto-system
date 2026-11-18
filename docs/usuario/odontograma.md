@@ -1,6 +1,6 @@
 ---
 modulo: odontograma
-atualizado_em: 3b9b648
+atualizado_em: 41c614e
 ---
 # Odontograma
 
@@ -67,7 +67,19 @@ Itens não são apagados. Quando não forem mais usados, desative-os. Criar ou a
 
 Quem pode: Administrador, Dentista e ASB.
 
-Na aba Odontograma do paciente, toque em **Editar odontograma**. A marcação é feita por face, sobre o desenho 2D ou sobre o 3D. Quando terminar, toque em **Concluir edição** para voltar ao odontograma.
+Na aba Odontograma do paciente, toque em **Editar odontograma ▾**. A área de edição abre logo abaixo da boca 2D, do 3D e da legenda, na mesma tela, com uma transição suave. Ela traz:
+
+- o cartão **1. Escolha o que marcar · 2. Toque na face do dente (aqui embaixo ou no 3D)**, com os itens da legenda, o campo **Vincular ao atendimento** (aparece só se houver atendimento aberto) e o botão **Arcada**;
+- o desenho por faces das duas arcadas, logo abaixo do cartão.
+
+Para marcar:
+
+1. Toque no item da legenda que você quer marcar. Ele fica destacado. Sem item escolhido, tocar só seleciona o dente.
+2. Se o item é por face, toque na face do dente. Se o item é do dente inteiro, toque no número do dente. No 3D, toque no próprio dente, ou na face quando o item é por face.
+
+Cada toque grava a marcação na hora, ou remove a que já estava (veja abaixo). Não há botão de enviar. Tocar numa face no 3D também seleciona o dente, e o detalhe dele aparece logo abaixo.
+
+Quando terminar, toque em **Concluir edição ▴**. A área de edição fecha, o odontograma continua na mesma tela e o item escolhido é desfeito.
 
 As regras abaixo valem para qualquer marcação, na tela ou fora dela:
 
@@ -97,7 +109,7 @@ Para tirar uma marcação do odontograma, registre a remoção daquele dente, fa
 
 Só é possível remover o que está marcado. Tentar remover algo que não está marcado é recusado.
 
-Na tela, toque em **Editar odontograma**, escolha o item e toque de novo no dente ou na face onde ele já está marcado.
+Na tela, abra **Editar odontograma ▾**, escolha o item e toque de novo no dente ou na face onde ele já está marcado.
 
 ### Registrar a arcada do paciente
 
@@ -138,7 +150,7 @@ Sem nenhum registro, o sistema sugere a arcada pela idade do paciente:
 
 Dente perdido não muda a arcada. Para mostrar que o dente não existe mais, marque o item "Ausente" no dente.
 
-Na tela, toque em **Editar odontograma** e depois em **Arcada** para registrar a arcada do paciente.
+Na tela, abra **Editar odontograma ▾** e toque em **Arcada**, dentro da área de edição, para registrar a arcada do paciente.
 
 ### Ver o odontograma atual
 
@@ -151,7 +163,7 @@ O odontograma mostra cada dente com marcas. Para cada dente, aparecem:
 
 Só aparecem os dentes que têm alguma marcação.
 
-Na aba Odontograma do paciente, a boca aparece em 2D: arcada superior em cima e inferior embaixo, com os dentes numerados e pintados com a cor da marcação. Toque em um dente para ver o detalhe dele e as anotações feitas nele (veja "Anotar um dente").
+Na aba Odontograma do paciente, a boca aparece em 2D: arcada superior em cima e inferior embaixo, com os dentes numerados e pintados com a cor da marcação. Toque em um dente para ver o detalhe dele e as anotações feitas nele (veja "Anotar um dente"). Tocar na boca 2D só seleciona o dente. Para marcar, use a área de edição (veja "Marcar um dente ou uma face").
 
 Você também pode ver como o odontograma estava em uma data e hora anteriores. Isso ajuda a comparar o antes e o depois de um tratamento.
 
@@ -168,7 +180,7 @@ O sistema prepara uma única visão do odontograma que serve tanto para o desenh
 - os dentes que devem ser ocultados no modelo 3D;
 - a legenda apenas com os itens que aparecem no odontograma.
 
-Na aba Odontograma do paciente, o 3D aparece ao lado do 2D, só para ver. Para marcar, toque em **Editar odontograma**: lá dá para marcar no desenho 2D por face ou, trocando para 3D, tocando na face do modelo.
+Na aba Odontograma do paciente, o 3D aparece ao lado da boca 2D e da legenda. Fora da edição, ele serve só para ver e para selecionar o dente. Durante a edição, tocar numa face do modelo também marca (veja "Marcar um dente ou uma face"). Não há seletor para trocar entre 2D e 3D: as duas visões ficam visíveis juntas.
 
 Você também pode ver essa visão como estava em uma data anterior.
 
@@ -226,6 +238,7 @@ O histórico vem em páginas de até 500 registros por vez. O padrão são 100.
 
 ## Bom saber
 
+- **Editar só no dia atual.** Com **Ver como estava em** preenchida, o botão Editar odontograma não aparece e nada pode ser marcado. Toque em **Voltar para hoje** para voltar a editar.
 - **Nada é apagado.** Cada marcação, remoção, registro de arcada e anotação fica guardado com data e autor. Para corrigir um erro, registre a remoção daquela marcação, um novo registro de arcada ou uma nova anotação.
 - **Faces.** Por face, o sistema usa as letras M, D, O, V e L:
   - **M** e **D**: faces de contato com os dentes vizinhos. M é a face voltada para o meio do rosto e D é a face voltada para trás.

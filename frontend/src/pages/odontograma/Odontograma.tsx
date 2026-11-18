@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { lazy, type ReactNode, Suspense, useMemo, useState } from "react";
+import { lazy, type ReactNode, Suspense, useMemo, useRef, useState } from "react";
 
 import { api, ok, type Schemas } from "../../api/client";
 import { temPapel, useSessao } from "../../auth/sessao";
@@ -24,7 +24,7 @@ export default function Odontograma({ paciente }: { paciente: Paciente }) {
   // Admin e gestor mudam a cor da clínica; dentista e ASB, só a própria.
   const modoCores: ModoCores = temPapel(papel, "admin", "gestor") ? "clinica" : temPapel(papel, "dentista", "asb") ? "pessoal" : null;
   const [editando, setEditando] = useState(false);
-  const [visao, setVisao] = useState<"2d" | "3d">("2d");
+  const areaEdicao = useRef<HTMLDivElement>(null);
   const [item, setItem] = useState<Item | null>(null);
   const [dente, setDente] = useState<number | null>(null);
   const [atendimento, setAtendimento] = useState("");
@@ -106,150 +106,153 @@ export default function Odontograma({ paciente }: { paciente: Paciente }) {
     marcar.mutate({ tooth: d.tooth, face: f, status_id: item.id, action: jaTem ? "remover" : "marcar" });
   }
 
-  const legendaLateral = (
-    <Legenda itens={ativos} emUso={emUso} modo={modoCores} />
+
+  const podeEditar = podeMarcar && !verEm && !!vis.data;
+  const abertoEdicao = editando && podeEditar;
+  const arcadaInfo = vis.data && (
+    <>
+      Arcada {vis.data.arch.dentition} ({vis.data.arch.source === "padrao" ? "sugerida pela idade" : "registrada"}) ·
+      atualizado em {dataHoraBR(vis.data.at)}
+    </>
   );
 
-  if (!editando) {
-    return (
-      <div className="flex flex-col gap-4">
-        <div className="nao-imprimir flex flex-wrap items-end gap-3">
-          <Campo rotulo="Ver como estava em" type="date" value={verEm} onChange={(e) => setVerEm(e.target.value)} />
-          {verEm && (
-            <Botao variante="fantasma" onClick={() => setVerEm("")}>
-              Voltar para hoje
-            </Botao>
-          )}
-        </div>
-        {verEm && <Aviso tom="alerta">Mostrando o odontograma como estava em {verEm.split("-").reverse().join("/")}.</Aviso>}
-        {vis.isLoading && <Carregando />}
-        {vis.error && <ErroCarga erro={vis.error} />}
-        {vis.data && (
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-            <div className="grid min-w-0 flex-1 gap-4 md:grid-cols-2">
-              <Cartao className="flex flex-col">
-                <Boca2D dentes={dentes} selecionado={dente} anotados={anotados} aoTocar={(d) => setDente(d.tooth)} />
-                <p className="mt-2 text-center text-xs text-texto-suave">
-                  Toque num dente para ver as marcações e escrever anotações.
-                </p>
-                <p className="mt-1 text-center text-xs text-texto-suave">
-                  Arcada {vis.data.arch.dentition} ({vis.data.arch.source === "padrao" ? "sugerida pela idade" : "registrada"}) ·
-                  atualizado em {dataHoraBR(vis.data.at)}
-                </p>
-              </Cartao>
-              <Suspense fallback={<Cartao><Carregando texto="Carregando o modelo 3D…" /></Cartao>}>
-                <Odontograma3D vis={vis.data} selecionado={dente} aoTocar={(d) => setDente(d.tooth)} compacto />
-              </Suspense>
-            </div>
-            <aside className="lg:w-52 lg:shrink-0">{legendaLateral}</aside>
-          </div>
-        )}
-        {podeMarcar && !verEm && vis.data && (
-          <div className="nao-imprimir flex justify-center">
-            <Botao onClick={() => setEditando(true)}>Editar odontograma</Botao>
-          </div>
-        )}
-        {selecionado && (
-          <DetalheDente dente={selecionado}>
-            <AnotacoesDente
-              pacienteId={paciente.id}
-              dente={selecionado.tooth}
-              notas={(anotacoes.data ?? []).filter((n) => n.tooth === selecionado.tooth)}
-              podeEscrever={podeMarcar && !verEm}
-            />
-          </DetalheDente>
-        )}
-      </div>
-    );
+  function alternarEdicao() {
+    if (abertoEdicao) {
+      setEditando(false);
+      setItem(null);
+      setErro(null);
+      return;
+    }
+    setEditando(true);
+    // Leva a pessoa até a área que acabou de abrir.
+    setTimeout(() => areaEdicao.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 120);
   }
 
   return (
     <div className="flex flex-col gap-4">
       <div className="nao-imprimir flex flex-wrap items-end gap-3">
-        <Botao variante="secundario" onClick={() => { setEditando(false); setItem(null); setErro(null); }}>
-          ← Concluir edição
-        </Botao>
-        <div className="flex rounded-lg border border-borda p-1">
-          {(["2d", "3d"] as const).map((v) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => setVisao(v)}
-              className={`min-h-10 rounded-md px-4 text-sm font-semibold ${visao === v ? "bg-marca text-white dark:text-slate-900" : ""}`}
-            >
-              {v.toUpperCase()}
-            </button>
-          ))}
-        </div>
-        {podeMarcar && abertos.length > 0 && (
-          <Selecao rotulo="Vincular ao atendimento" value={atendimento} onChange={(e) => setAtendimento(e.target.value)}>
-            <option value="">— nenhum —</option>
-            {abertos.map((a) => (
-              <option key={a.id} value={a.id}>
-                Aberto em {dataHoraBR(a.started_at)}
-              </option>
-            ))}
-          </Selecao>
-        )}
-        {podeMarcar && (
-          <Botao variante="secundario" onClick={() => setArcadaAberta(true)}>
-            Arcada
+        <Campo rotulo="Ver como estava em" type="date" value={verEm} onChange={(e) => setVerEm(e.target.value)} />
+        {verEm && (
+          <Botao variante="fantasma" onClick={() => setVerEm("")}>
+            Voltar para hoje
           </Botao>
         )}
       </div>
-
-      {erro && <Aviso tom="perigo">{erro}</Aviso>}
-
-      {podeMarcar && (
-        <Cartao titulo="1. Escolha o que marcar · 2. Toque na face ou no número do dente">
-          <div className="flex flex-wrap gap-2">
-            {ativos.map((l) => (
-              <button
-                key={l.id}
-                type="button"
-                onClick={() => setItem(item?.id === l.id ? null : l)}
-                className={`flex min-h-11 items-center gap-2 rounded-lg border px-3 text-sm ${
-                  item?.id === l.id ? "border-marca ring-2 ring-marca" : "border-borda"
-                }`}
-              >
-                <span className="size-4 rounded-sm" style={{ background: l.color }} />
-                {l.name}
-                <span className="text-xs text-texto-suave">({l.scope === "face" ? "face" : "dente"})</span>
-              </button>
-            ))}
-          </div>
-          {item && (
-            <p className="mt-2 text-xs text-texto-suave">
-              Tocar de novo onde já está marcado remove a marcação (fica no histórico).
-            </p>
-          )}
-        </Cartao>
-      )}
-
+      {verEm && <Aviso tom="alerta">Mostrando o odontograma como estava em {verEm.split("-").reverse().join("/")}.</Aviso>}
       {vis.isLoading && <Carregando />}
       {vis.error && <ErroCarga erro={vis.error} />}
-
-      {vis.data && visao === "2d" && (
-        <Cartao>
-          <div className="overflow-x-auto">
-            <Fileira dentes={sup} selecionado={dente} aoTocar={tocar} />
-            <div className="my-1 border-t border-dashed border-borda" />
-            <Fileira dentes={inf} selecionado={dente} aoTocar={tocar} />
+      {vis.data && (
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+          <div className="grid min-w-0 flex-1 gap-4 md:grid-cols-2">
+            <Cartao className="flex flex-col">
+              <Boca2D dentes={dentes} selecionado={dente} anotados={anotados} aoTocar={(d) => setDente(d.tooth)} />
+              <p className="mt-2 text-center text-xs text-texto-suave">
+                Toque num dente para ver as marcações e escrever anotações.
+              </p>
+              <p className="mt-1 text-center text-xs text-texto-suave">{arcadaInfo}</p>
+            </Cartao>
+            <Suspense fallback={<Cartao><Carregando texto="Carregando o modelo 3D…" /></Cartao>}>
+              <Odontograma3D
+                vis={vis.data}
+                selecionado={dente}
+                // Editando, o toque numa face do 3D também marca.
+                aoTocar={abertoEdicao ? tocar : (d) => setDente(d.tooth)}
+                compacto
+              />
+            </Suspense>
           </div>
-          <p className="mt-2 text-xs text-texto-suave">
-            Arcada {vis.data.arch.dentition} ({vis.data.arch.source === "padrao" ? "sugerida pela idade" : "registrada"}) ·
-            atualizado em {dataHoraBR(vis.data.at)}
-          </p>
-        </Cartao>
+          <aside className="lg:w-52 lg:shrink-0">
+            <Legenda itens={ativos} emUso={emUso} modo={modoCores} />
+          </aside>
+        </div>
       )}
 
-      {vis.data && visao === "3d" && (
-        <Suspense fallback={<Carregando texto="Carregando o modelo 3D…" />}>
-          <Odontograma3D vis={vis.data} selecionado={dente} aoTocar={(d, face) => tocar(d, face)} />
-        </Suspense>
+      {podeEditar && (
+        <div className="nao-imprimir flex justify-center">
+          <Botao variante={abertoEdicao ? "secundario" : "primario"} onClick={alternarEdicao} aria-expanded={abertoEdicao}>
+            {abertoEdicao ? "Concluir edição ▴" : "Editar odontograma ▾"}
+          </Botao>
+        </div>
       )}
 
-      {selecionado && <DetalheDente dente={selecionado} />}
+      {/* Área de edição: abre para baixo, na mesma tela (transição pela altura da grade). */}
+      {podeEditar && (
+        <div
+          ref={areaEdicao}
+          className={`nao-imprimir grid scroll-mt-4 transition-[grid-template-rows,opacity] duration-300 ease-out ${
+            abertoEdicao ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+          }`}
+          aria-hidden={!abertoEdicao}
+          inert={!abertoEdicao}
+        >
+          <div className="min-h-0 overflow-hidden">
+            <div className="flex flex-col gap-4 pb-1">
+              <Cartao
+                titulo="1. Escolha o que marcar · 2. Toque na face do dente (aqui embaixo ou no 3D)"
+                acoes={
+                  <>
+                    {abertos.length > 0 && (
+                      <Selecao rotulo="Vincular ao atendimento" value={atendimento} onChange={(e) => setAtendimento(e.target.value)}>
+                        <option value="">— nenhum —</option>
+                        {abertos.map((a) => (
+                          <option key={a.id} value={a.id}>
+                            Aberto em {dataHoraBR(a.started_at)}
+                          </option>
+                        ))}
+                      </Selecao>
+                    )}
+                    <Botao variante="secundario" onClick={() => setArcadaAberta(true)}>
+                      Arcada
+                    </Botao>
+                  </>
+                }
+              >
+                <div className="flex flex-wrap gap-2">
+                  {ativos.map((l) => (
+                    <button
+                      key={l.id}
+                      type="button"
+                      onClick={() => setItem(item?.id === l.id ? null : l)}
+                      className={`flex min-h-11 items-center gap-2 rounded-lg border px-3 text-sm ${
+                        item?.id === l.id ? "border-marca ring-2 ring-marca" : "border-borda"
+                      }`}
+                    >
+                      <span className="size-4 rounded-sm" style={{ background: l.color }} />
+                      {l.name}
+                      <span className="text-xs text-texto-suave">({l.scope === "face" ? "face" : "dente"})</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-2 text-xs text-texto-suave">
+                  {item
+                    ? "Tocar de novo onde já está marcado remove a marcação (fica no histórico)."
+                    : "Sem item escolhido, tocar só seleciona o dente."}
+                </p>
+              </Cartao>
+              {erro && <Aviso tom="perigo">{erro}</Aviso>}
+              <Cartao>
+                <div className="overflow-x-auto">
+                  <Fileira dentes={sup} selecionado={dente} aoTocar={tocar} />
+                  <div className="my-1 border-t border-dashed border-borda" />
+                  <Fileira dentes={inf} selecionado={dente} aoTocar={tocar} />
+                </div>
+                <p className="mt-2 text-xs text-texto-suave">{arcadaInfo}</p>
+              </Cartao>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selecionado && (
+        <DetalheDente dente={selecionado}>
+          <AnotacoesDente
+            pacienteId={paciente.id}
+            dente={selecionado.tooth}
+            notas={(anotacoes.data ?? []).filter((n) => n.tooth === selecionado.tooth)}
+            podeEscrever={podeMarcar && !verEm}
+          />
+        </DetalheDente>
+      )}
 
       {arcadaAberta && vis.data && (
         <Arcada paciente={paciente} atual={vis.data.arch} aoFechar={() => setArcadaAberta(false)} />
