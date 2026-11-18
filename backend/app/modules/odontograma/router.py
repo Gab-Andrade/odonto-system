@@ -41,6 +41,8 @@ router = APIRouter(prefix="/odontograma", tags=["odontograma"])
 READ = (Role.ADMIN, Role.GESTOR, Role.DENTISTA, Role.ASB)
 MARK = (Role.ADMIN, Role.DENTISTA, Role.ASB)
 MANAGE = (Role.ADMIN, Role.GESTOR)
+# O dentista pode trocar só a cor de um item (ex.: cárie preta); o resto da legenda é da gestão.
+RECOLOR = (*MANAGE, Role.DENTISTA)
 
 
 def _http(exc: service.OdontogramError) -> HTTPException:
@@ -93,12 +95,18 @@ def update_status(
     status_id: uuid.UUID,
     body: StatusUpdate,
     request: Request,
-    user: CurrentUser = Depends(require_roles(*MANAGE)),
+    user: CurrentUser = Depends(require_roles(*RECOLOR)),
     db: Session = Depends(get_tenant_db),
 ):
+    data = body.model_dump(exclude_unset=True)
+    if user.role not in MANAGE and set(data) - {"color"}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Dentista só pode alterar a cor do item da legenda.",
+        )
     try:
         item: ToothStatus = service.get_status(db, status_id)
-        changed = service.update_status(db, item, body.model_dump(exclude_unset=True))
+        changed = service.update_status(db, item, data)
     except service.OdontogramError as exc:
         raise _http(exc) from None
     if changed:

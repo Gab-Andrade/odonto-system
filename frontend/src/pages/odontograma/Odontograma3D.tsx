@@ -33,10 +33,13 @@ export default function Odontograma3D({
   vis,
   selecionado,
   aoTocar,
+  compacto = false,
 }: {
   vis: Schemas["VisualizationOut"];
   selecionado: number | null;
   aoTocar: (d: DenteVis, face: string | null) => void;
+  /** Ao lado da boca 2D, só para ver: mais baixo. */
+  compacto?: boolean;
 }) {
   const [raizes, setRaizes] = useState(false);
   const [arcadas, setArcadas] = useState<"ambas" | "superior" | "inferior">("ambas");
@@ -102,12 +105,14 @@ export default function Odontograma3D({
             </button>
           ))}
         </div>
-        <span className="text-xs text-texto-suave">Arraste para girar, pinça/roda para aproximar, toque numa face para marcar.</span>
+        <span className="text-xs text-texto-suave">
+          Arraste para girar, pinça/roda para aproximar, {compacto ? "toque num dente para ver." : "toque numa face para marcar."}
+        </span>
       </div>
       {modelo.isLoading && <Carregando texto="Carregando o modelo 3D…" />}
       {modelo.error && <ErroCarga erro={modelo.error} />}
       {cena && (
-        <div className="h-[60vh] min-h-80 w-full touch-none overflow-hidden rounded-lg bg-gradient-to-b from-slate-100 to-slate-300 dark:from-slate-800 dark:to-slate-950">
+        <div className={`${compacto ? "h-[26rem]" : "h-[60vh] min-h-80"} w-full touch-none overflow-hidden rounded-lg bg-gradient-to-b from-slate-100 to-slate-300 dark:from-slate-800 dark:to-slate-950`}>
           <Canvas camera={{ position: [0, 8, 95], fov: 35, near: 1, far: 1000 }} dpr={[1, 2]}>
             <ambientLight intensity={0.6} />
             <directionalLight position={[30, 60, 80]} intensity={1.6} />

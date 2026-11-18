@@ -1,6 +1,6 @@
 ---
 modulo: odontograma
-atualizado_em: 2f71133
+atualizado_em: 53c3930
 ---
 # Odontograma
 
@@ -12,7 +12,7 @@ atualizado_em: 2f71133
 |---|---|
 | Administrador | Ver o odontograma, o histórico, a arcada e a comparação antes e depois; marcar e remover dentes e faces; registrar a arcada; criar e alterar os itens da legenda |
 | Gestor | Ver o odontograma, o histórico, a arcada e a comparação antes e depois; criar e alterar os itens da legenda |
-| Dentista | Ver o odontograma, o histórico, a arcada e a comparação antes e depois; marcar e remover dentes e faces; registrar a arcada |
+| Dentista | Ver o odontograma, o histórico, a arcada e a comparação antes e depois; marcar e remover dentes e faces; registrar a arcada; trocar a cor de um item da legenda |
 | ASB | Ver o odontograma, o histórico, a arcada e a comparação antes e depois; marcar e remover dentes e faces; registrar a arcada |
 | Recepção | Não tem acesso ao odontograma |
 
@@ -30,9 +30,20 @@ Na primeira vez que a clínica usa o odontograma, o sistema cria uma legenda pad
 - **Planejado** (laranja, o que ainda será feito): Restauração a fazer (por face), Tratamento de canal a fazer (dente inteiro) e Extração indicada (dente inteiro).
 - **Realizado** (azul, o que já foi feito): Restauração (por face), Selante (por face), Tratamento de canal (dente inteiro), Coroa (dente inteiro) e Implante (dente inteiro).
 
-Quem vê a legenda: Administrador, Gestor, Dentista e ASB. Você pode pedir a lista só com os itens ativos ou com todos, inclusive os desativados.
+Quem vê a legenda: Administrador, Gestor, Dentista e ASB.
 
-*Tela em construção.*
+Na aba Odontograma do paciente, a legenda aparece ao lado da boca, em versão compacta. Use a setinha para recolher ou expandir a lista. Ver os itens desativados: *Tela em construção.*
+
+### Trocar a cor de um item da legenda
+
+Quem pode: Administrador, Gestor e Dentista.
+
+1. Na aba Odontograma do paciente, toque na cor do item na legenda.
+2. Escolha a nova cor.
+
+A cor vale para a clínica toda: todas as marcações desse item, antigas e novas, passam a usar a nova cor.
+
+O Dentista pode trocar só a cor. Para mudar o nome, o tipo, a forma de marcar, o efeito no 3D, a ordem ou para ativar e desativar o item, é preciso ser Administrador ou Gestor. Se o Dentista tentar mudar outra coisa, o sistema recusa.
 
 ### Criar ou alterar um item da legenda
 
@@ -50,6 +61,10 @@ Itens não são apagados. Quando não forem mais usados, desative-os. Criar ou a
 ### Marcar um dente ou uma face
 
 Quem pode: Administrador, Dentista e ASB.
+
+Na aba Odontograma do paciente, toque em **Editar odontograma**. A marcação é feita por face, sobre o desenho 2D ou sobre o 3D. Quando terminar, toque em **Concluir edição** para voltar ao odontograma.
+
+As regras abaixo valem para qualquer marcação, na tela ou fora dela:
 
 1. Escolha o paciente. O cadastro precisa estar ativo.
 2. Escolha o dente pela numeração de dois dígitos usada na odontologia (FDI). Os dentes permanentes vão de 11 a 48. Os dentes de leite vão de 51 a 85. Outros números são recusados.
@@ -69,8 +84,6 @@ O sistema recusa a marcação quando:
 - o atendimento não é deste paciente ou já está fechado;
 - o item exige face e você não informou, ou não aceita face e você informou.
 
-*Tela em construção.*
-
 ### Remover uma marcação
 
 Quem pode: Administrador, Dentista e ASB.
@@ -79,7 +92,7 @@ Para tirar uma marcação do odontograma, registre a remoção daquele dente, fa
 
 Só é possível remover o que está marcado. Tentar remover algo que não está marcado é recusado.
 
-*Tela em construção.*
+Na tela, toque em **Editar odontograma**, escolha o item e toque de novo no dente ou na face onde ele já está marcado.
 
 ### Registrar a arcada do paciente
 
@@ -120,7 +133,7 @@ Sem nenhum registro, o sistema sugere a arcada pela idade do paciente:
 
 Dente perdido não muda a arcada. Para mostrar que o dente não existe mais, marque o item "Ausente" no dente.
 
-*Tela em construção.*
+Na tela, toque em **Editar odontograma** e depois em **Arcada** para registrar a arcada do paciente.
 
 ### Ver o odontograma atual
 
@@ -133,9 +146,11 @@ O odontograma mostra cada dente com marcas. Para cada dente, aparecem:
 
 Só aparecem os dentes que têm alguma marcação.
 
+Na aba Odontograma do paciente, a boca aparece em 2D: arcada superior em cima e inferior embaixo, com os dentes numerados e pintados com a cor da marcação. Toque em um dente para ver o detalhe dele.
+
 Você também pode ver como o odontograma estava em uma data e hora anteriores. Isso ajuda a comparar o antes e o depois de um tratamento.
 
-*Tela em construção.*
+Na aba Odontograma, preencha **Ver como estava em** com a data; para voltar, toque em **Voltar para hoje**. A tela escolhe só o dia (mostra como estava no fim daquele dia).
 
 ### Ver o odontograma em 2D e 3D
 
@@ -148,9 +163,11 @@ O sistema prepara uma única visão do odontograma que serve tanto para o desenh
 - os dentes que devem ser ocultados no modelo 3D;
 - a legenda apenas com os itens que aparecem no odontograma.
 
+Na aba Odontograma do paciente, o 3D aparece ao lado do 2D, só para ver. Para marcar, toque em **Editar odontograma**: lá dá para marcar no desenho 2D por face ou, trocando para 3D, tocando na face do modelo.
+
 Você também pode ver essa visão como estava em uma data anterior.
 
-*Tela em construção.* Visualização em 3D na tela: previsto.
+Na aba Odontograma, preencha **Ver como estava em** com a data; para voltar, toque em **Voltar para hoje**. A tela escolhe só o dia (mostra como estava no fim daquele dia).
 
 ### Comparar antes e depois
 
@@ -216,4 +233,4 @@ Não. A arcada descreve a dentição do paciente. Marque o item "Ausente" no den
 O perfil Recepção não tem permissão para acessar dados clínicos do paciente.
 
 **Quem pode mudar a cor de uma marcação?**
-Administrador e Gestor podem mudar a cor e o efeito no 3D de cada item da legenda. A mudança vale para todas as marcações desse item.
+Administrador, Gestor e Dentista podem trocar a cor de um item da legenda. A mudança vale para todas as marcações desse item, na clínica toda. Só Administrador e Gestor podem mudar o nome, o tipo, o efeito no 3D e ativar ou desativar o item.

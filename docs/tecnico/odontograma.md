@@ -1,6 +1,6 @@
 ---
 modulo: odontograma
-atualizado_em: 2f71133
+atualizado_em: 53c3930
 ---
 # Odontograma
 
@@ -40,7 +40,7 @@ Prefixo `/odontograma`.
 |---|---|---|---|
 | GET | `/legenda` | admin, gestor, dentista, asb | Lista a legenda (`incluir_inativos`); cria a legenda padrão na primeira leitura |
 | POST | `/legenda` | admin, gestor | Cria item |
-| PATCH | `/legenda/{id}` | admin, gestor | Edita nome, cor, ordem, efeito 3D, ativo e, se nunca usado, tipo/escopo |
+| PATCH | `/legenda/{id}` | admin, gestor; dentista só o campo `color` | Edita nome, cor, ordem, efeito 3D, ativo e, se nunca usado, tipo/escopo |
 | GET | `/pacientes/{id}` | admin, gestor, dentista, asb | Odontograma atual ou em `?em=<datetime com fuso>`; só dentes com marcação |
 | POST | `/pacientes/{id}/eventos` | admin, dentista, asb | Grava lote de 1 a 200 eventos (201) |
 | GET | `/pacientes/{id}/historico` | admin, gestor, dentista, asb | Eventos do mais novo ao mais antigo (`limit` até 500, `offset`) |
@@ -52,7 +52,7 @@ Prefixo `/odontograma`.
 | GET | `/3d/dentes/{fdi}.glb` | idem | Dente isolado |
 | GET | `/3d/arcada.glb?dentes=11,12,...` | idem | Arcada montada; sem `dentes`, permanente com 32 dentes |
 
-Recepção não acessa nada. Gestor lê e edita a legenda, mas não marca. `NotFound` vira 404; `RuleViolation` vira 409 (`router.py:_http`). `comparacao` com `de > ate` devolve 422. Os `.glb` respondem 304 com `If-None-Match` e 404 para dente fora do FDI; `dentes` inválido dá 422 (`biblioteca_router.py:parse_teeth`).
+Recepção não acessa nada. Gestor lê e edita a legenda, mas não marca. O dentista só recolore itens: o `PATCH` aceita o papel (`router.py:RECOLOR`), mas qualquer campo além de `color` no corpo dá 403 (`router.py:update_status`). `NotFound` vira 404; `RuleViolation` vira 409 (`router.py:_http`). `comparacao` com `de > ate` devolve 422. Os `.glb` respondem 304 com `If-None-Match` e 404 para dente fora do FDI; `dentes` inválido dá 422 (`biblioteca_router.py:parse_teeth`).
 
 ## Regras de negócio e invariantes
 
@@ -115,6 +115,7 @@ Recepção não acessa nada. Gestor lê e edita a legenda, mas não marca. `NotF
 - O GET da legenda escreve (cria a legenda padrão) e faz commit, apesar de ser leitura. Papéis de leitura (inclusive ASB) disparam essa escrita. O mesmo vale para `create_status` e `record_events`, que também chamam `ensure_default_legend`. `/visualizacao`, `/comparacao` e `GET /odontograma/pacientes/{id}` **não** inicializam a legenda (sem eventos não precisam dela).
 - `ensure_default_legend` só checa se existe algum item.
 - `IntegrityError` não tratado (incluindo `check_violation` dos gatilhos e corrida no código da legenda) vira 409 pelo handler global de `app/main.py`, não 500. A checagem de código duplicado em `create_status` é só mensagem amigável.
+- O 403 do dentista por campo proibido é checado **antes** de `get_status`: id inexistente com campo proibido dá 403, não 404. A auditoria (`legenda_alterada`) é a mesma dos outros papéis.
 - `PATCH` com campo `null` explícito retorna 409 ("não pode ficar vazio"); campo omitido é ignorado. `code` não é editável.
 - Remover uma marcação grava novo evento `remover`; não há como corrigir ou apagar um evento errado.
 - `GET /pacientes/{id}` não pagina e devolve só dentes com marcação; já `/visualizacao` devolve todos os dentes da arcada mais os marcados fora dela.

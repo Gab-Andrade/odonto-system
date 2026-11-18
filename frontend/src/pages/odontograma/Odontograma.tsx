@@ -6,20 +6,22 @@ import { temPapel, useSessao } from "../../auth/sessao";
 import { Aviso, Botao, Campo, Cartao, Carregando, ErroCarga, Etiqueta, Selecao } from "../../components/ui";
 import { dataHoraBR, instante } from "../../lib/datas";
 import Arcada from "./Arcada";
+import Boca2D from "./Boca2D";
 import Dente2D, { type DenteVis } from "./Dente2D";
 import { LADO, superior } from "./geometria";
+import Legenda from "./Legenda";
 
 const Odontograma3D = lazy(() => import("./Odontograma3D"));
 
 type Paciente = Schemas["PatientOut"];
 type Item = Schemas["StatusOut"];
 
-const TIPO: Record<string, string> = { patologia: "Patologia", planejado: "A fazer", realizado: "Feito" };
-
 export default function Odontograma({ paciente }: { paciente: Paciente }) {
   const { papel } = useSessao();
   const cliente = useQueryClient();
   const podeMarcar = temPapel(papel, "admin", "dentista", "asb");
+  const podeEditarCores = temPapel(papel, "admin", "gestor", "dentista");
+  const [editando, setEditando] = useState(false);
   const [visao, setVisao] = useState<"2d" | "3d">("2d");
   const [item, setItem] = useState<Item | null>(null);
   const [dente, setDente] = useState<number | null>(null);
@@ -75,10 +77,11 @@ export default function Odontograma({ paciente }: { paciente: Paciente }) {
   const inf = dentes.filter((d) => !superior(d.tooth));
   const selecionado = dentes.find((d) => d.tooth === dente) ?? null;
   const ativos = useMemo(() => (legenda.data ?? []).filter((l) => l.active), [legenda.data]);
+  const emUso = useMemo(() => new Set((vis.data?.legend ?? []).map((l) => l.id)), [vis.data]);
 
   function tocar(d: DenteVis, face: string | null) {
     setDente(d.tooth);
-    if (!podeMarcar || verEm || !item) return;
+    if (!podeMarcar || !item) return;
     const porFace = item.scope === "face";
     const f = porFace ? face : null;
     if (porFace && !f) {
@@ -91,9 +94,57 @@ export default function Odontograma({ paciente }: { paciente: Paciente }) {
     marcar.mutate({ tooth: d.tooth, face: f, status_id: item.id, action: jaTem ? "remover" : "marcar" });
   }
 
+  const legendaLateral = (
+    <Legenda itens={ativos} emUso={emUso} podeEditar={podeEditarCores} />
+  );
+
+  if (!editando) {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="nao-imprimir flex flex-wrap items-end gap-3">
+          <Campo rotulo="Ver como estava em" type="date" value={verEm} onChange={(e) => setVerEm(e.target.value)} />
+          {verEm && (
+            <Botao variante="fantasma" onClick={() => setVerEm("")}>
+              Voltar para hoje
+            </Botao>
+          )}
+        </div>
+        {verEm && <Aviso tom="alerta">Mostrando o odontograma como estava em {verEm.split("-").reverse().join("/")}.</Aviso>}
+        {vis.isLoading && <Carregando />}
+        {vis.error && <ErroCarga erro={vis.error} />}
+        {vis.data && (
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+            <div className="grid min-w-0 flex-1 gap-4 md:grid-cols-2">
+              <Cartao className="flex flex-col">
+                <Boca2D dentes={dentes} selecionado={dente} aoTocar={(d) => setDente(d.tooth)} />
+                <p className="mt-2 text-center text-xs text-texto-suave">
+                  Arcada {vis.data.arch.dentition} ({vis.data.arch.source === "padrao" ? "sugerida pela idade" : "registrada"}) ·
+                  atualizado em {dataHoraBR(vis.data.at)}
+                </p>
+              </Cartao>
+              <Suspense fallback={<Cartao><Carregando texto="Carregando o modelo 3D…" /></Cartao>}>
+                <Odontograma3D vis={vis.data} selecionado={dente} aoTocar={(d) => setDente(d.tooth)} compacto />
+              </Suspense>
+            </div>
+            <aside className="lg:w-52 lg:shrink-0">{legendaLateral}</aside>
+          </div>
+        )}
+        {podeMarcar && !verEm && vis.data && (
+          <div className="nao-imprimir flex justify-center">
+            <Botao onClick={() => setEditando(true)}>Editar odontograma</Botao>
+          </div>
+        )}
+        {selecionado && <DetalheDente dente={selecionado} />}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="nao-imprimir flex flex-wrap items-end gap-3">
+        <Botao variante="secundario" onClick={() => { setEditando(false); setItem(null); setErro(null); }}>
+          ← Concluir edição
+        </Botao>
         <div className="flex rounded-lg border border-borda p-1">
           {(["2d", "3d"] as const).map((v) => (
             <button
@@ -106,12 +157,6 @@ export default function Odontograma({ paciente }: { paciente: Paciente }) {
             </button>
           ))}
         </div>
-        <Campo rotulo="Ver como estava em" type="date" value={verEm} onChange={(e) => setVerEm(e.target.value)} />
-        {verEm && (
-          <Botao variante="fantasma" onClick={() => setVerEm("")}>
-            Voltar para hoje
-          </Botao>
-        )}
         {podeMarcar && abertos.length > 0 && (
           <Selecao rotulo="Vincular ao atendimento" value={atendimento} onChange={(e) => setAtendimento(e.target.value)}>
             <option value="">— nenhum —</option>
@@ -130,9 +175,8 @@ export default function Odontograma({ paciente }: { paciente: Paciente }) {
       </div>
 
       {erro && <Aviso tom="perigo">{erro}</Aviso>}
-      {verEm && <Aviso tom="alerta">Mostrando o odontograma como estava em {verEm.split("-").reverse().join("/")} (só leitura).</Aviso>}
 
-      {podeMarcar && !verEm && (
+      {podeMarcar && (
         <Cartao titulo="1. Escolha o que marcar · 2. Toque na face ou no número do dente">
           <div className="flex flex-wrap gap-2">
             {ativos.map((l) => (
@@ -182,19 +226,6 @@ export default function Odontograma({ paciente }: { paciente: Paciente }) {
       )}
 
       {selecionado && <DetalheDente dente={selecionado} />}
-
-      {vis.data && vis.data.legend.length > 0 && (
-        <Cartao titulo="Legenda">
-          <div className="flex flex-wrap gap-3">
-            {vis.data.legend.map((l) => (
-              <span key={l.id} className="flex items-center gap-2 text-sm">
-                <span className="size-4 rounded-sm" style={{ background: l.color }} />
-                {l.name} <span className="text-xs text-texto-suave">({TIPO[l.kind]})</span>
-              </span>
-            ))}
-          </div>
-        </Cartao>
-      )}
 
       {arcadaAberta && vis.data && (
         <Arcada paciente={paciente} atual={vis.data.arch} aoFechar={() => setArcadaAberta(false)} />

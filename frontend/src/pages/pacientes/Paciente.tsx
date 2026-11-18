@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { lazy, Suspense } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
-import { api, ok } from "../../api/client";
+import { api, ok, type Schemas } from "../../api/client";
 import { CLINICOS, temPapel, useSessao } from "../../auth/sessao";
 import { Abas, Aviso, Carregando, ErroCarga, Etiqueta } from "../../components/ui";
 import { dataBR, idade } from "../../lib/datas";
@@ -20,13 +20,48 @@ const Financeiro = lazy(() => import("../financeiro/FinanceiroPaciente"));
 
 type Aba =
   | "cadastro"
-  | "consultas"
-  | "anamnese"
+  | "agenda"
   | "atendimentos"
   | "odontograma"
   | "planos"
   | "exames"
   | "financeiro";
+
+type Secao = "evolucao" | "anamnese";
+
+/** Aba Atendimentos: evolução clínica e anamnese, lado a lado num seletor. */
+function ProntuarioClinico({
+  paciente,
+  secao,
+  aoMudar,
+}: {
+  paciente: Schemas["PatientOut"];
+  secao: Secao;
+  aoMudar: (s: Secao) => void;
+}) {
+  const opcoes: { id: Secao; rotulo: string }[] = [
+    { id: "evolucao", rotulo: "Evolução" },
+    { id: "anamnese", rotulo: "Anamnese" },
+  ];
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="nao-imprimir flex w-fit rounded-lg border border-borda p-1">
+        {opcoes.map((o) => (
+          <button
+            key={o.id}
+            type="button"
+            onClick={() => aoMudar(o.id)}
+            aria-pressed={secao === o.id}
+            className={`min-h-10 rounded-md px-4 text-sm font-semibold ${secao === o.id ? "bg-marca text-white dark:text-slate-900" : ""}`}
+          >
+            {o.rotulo}
+          </button>
+        ))}
+      </div>
+      {secao === "anamnese" ? <Anamnese pacienteId={paciente.id} /> : <Atendimentos paciente={paciente} />}
+    </div>
+  );
+}
 
 export default function Paciente() {
   const { id = "" } = useParams();
@@ -47,15 +82,17 @@ export default function Paciente() {
   const abas: { id: Aba; rotulo: string }[] = [
     ...(clinico ? [{ id: "odontograma" as Aba, rotulo: "Odontograma" }] : []),
     ...(clinico ? [{ id: "atendimentos" as Aba, rotulo: "Atendimentos" }] : []),
-    ...(clinico ? [{ id: "anamnese" as Aba, rotulo: "Anamnese" }] : []),
     ...(planos ? [{ id: "planos" as Aba, rotulo: "Planos e orçamentos" }] : []),
     ...(clinico ? [{ id: "exames" as Aba, rotulo: "Raio-X" }] : []),
     ...(caixa ? [{ id: "financeiro" as Aba, rotulo: "Financeiro" }] : []),
-    { id: "consultas", rotulo: "Consultas" },
+    { id: "agenda", rotulo: "Agenda" },
     { id: "cadastro", rotulo: "Cadastro" },
   ];
-  const pedida = params.get("aba") as Aba | null;
+  // Nomes antigos das abas continuam valendo em links salvos.
+  const bruta = params.get("aba");
+  const pedida = (bruta === "consultas" ? "agenda" : bruta === "anamnese" ? "atendimentos" : bruta) as Aba | null;
   const aba: Aba = abas.some((a) => a.id === pedida) ? (pedida as Aba) : abas[0].id;
+  const secao: Secao = params.get("secao") === "anamnese" || bruta === "anamnese" ? "anamnese" : "evolucao";
 
   const paciente = useQuery({
     queryKey: ["paciente", id],
@@ -120,9 +157,10 @@ export default function Paciente() {
 
       <Suspense fallback={<Carregando />}>
         {aba === "cadastro" && <Cadastro paciente={p} />}
-        {aba === "consultas" && <ConsultasPaciente pacienteId={p.id} />}
-        {aba === "anamnese" && <Anamnese pacienteId={p.id} />}
-        {aba === "atendimentos" && <Atendimentos paciente={p} />}
+        {aba === "agenda" && <ConsultasPaciente pacienteId={p.id} />}
+        {aba === "atendimentos" && (
+          <ProntuarioClinico paciente={p} secao={secao} aoMudar={(s) => setParams({ aba: "atendimentos", secao: s }, { replace: true })} />
+        )}
         {aba === "odontograma" && <Odontograma paciente={p} />}
         {aba === "planos" && <Planos paciente={p} />}
         {aba === "exames" && <Exames pacienteId={p.id} />}

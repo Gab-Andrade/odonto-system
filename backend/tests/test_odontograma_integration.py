@@ -94,6 +94,16 @@ def test_default_legend_and_editing(client, make_clinic, add_member):
                         headers=h["gestor"])  # fmt: skip
     assert resp.status_code == 200 and resp.json()["name"] == "Mancha branca"
 
+    # Dentista troca só a cor; ASB e recepção não mexem na legenda.
+    resp = client.patch(f"{L}/{sid}", json={"color": "#112233"}, headers=h["dent"])
+    assert resp.status_code == 200 and resp.json()["color"] == "#112233"
+    for body in ({"name": "Outro"}, {"color": "#000000", "active": False}):
+        assert client.patch(f"{L}/{sid}", json=body, headers=h["dent"]).status_code == 403
+    for who in ("asb", "recep"):
+        resp = client.patch(f"{L}/{sid}", json={"color": "#000000"}, headers=h[who])
+        assert resp.status_code == 403
+    assert client.post(L, json={**item, "code": "outro"}, headers=h["dent"]).status_code == 403
+
     # Desativado some da lista padrão e não pode ser marcado; pode ser removido.
     client.patch(f"{L}/{sid}", json={"active": False}, headers=h["admin"])
     assert "mancha" not in {s["code"] for s in client.get(L, headers=h["dent"]).json()}
