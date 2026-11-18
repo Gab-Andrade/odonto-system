@@ -25,7 +25,7 @@ from app.modules.agenda.models import Appointment, Chair
 from app.modules.identidade.models import Clinic, ClinicMembership, User
 from app.modules.identidade.service import create_clinic_with_admin, normalize_email
 from app.modules.odontograma import service as odontograma
-from app.modules.odontograma.models import ToothStatus
+from app.modules.odontograma.models import StatusKind, StatusScope, ToothStatus
 from app.modules.pacientes import service as pacientes
 from app.modules.pacientes.models import ConsentGivenBy, ConsentPurpose, Patient, Sex
 from app.modules.precificacao import service as pricing
@@ -49,6 +49,7 @@ PROCEDURES = (
     ("DEMO-EXO", "Extração simples", "Cirurgia", "220.00"),
     ("DEMO-SEL", "Selante (por dente)", "Prevenção", "90.00"),
     ("DEMO-COROA", "Coroa em porcelana", "Prótese", "1800.00"),
+    ("DEMO-RETRAT", "Retratamento endodôntico (molar)", "Endodontia", "1500.00"),
 )
 
 ANAMNESE = [
@@ -110,6 +111,7 @@ ANAMNESE = [
 TEAM = (
     ("beatriz.demo@example.com", "Dra. Beatriz Demo", Role.DENTISTA, "CRO-SP 00001"),
     ("rafael.demo@example.com", "Dr. Rafael Demo", Role.DENTISTA, "CRO-SP 00002"),
+    ("giovanna.demo@example.com", "Dra. Giovanna Martins", Role.DENTISTA, "CRO-SP 00003"),
     ("recepcao.demo@example.com", "Júlia Recepção Demo", Role.RECEPCAO, None),
     ("gestor.demo@example.com", "Marcos Gestor Demo", Role.GESTOR, None),
 )
@@ -229,6 +231,8 @@ def _price_table(db: Session, actor: CurrentUser, report: Report) -> None:
         )
         pricing.publish(db, actor, table, draft, None)
         report.created.append(f"{DEMO_TABLE} publicada com {len(PROCEDURES)} procedimentos")
+    else:
+        _add_missing_procedures(db, actor, table, report)
     has_assignment = db.scalar(
         select(PriceAssignment.id).where(
             PriceAssignment.table_id == table.id, PriceAssignment.scope_type == ScopeType.CLINICA
@@ -238,6 +242,35 @@ def _price_table(db: Session, actor: CurrentUser, report: Report) -> None:
         pricing.create_assignment(
             db, actor, table_id=table.id, scope_type=ScopeType.CLINICA, scope_id=None, priority=None
         )
+
+
+def _add_missing_procedures(
+    db: Session, actor: CurrentUser, table: PriceTable, report: Report
+) -> None:
+    """Tabela criada por uma versão anterior do demo: publica uma versão nova com os
+    procedimentos que faltam (ex.: o retratamento), mantendo os preços que já estão lá."""
+    current = pricing.effective_version(db, table.id, pricing.today())
+    have = {i.procedure_code for i in pricing.list_items(db, current)} if current else set()
+    missing = [p for p in PROCEDURES if p[0] not in have]
+    if not missing:
+        return
+    draft = pricing.create_draft(db, actor, table)
+    items = [
+        {
+            "procedure_code": i.procedure_code,
+            "description": i.description,
+            "category": i.category,
+            "price": i.price,
+        }
+        for i in pricing.list_items(db, draft)
+    ]
+    items += [
+        {"procedure_code": c, "description": d, "category": cat, "price": Decimal(p)}
+        for c, d, cat, p in missing
+    ]
+    pricing.replace_items(db, actor, draft, items)
+    pricing.publish(db, actor, table, draft, None)
+    report.created.append(f"{DEMO_TABLE}: nova versão com {', '.join(m[0] for m in missing)}")
 
 
 def _anamnese(db: Session, actor: CurrentUser, report: Report) -> AnamnesisTemplate:
@@ -297,8 +330,39 @@ def _clinical_history(
     report.created.append(f"anamnese e atendimentos de {patient.full_name}")
 
 
-def _legend(db: Session, clinic_id: uuid.UUID) -> dict[str, uuid.UUID]:
-    odontograma.ensure_default_legend(db, clinic_id)
+# Itens que a clínica de demonstração acrescenta à legenda padrão (mostra que ela é editável).
+EXTRA_LEGEND = (
+    ("lesao_periapical", "Lesão periapical", "#6A1B9A", "patologia", "dente", 25),
+    (
+        "retratamento_planejado",
+        "Retratamento de canal a fazer",
+        "#FF8F00",
+        "planejado",
+        "dente",
+        45,
+    ),
+    ("retratamento", "Retratamento de canal", "#00838F", "realizado", "dente", 85),
+)
+
+
+def _legend(db: Session, actor: CurrentUser, report: Report) -> dict[str, uuid.UUID]:
+    odontograma.ensure_default_legend(db, actor.clinic_id)
+    codes = set(db.scalars(select(ToothStatus.code)))
+    for code, name, color, kind, scope, order in EXTRA_LEGEND:
+        if code not in codes:
+            odontograma.create_status(
+                db,
+                actor,
+                {
+                    "code": code,
+                    "name": name,
+                    "color": color,
+                    "kind": StatusKind(kind),
+                    "scope": StatusScope(scope),
+                    "sort_order": order,
+                },
+            )
+            report.created.append(f"item da legenda {name}")
     return {s.code: s.id for s in db.scalars(select(ToothStatus))}
 
 
@@ -396,6 +460,130 @@ def _patients(today: date) -> list[DemoPatient]:
             consent_by=ConsentGivenBy.RESPONSAVEL,
         ),
     ]
+
+
+# Caso para apresentação: retratamento endodôntico do 36, com a Dra. Giovanna.
+CADU = DemoPatient(
+    data={
+        "full_name": "Cadu Lima",
+        "phone": "11987650006",
+        "birth_date": None,  # preenchido em seed() a partir de hoje
+        "sex": Sex.MASCULINO,
+        "email": "cadu.demo@example.com",
+        "city": "São Paulo",
+        "state": "SP",
+        "notes": "Paciente de demonstração: retratamento de canal do 36.",
+    },
+    arch={"dentition": "permanente", "third_molars": []},
+    marks=[
+        (36, None, "endodontia"),  # canal feito há anos, em outro consultório
+        (36, None, "coroa"),
+        (36, None, "lesao_periapical"),
+        (36, None, "retratamento_planejado"),
+        (26, "O", "restauracao"),
+        (17, "O", "restauracao"),
+        (45, "D", "carie"),
+        (45, "D", "restauracao_planejada"),
+    ],
+    consent_by=ConsentGivenBy.PACIENTE,
+)
+
+
+def _cadu_history(
+    db: Session,
+    dentist: CurrentUser,
+    template: AnamnesisTemplate,
+    patient: Patient,
+    report: Report,
+) -> None:
+    """Anamnese, primeira consulta com a evolução que indica o retratamento e anotação no 36."""
+    if db.scalar(select(Encounter.id).where(Encounter.patient_id == patient.id)) is not None:
+        return
+    version = prontuario.open_versions(db, [template.id])[template.id][VersionStatus.PUBLICADA]
+    prontuario.record_response(
+        db,
+        dentist,
+        patient,
+        template.id,
+        version.id,
+        {
+            "alergia": False,
+            "medicamentos": "Nenhum",
+            "anticoagulante": False,
+            "diabetes": False,
+            "pressao": "Normal",
+            "fumante": "Não",
+            "escovacoes": 3,
+            "queixa": "Dor ao mastigar do lado esquerdo, embaixo, há cerca de um mês.",
+        },
+    )
+    first = atendimento.open_encounter(
+        db, dentist, patient.id, None, atendimento.now() - timedelta(days=5)
+    )
+    atendimento.add_note(
+        db,
+        dentist,
+        first,
+        "Paciente relata dor à mastigação no 36, tratado endodonticamente há cerca de 6 anos "
+        "em outro consultório e com coroa. Percussão vertical positiva, palpação apical "
+        "levemente dolorosa, sem fístula. Radiografia periapical: obturação aquém do ápice "
+        "(cerca de 3 mm) e área radiolúcida periapical na raiz mesial. Diagnóstico: "
+        "periodontite apical sintomática em dente com tratamento endodôntico prévio. "
+        "Indicado retratamento endodôntico do 36 e, depois, nova coroa. Cárie distal no 45. "
+        "Paciente orientado sobre o prognóstico e as sessões; aceitou o plano.",
+        None,
+    )
+    atendimento.close_encounter(db, dentist, first)
+    odontograma.add_tooth_note(
+        db,
+        dentist,
+        patient,
+        36,
+        "Obturação antiga curta (~3 mm aquém) e lesão periapical na raiz mesial. Suspeita de "
+        "canal mesiolingual não tratado. Remover a coroa, desobturar e reavaliar com "
+        "localizador apical. Medicação intracanal com hidróxido de cálcio entre as sessões.",
+    )
+    report.created.append(f"anamnese, atendimento e anotação do 36 de {patient.full_name}")
+
+
+def _cadu_plan(
+    db: Session,
+    actor: CurrentUser,
+    patient: Patient,
+    dentist_id: uuid.UUID,
+    legend: dict[str, uuid.UUID],
+    report: Report,
+) -> None:
+    if db.scalar(select(TreatmentPlan.id).where(TreatmentPlan.patient_id == patient.id)):
+        return
+    plan = tratamento.create_plan(
+        db,
+        actor,
+        {
+            "patient_id": patient.id,
+            "dentist_id": dentist_id,
+            "title": "Retratamento endodôntico do 36",
+            "items": [
+                {
+                    "procedure_code": "DEMO-RETRAT",
+                    "tooth": 36,
+                    "planned_status_id": legend["retratamento_planejado"],
+                    "done_status_id": legend["retratamento"],
+                },
+                {"procedure_code": "DEMO-COROA", "tooth": 36},
+                {
+                    "procedure_code": "DEMO-REST",
+                    "tooth": 45,
+                    "faces": "D",
+                    "planned_status_id": legend["restauracao_planejada"],
+                    "done_status_id": legend["restauracao"],
+                },
+            ],
+        },
+    )
+    tratamento.issue(db, actor, plan)
+    tratamento.decide(db, actor, plan, [i.id for i in tratamento.plan_items(db, plan)])
+    report.created.append(f"plano aprovado de {patient.full_name} (retratamento do 36)")
 
 
 def _patient(
@@ -542,7 +730,7 @@ def seed(slug: str) -> Report:
     with tenant_session(clinic.id) as db:
         chair = _chair(db, actor, report)
         _price_table(db, actor, report)
-        legend = _legend(db, clinic.id)
+        legend = _legend(db, actor, report)
         created = {}
         for demo in _patients(today):
             patient, _ = _patient(db, actor, demo, legend, report)
@@ -552,6 +740,19 @@ def seed(slug: str) -> Report:
         as_dentist = CurrentUser(user_id=dentist.id, clinic_id=clinic.id, role=Role.DENTISTA)
         _clinical_history(db, as_dentist, template, adult, report)
         _plan_for_adult(db, actor, adult, dentist.id, legend, report)
+
+        giovanna = team["giovanna.demo@example.com"]
+        as_giovanna = CurrentUser(user_id=giovanna.id, clinic_id=clinic.id, role=Role.DENTISTA)
+        cadu_demo = DemoPatient(
+            data=CADU.data | {"birth_date": _years_ago(34, today)},
+            arch=CADU.arch,
+            marks=CADU.marks,
+            consent_by=CADU.consent_by,
+        )
+        cadu, _ = _patient(db, actor, cadu_demo, legend, report)
+        _cadu_history(db, as_giovanna, template, cadu, report)
+        _cadu_plan(db, actor, cadu, giovanna.id, legend, report)
+
         tomorrow = today + timedelta(days=1)
         _appointments(
             db,
@@ -561,6 +762,13 @@ def seed(slug: str) -> Report:
                 (created["Laura Demo Costa"], dentist.id, _at(tomorrow, 9), 30, "Avaliação"),
                 (created["Pedro Demo Souza"], other.id, _at(tomorrow, 10), 45, "Selantes"),
                 (adult, dentist.id, _at(today + timedelta(days=2), 14), 60, "Restauração 16"),
+                (
+                    cadu,
+                    giovanna.id,
+                    _at(today + timedelta(days=2), 9),
+                    90,
+                    "Retratamento de canal 36 (1ª sessão)",
+                ),
             ],
             report,
         )

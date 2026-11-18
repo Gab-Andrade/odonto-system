@@ -113,6 +113,8 @@ interface Montagem {
   sup: THREE.Group;
   inf: THREE.Group;
   gengivas: THREE.Mesh[];
+  /** Meio da boca (entre os incisivos e os últimos molares): centro de giro da câmera. */
+  centro: THREE.Vector3;
 }
 
 /**
@@ -147,7 +149,10 @@ function montar(modelo: THREE.Group, dentes: DenteVis[]): Montagem {
     grupo.add(g);
     gengivas.push(g);
   }
-  return { raiz, sup, inf, gengivas };
+  const zs = naArcada.map((d) => d.placement.translation[2]);
+  // Um pouco atrás do meio exato (−4 mm): os molares giram mais perto da tela.
+  const centro = new THREE.Vector3(0, 0, (zs.length ? (Math.min(...zs) + Math.max(...zs)) / 2 : 0) - 4);
+  return { raiz, sup, inf, gengivas, centro };
 }
 
 /** Um passo da animação: aproxima cada arcada do ângulo-alvo. */
@@ -290,13 +295,23 @@ export default function Odontograma3D({
         <div
           className={`${compacto ? "h-[26rem]" : "h-[60vh] min-h-80"} w-full touch-none overflow-hidden rounded-lg bg-gradient-to-b from-slate-100 to-slate-300 dark:from-slate-800 dark:to-slate-950`}
         >
-          <Canvas camera={{ position: [0, 8, 95], fov: 35, near: 1, far: 1000 }} dpr={[1, 2]}>
+          <Canvas
+            camera={{ position: [0, 8, montagem.centro.z + 122], fov: 35, near: 1, far: 1000 }}
+            dpr={[1, 2]}
+          >
             <ambientLight intensity={0.6} />
             <directionalLight position={[30, 60, 80]} intensity={1.6} />
             <directionalLight position={[-40, -30, 40]} intensity={0.5} />
             <primitive object={montagem.raiz} onClick={clique} />
             <Abertura montagem={montagem} aberta={aberta} />
-            <OrbitControls makeDefault enablePan={false} minDistance={40} maxDistance={220} />
+            {/* Gira em torno do meio da boca, para os dentes de trás chegarem perto da tela. */}
+            <OrbitControls
+              makeDefault
+              target={montagem.centro.toArray()}
+              enablePan={false}
+              minDistance={25}
+              maxDistance={220}
+            />
           </Canvas>
         </div>
       )}
