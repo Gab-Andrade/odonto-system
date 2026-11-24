@@ -10,7 +10,7 @@ Este guia explica, em linguagem simples, o que cada parte do sistema faz e quem 
 
 | Parte | Para que serve |
 |---|---|
-| [Acesso e login](identidade.md) | Entrar no sistema, escolher a clínica e entender os perfis de acesso |
+| [Acesso e equipe](identidade.md) | Entrar no sistema, trocar senhas e cuidar da equipe e dos perfis de acesso da clínica |
 | [Cadastro de pacientes](pacientes.md) | Guardar a ficha de cada paciente, buscar pacientes e registrar os consentimentos para o uso dos dados |
 | [Prontuário e anamnese](prontuario.md) | Montar o questionário inicial de cada paciente, registrar o atendimento e a evolução de cada consulta, e ver os alertas e o histórico clínico |
 | [Exames de imagem (raio-X)](imagens.md) | Guardar raios-X e outros exames no prontuário de cada paciente, com dente, data e tipo, e baixar o arquivo original |

@@ -11,6 +11,7 @@ Uso num endpoint de outro módulo:
 
 import uuid
 from collections.abc import Callable, Iterator
+from datetime import UTC, datetime
 
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -21,7 +22,7 @@ from app.core.context import CurrentUser
 from app.core.db import get_db, tenant_session
 from app.core.roles import Role
 from app.core.security import decode_access_token
-from app.modules.identidade.service import active_role
+from app.modules.identidade.service import session_role
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -42,10 +43,12 @@ def get_current_user(
         payload = decode_access_token(creds.credentials)
         user_id = uuid.UUID(payload["sub"])
         clinic_id = uuid.UUID(payload["cid"])
-    except (jwt.InvalidTokenError, ValueError, KeyError):
+        issued_ms = int(payload.get("iat_ms", int(payload["iat"]) * 1000))
+        issued_at = datetime.fromtimestamp(issued_ms / 1000, UTC)
+    except (jwt.InvalidTokenError, ValueError, KeyError, TypeError, OverflowError):
         raise _UNAUTHORIZED from None
 
-    role = active_role(db, user_id, clinic_id)
+    role = session_role(db, user_id, clinic_id, issued_at)
     if role is None:
         raise _UNAUTHORIZED
     # O papel vem do banco, não do token: mudança de papel vale imediatamente.

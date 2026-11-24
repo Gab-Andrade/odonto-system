@@ -51,6 +51,171 @@
         "title": "AdjustIn",
         "type": "object"
       },
+      "AdminChangeAction": {
+        "enum": [
+          "rebaixar",
+          "desativar"
+        ],
+        "title": "AdminChangeAction",
+        "type": "string"
+      },
+      "AdminChangeCreate": {
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/AdminChangeAction"
+          },
+          "new_role": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Role"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "action"
+        ],
+        "title": "AdminChangeCreate",
+        "type": "object"
+      },
+      "AdminChangeOut": {
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/AdminChangeAction"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "new_role": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Role"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "requested_by": {
+            "format": "uuid",
+            "title": "Requested By",
+            "type": "string"
+          },
+          "requested_by_name": {
+            "title": "Requested By Name",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AdminChangeStatus"
+          },
+          "target_name": {
+            "title": "Target Name",
+            "type": "string"
+          },
+          "target_user_id": {
+            "format": "uuid",
+            "title": "Target User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "target_user_id",
+          "target_name",
+          "action",
+          "new_role",
+          "reason",
+          "requested_by",
+          "requested_by_name",
+          "status",
+          "decided_by",
+          "decided_at",
+          "created_at",
+          "expires_at"
+        ],
+        "title": "AdminChangeOut",
+        "type": "object"
+      },
+      "AdminChangeStatus": {
+        "enum": [
+          "pendente",
+          "aprovada",
+          "recusada",
+          "cancelada",
+          "expirada"
+        ],
+        "title": "AdminChangeStatus",
+        "type": "string"
+      },
       "AgendaOut": {
         "description": "Consultas com início no dia (bloqueios não contam).",
         "properties": {
@@ -2732,6 +2897,47 @@
         "title": "FinancialSettingsOut",
         "type": "object"
       },
+      "FirstAccess": {
+        "description": "Troca a senha aleatória e entra (mesma resposta do login).",
+        "properties": {
+          "clinic_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clinic Id"
+          },
+          "current_password": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Current Password",
+            "type": "string"
+          },
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "new_password": {
+            "maxLength": 200,
+            "minLength": 10,
+            "title": "New Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "current_password",
+          "new_password"
+        ],
+        "title": "FirstAccess",
+        "type": "object"
+      },
       "FormulaOut": {
         "properties": {
           "entradas_do_sistema": {
@@ -3302,6 +3508,88 @@
           "reason"
         ],
         "title": "InvalidateIn",
+        "type": "object"
+      },
+      "InviteAccept": {
+        "properties": {
+          "code": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password",
+          "code"
+        ],
+        "title": "InviteAccept",
+        "type": "object"
+      },
+      "InviteCode": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "invite_code": {
+            "title": "Invite Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "invite_code",
+          "email"
+        ],
+        "title": "InviteCode",
+        "type": "object"
+      },
+      "InviteOut": {
+        "description": "Convite a um e-mail que já tem cadastro (sem nome nem CRO até a pessoa aceitar).",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "role",
+          "expires_at",
+          "created_at"
+        ],
+        "title": "InviteOut",
         "type": "object"
       },
       "ItemCalcOut": {
@@ -4066,6 +4354,206 @@
         "title": "MeResponse",
         "type": "object"
       },
+      "MemberCreate": {
+        "properties": {
+          "cro": {
+            "anyOf": [
+              {
+                "maxLength": 30,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cro"
+          },
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "full_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Full Name",
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          }
+        },
+        "required": [
+          "email",
+          "full_name",
+          "role"
+        ],
+        "title": "MemberCreate",
+        "type": "object"
+      },
+      "MemberCreated": {
+        "description": "E-mail novo: `member` + `temporary_password`. E-mail que já tem cadastro: `invite`\n+ `invite_code`, que a clínica entrega à pessoa; o vínculo só vale depois que ela o\ndigitar. Senha e código aparecem só nesta resposta.",
+        "properties": {
+          "invite": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InviteOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "invite_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invite Code"
+          },
+          "member": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MemberOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "temporary_password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Temporary Password"
+          }
+        },
+        "title": "MemberCreated",
+        "type": "object"
+      },
+      "MemberOut": {
+        "properties": {
+          "active": {
+            "description": "Vínculo ativo nesta clínica.",
+            "title": "Active",
+            "type": "boolean"
+          },
+          "cro": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cro"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "other_clinics": {
+            "description": "A pessoa também tem vínculo em outra clínica: nome, CRO e senha são dela e não são alterados por aqui.",
+            "title": "Other Clinics",
+            "type": "boolean"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          },
+          "since": {
+            "description": "Quando o vínculo com esta clínica foi criado.",
+            "format": "date-time",
+            "title": "Since",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "full_name",
+          "email",
+          "cro",
+          "role",
+          "active",
+          "other_clinics",
+          "since"
+        ],
+        "title": "MemberOut",
+        "type": "object"
+      },
+      "MemberUpdate": {
+        "description": "Campos omitidos não mudam. `cro: null` apaga o CRO.",
+        "properties": {
+          "active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active"
+          },
+          "cro": {
+            "anyOf": [
+              {
+                "maxLength": 30,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cro"
+          },
+          "full_name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Role"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "MemberUpdate",
+        "type": "object"
+      },
       "MonthMetricsOut": {
         "properties": {
           "aprovado": {
@@ -4684,6 +5172,28 @@
           "default"
         ],
         "title": "ParamOut",
+        "type": "object"
+      },
+      "PasswordChange": {
+        "properties": {
+          "current_password": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Current Password",
+            "type": "string"
+          },
+          "new_password": {
+            "maxLength": 200,
+            "minLength": 10,
+            "title": "New Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "title": "PasswordChange",
         "type": "object"
       },
       "PatientAlert": {
@@ -8760,6 +9270,19 @@
         "title": "TemplateUpdate",
         "type": "object"
       },
+      "TemporaryPassword": {
+        "properties": {
+          "temporary_password": {
+            "title": "Temporary Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "temporary_password"
+        ],
+        "title": "TemporaryPassword",
+        "type": "object"
+      },
       "TokenResponse": {
         "properties": {
           "access_token": {
@@ -11471,6 +11994,9 @@
             },
             "description": "Successful Response"
           },
+          "403": {
+            "description": "Senha aleatória: defina a sua em `POST /auth/primeiro-acesso`."
+          },
           "409": {
             "content": {
               "application/json": {
@@ -11521,6 +12047,711 @@
         "summary": "Me",
         "tags": [
           "autenticação"
+        ]
+      }
+    },
+    "/auth/primeiro-acesso": {
+      "post": {
+        "description": "Troca a senha aleatória (do cadastro ou de uma redefinição) pela da pessoa e entra.\nSe ela atua em mais de uma clínica, responde 409 como o login: a senha já foi trocada,\ne o login segue com a senha nova e a clínica escolhida.",
+        "operationId": "first_access_auth_primeiro_acesso_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FirstAccess"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClinicSelectionResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "First Access",
+        "tags": [
+          "autenticação"
+        ]
+      }
+    },
+    "/auth/senha": {
+      "post": {
+        "description": "Troca a própria senha (vale em todas as clínicas da pessoa). As sessões abertas\ncom a senha antiga caem; a resposta traz um token novo para esta.",
+        "operationId": "change_password_auth_senha_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Change Password",
+        "tags": [
+          "autenticação"
+        ]
+      }
+    },
+    "/auth/vinculos/aceitar": {
+      "post": {
+        "description": "A pessoa aceita o convite de uma clínica com o código que recebeu dela, usando o\ne-mail e a senha que já tem. Depois, entra normalmente escolhendo a clínica.",
+        "operationId": "accept_invite_auth_vinculos_aceitar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteAccept"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Accept Invite",
+        "tags": [
+          "autenticação"
+        ]
+      }
+    },
+    "/equipe/convites": {
+      "get": {
+        "description": "Convites ainda não aceitos (vencidos aparecem até gerar código novo ou cancelar).",
+        "operationId": "list_invites_equipe_convites_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/InviteOut"
+                  },
+                  "title": "Response List Invites Equipe Convites Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Invites",
+        "tags": [
+          "equipe"
+        ]
+      }
+    },
+    "/equipe/convites/{invite_id}": {
+      "delete": {
+        "operationId": "cancel_invite_equipe_convites__invite_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invite_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invite Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cancel Invite",
+        "tags": [
+          "equipe"
+        ]
+      }
+    },
+    "/equipe/convites/{invite_id}/novo-codigo": {
+      "post": {
+        "description": "Gera outro código (o anterior deixa de valer) e renova o prazo de 7 dias.",
+        "operationId": "renew_invite_equipe_convites__invite_id__novo_codigo_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invite_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invite Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteCode"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Renew Invite",
+        "tags": [
+          "equipe"
+        ]
+      }
+    },
+    "/equipe/membros": {
+      "get": {
+        "description": "Equipe da clínica com e-mail e situação do acesso (a lista para todos os papéis,\nsem e-mail, é `GET /auth/equipe`).",
+        "operationId": "list_members_equipe_membros_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "incluir_inativos",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Incluir Inativos",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MemberOut"
+                  },
+                  "title": "Response List Members Equipe Membros Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Members",
+        "tags": [
+          "equipe"
+        ]
+      },
+      "post": {
+        "description": "Adiciona alguém à equipe. E-mail novo: cria o usuário com senha aleatória (ele define\na dele no primeiro acesso). E-mail que já tem cadastro: cria um convite com código, que\na clínica entrega à pessoa; o vínculo só vale depois que ela digitar o código.",
+        "operationId": "add_member_equipe_membros_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemberCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Add Member",
+        "tags": [
+          "equipe"
+        ]
+      }
+    },
+    "/equipe/membros/{user_id}": {
+      "patch": {
+        "description": "Muda papel, ativa/desativa o acesso nesta clínica e corrige nome e CRO. Rebaixar ou\ndesativar outro administrador não é feito aqui: use `POST /equipe/solicitacoes`.",
+        "operationId": "update_member_equipe_membros__user_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemberUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Member",
+        "tags": [
+          "equipe"
+        ]
+      }
+    },
+    "/equipe/membros/{user_id}/redefinir-senha": {
+      "post": {
+        "description": "Gera uma senha aleatória nova (mostrada só nesta resposta). Não vale para outro\nadministrador nem para quem também atua em outra clínica.",
+        "operationId": "reset_password_equipe_membros__user_id__redefinir_senha_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemporaryPassword"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reset Password",
+        "tags": [
+          "equipe"
+        ]
+      }
+    },
+    "/equipe/solicitacoes": {
+      "get": {
+        "description": "Pedidos para rebaixar ou desativar administrador (sem filtro: os 100 mais\nrecentes).",
+        "operationId": "list_requests_equipe_solicitacoes_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "somente_pendentes",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Somente Pendentes",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AdminChangeOut"
+                  },
+                  "title": "Response List Requests Equipe Solicitacoes Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Requests",
+        "tags": [
+          "equipe"
+        ]
+      },
+      "post": {
+        "description": "Pede para rebaixar ou desativar outro administrador. Só vale quando o próprio\nadministrador alvo aceitar; expira em 7 dias.",
+        "operationId": "create_request_equipe_solicitacoes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminChangeCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminChangeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Request",
+        "tags": [
+          "equipe"
+        ]
+      }
+    },
+    "/equipe/solicitacoes/{request_id}/aceitar": {
+      "post": {
+        "description": "O próprio administrador alvo aceita o pedido, e a mudança é aplicada.",
+        "operationId": "accept_request_equipe_solicitacoes__request_id__aceitar_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminChangeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Accept Request",
+        "tags": [
+          "equipe"
+        ]
+      }
+    },
+    "/equipe/solicitacoes/{request_id}/cancelar": {
+      "post": {
+        "description": "Quem pediu desiste do pedido.",
+        "operationId": "cancel_request_equipe_solicitacoes__request_id__cancelar_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminChangeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cancel Request",
+        "tags": [
+          "equipe"
+        ]
+      }
+    },
+    "/equipe/solicitacoes/{request_id}/recusar": {
+      "post": {
+        "operationId": "reject_request_equipe_solicitacoes__request_id__recusar_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminChangeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reject Request",
+        "tags": [
+          "equipe"
         ]
       }
     },

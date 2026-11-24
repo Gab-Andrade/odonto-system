@@ -193,6 +193,279 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/primeiro-acesso": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * First Access
+         * @description Troca a senha aleatória (do cadastro ou de uma redefinição) pela da pessoa e entra.
+         *     Se ela atua em mais de uma clínica, responde 409 como o login: a senha já foi trocada,
+         *     e o login segue com a senha nova e a clínica escolhida.
+         */
+        post: operations["first_access_auth_primeiro_acesso_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/senha": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change Password
+         * @description Troca a própria senha (vale em todas as clínicas da pessoa). As sessões abertas
+         *     com a senha antiga caem; a resposta traz um token novo para esta.
+         */
+        post: operations["change_password_auth_senha_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/vinculos/aceitar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept Invite
+         * @description A pessoa aceita o convite de uma clínica com o código que recebeu dela, usando o
+         *     e-mail e a senha que já tem. Depois, entra normalmente escolhendo a clínica.
+         */
+        post: operations["accept_invite_auth_vinculos_aceitar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/equipe/convites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Invites
+         * @description Convites ainda não aceitos (vencidos aparecem até gerar código novo ou cancelar).
+         */
+        get: operations["list_invites_equipe_convites_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/equipe/convites/{invite_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Cancel Invite */
+        delete: operations["cancel_invite_equipe_convites__invite_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/equipe/convites/{invite_id}/novo-codigo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Renew Invite
+         * @description Gera outro código (o anterior deixa de valer) e renova o prazo de 7 dias.
+         */
+        post: operations["renew_invite_equipe_convites__invite_id__novo_codigo_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/equipe/membros": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Members
+         * @description Equipe da clínica com e-mail e situação do acesso (a lista para todos os papéis,
+         *     sem e-mail, é `GET /auth/equipe`).
+         */
+        get: operations["list_members_equipe_membros_get"];
+        put?: never;
+        /**
+         * Add Member
+         * @description Adiciona alguém à equipe. E-mail novo: cria o usuário com senha aleatória (ele define
+         *     a dele no primeiro acesso). E-mail que já tem cadastro: cria um convite com código, que
+         *     a clínica entrega à pessoa; o vínculo só vale depois que ela digitar o código.
+         */
+        post: operations["add_member_equipe_membros_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/equipe/membros/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Member
+         * @description Muda papel, ativa/desativa o acesso nesta clínica e corrige nome e CRO. Rebaixar ou
+         *     desativar outro administrador não é feito aqui: use `POST /equipe/solicitacoes`.
+         */
+        patch: operations["update_member_equipe_membros__user_id__patch"];
+        trace?: never;
+    };
+    "/equipe/membros/{user_id}/redefinir-senha": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset Password
+         * @description Gera uma senha aleatória nova (mostrada só nesta resposta). Não vale para outro
+         *     administrador nem para quem também atua em outra clínica.
+         */
+        post: operations["reset_password_equipe_membros__user_id__redefinir_senha_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/equipe/solicitacoes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Requests
+         * @description Pedidos para rebaixar ou desativar administrador (sem filtro: os 100 mais
+         *     recentes).
+         */
+        get: operations["list_requests_equipe_solicitacoes_get"];
+        put?: never;
+        /**
+         * Create Request
+         * @description Pede para rebaixar ou desativar outro administrador. Só vale quando o próprio
+         *     administrador alvo aceitar; expira em 7 dias.
+         */
+        post: operations["create_request_equipe_solicitacoes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/equipe/solicitacoes/{request_id}/aceitar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept Request
+         * @description O próprio administrador alvo aceita o pedido, e a mudança é aplicada.
+         */
+        post: operations["accept_request_equipe_solicitacoes__request_id__aceitar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/equipe/solicitacoes/{request_id}/cancelar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Request
+         * @description Quem pediu desiste do pedido.
+         */
+        post: operations["cancel_request_equipe_solicitacoes__request_id__cancelar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/equipe/solicitacoes/{request_id}/recusar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject Request */
+        post: operations["reject_request_equipe_solicitacoes__request_id__recusar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/estoque/ajustes": {
         parameters: {
             query?: never;
@@ -2318,6 +2591,69 @@ export interface components {
             reason: string;
         };
         /**
+         * AdminChangeAction
+         * @enum {string}
+         */
+        AdminChangeAction: "rebaixar" | "desativar";
+        /** AdminChangeCreate */
+        AdminChangeCreate: {
+            action: components["schemas"]["AdminChangeAction"];
+            new_role?: components["schemas"]["Role"] | null;
+            /** Reason */
+            reason?: string | null;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /** AdminChangeOut */
+        AdminChangeOut: {
+            action: components["schemas"]["AdminChangeAction"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decided By */
+            decided_by: string | null;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            new_role: components["schemas"]["Role"] | null;
+            /** Reason */
+            reason: string | null;
+            /**
+             * Requested By
+             * Format: uuid
+             */
+            requested_by: string;
+            /** Requested By Name */
+            requested_by_name: string;
+            status: components["schemas"]["AdminChangeStatus"];
+            /** Target Name */
+            target_name: string;
+            /**
+             * Target User Id
+             * Format: uuid
+             */
+            target_user_id: string;
+        };
+        /**
+         * AdminChangeStatus
+         * @enum {string}
+         */
+        AdminChangeStatus: "pendente" | "aprovada" | "recusada" | "cancelada" | "expirada";
+        /**
          * AgendaOut
          * @description Consultas com início no dia (bloqueios não contam).
          */
@@ -3265,6 +3601,23 @@ export interface components {
              */
             dentist_can_view: boolean;
         };
+        /**
+         * FirstAccess
+         * @description Troca a senha aleatória e entra (mesma resposta do login).
+         */
+        FirstAccess: {
+            /** Clinic Id */
+            clinic_id?: string | null;
+            /** Current Password */
+            current_password: string;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** New Password */
+            new_password: string;
+        };
         /** FormulaOut */
         FormulaOut: {
             /** Entradas Do Sistema */
@@ -3498,6 +3851,49 @@ export interface components {
         InvalidateIn: {
             /** Reason */
             reason: string;
+        };
+        /** InviteAccept */
+        InviteAccept: {
+            /** Code */
+            code: string;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Password */
+            password: string;
+        };
+        /** InviteCode */
+        InviteCode: {
+            /** Email */
+            email: string;
+            /** Invite Code */
+            invite_code: string;
+        };
+        /**
+         * InviteOut
+         * @description Convite a um e-mail que já tem cadastro (sem nome nem CRO até a pessoa aceitar).
+         */
+        InviteOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Email */
+            email: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            role: components["schemas"]["Role"];
         };
         /** ItemCalcOut */
         ItemCalcOut: {
@@ -3787,6 +4183,77 @@ export interface components {
              * Format: uuid
              */
             user_id: string;
+        };
+        /** MemberCreate */
+        MemberCreate: {
+            /** Cro */
+            cro?: string | null;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Full Name */
+            full_name: string;
+            role: components["schemas"]["Role"];
+        };
+        /**
+         * MemberCreated
+         * @description E-mail novo: `member` + `temporary_password`. E-mail que já tem cadastro: `invite`
+         *     + `invite_code`, que a clínica entrega à pessoa; o vínculo só vale depois que ela o
+         *     digitar. Senha e código aparecem só nesta resposta.
+         */
+        MemberCreated: {
+            invite?: components["schemas"]["InviteOut"] | null;
+            /** Invite Code */
+            invite_code?: string | null;
+            member?: components["schemas"]["MemberOut"] | null;
+            /** Temporary Password */
+            temporary_password?: string | null;
+        };
+        /** MemberOut */
+        MemberOut: {
+            /**
+             * Active
+             * @description Vínculo ativo nesta clínica.
+             */
+            active: boolean;
+            /** Cro */
+            cro: string | null;
+            /** Email */
+            email: string;
+            /** Full Name */
+            full_name: string;
+            /**
+             * Other Clinics
+             * @description A pessoa também tem vínculo em outra clínica: nome, CRO e senha são dela e não são alterados por aqui.
+             */
+            other_clinics: boolean;
+            role: components["schemas"]["Role"];
+            /**
+             * Since
+             * Format: date-time
+             * @description Quando o vínculo com esta clínica foi criado.
+             */
+            since: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /**
+         * MemberUpdate
+         * @description Campos omitidos não mudam. `cro: null` apaga o CRO.
+         */
+        MemberUpdate: {
+            /** Active */
+            active?: boolean | null;
+            /** Cro */
+            cro?: string | null;
+            /** Full Name */
+            full_name?: string | null;
+            role?: components["schemas"]["Role"] | null;
         };
         /** MonthMetricsOut */
         MonthMetricsOut: {
@@ -4083,6 +4550,13 @@ export interface components {
              * @enum {string}
              */
             type: "inteiro" | "termos";
+        };
+        /** PasswordChange */
+        PasswordChange: {
+            /** Current Password */
+            current_password: string;
+            /** New Password */
+            new_password: string;
         };
         /** PatientAlert */
         PatientAlert: {
@@ -5549,6 +6023,11 @@ export interface components {
             /** Name */
             name?: string | null;
         };
+        /** TemporaryPassword */
+        TemporaryPassword: {
+            /** Temporary Password */
+            temporary_password: string;
+        };
         /** TokenResponse */
         TokenResponse: {
             /** Access Token */
@@ -6738,6 +7217,13 @@ export interface operations {
                     "application/json": components["schemas"]["TokenResponse"];
                 };
             };
+            /** @description Senha aleatória: defina a sua em `POST /auth/primeiro-acesso`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Conflict */
             409: {
                 headers: {
@@ -6774,6 +7260,479 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeResponse"];
+                };
+            };
+        };
+    };
+    first_access_auth_primeiro_acesso_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FirstAccess"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClinicSelectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_password_auth_senha_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_invite_auth_vinculos_aceitar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InviteAccept"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_invites_equipe_convites_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InviteOut"][];
+                };
+            };
+        };
+    };
+    cancel_invite_equipe_convites__invite_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invite_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    renew_invite_equipe_convites__invite_id__novo_codigo_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invite_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InviteCode"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_members_equipe_membros_get: {
+        parameters: {
+            query?: {
+                incluir_inativos?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_member_equipe_membros_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemberCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberCreated"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_member_equipe_membros__user_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemberUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_password_equipe_membros__user_id__redefinir_senha_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemporaryPassword"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_requests_equipe_solicitacoes_get: {
+        parameters: {
+            query?: {
+                somente_pendentes?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminChangeOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_request_equipe_solicitacoes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminChangeCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminChangeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_request_equipe_solicitacoes__request_id__aceitar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminChangeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_request_equipe_solicitacoes__request_id__cancelar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminChangeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_request_equipe_solicitacoes__request_id__recusar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminChangeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

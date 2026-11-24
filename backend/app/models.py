@@ -8,7 +8,13 @@ from app.core.models import Base
 from app.modules.agenda.models import Appointment, AppointmentEvent, Chair
 from app.modules.estoque.models import Material, StockLot, StockMovement
 from app.modules.financeiro.models import FinancialSettings, Payable, Payment, Receivable
-from app.modules.identidade.models import Clinic, ClinicMembership, User
+from app.modules.identidade.models import (
+    AdminChangeRequest,
+    Clinic,
+    ClinicMembership,
+    MembershipInvite,
+    User,
+)
 from app.modules.imagens.models import ImagingExam
 from app.modules.inteligencia.models import AlertDismissal, AlertRuleSetting
 from app.modules.odontograma.models import (
@@ -49,6 +55,8 @@ from app.modules.tratamento.models import (
 )
 
 __all__ = [
+    "AdminChangeRequest",
+    "MembershipInvite",
     "AlertDismissal",
     "AlertRuleSetting",
     "AnamnesisResponse",

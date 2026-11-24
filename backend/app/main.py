@@ -13,6 +13,7 @@ from app.modules.auditoria.router import router as auditoria_router
 from app.modules.estoque.lotes_router import router as estoque_lotes_router
 from app.modules.estoque.router import router as estoque_router
 from app.modules.financeiro.router import router as financeiro_router
+from app.modules.identidade.equipe_router import router as equipe_router
 from app.modules.identidade.router import router as identidade_router
 from app.modules.imagens.router import router as imagens_router
 from app.modules.inteligencia.router import router as inteligencia_router
@@ -71,6 +72,7 @@ def create_app() -> FastAPI:
         return {"status": "ok", "database": "ok"}
 
     app.include_router(identidade_router)
+    app.include_router(equipe_router)
     app.include_router(auditoria_router)
     app.include_router(precificacao_router)
     app.include_router(estoque_router)

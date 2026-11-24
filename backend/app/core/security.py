@@ -43,6 +43,9 @@ def create_access_token(
         "role": role.value,
         "typ": "access",
         "iat": now,
+        # Emissão em milissegundos: o `iat` tem resolução de segundos, e uma troca de senha
+        # no mesmo segundo do login precisa derrubar essa sessão.
+        "iat_ms": int(now.timestamp() * 1000),
         "exp": now + timedelta(minutes=minutes),
     }
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
@@ -55,7 +58,7 @@ def decode_access_token(token: str) -> dict[str, Any]:
         token,
         settings.jwt_secret,
         algorithms=[settings.jwt_algorithm],
-        options={"require": ["exp", "sub", "cid", "typ"]},
+        options={"require": ["exp", "iat", "sub", "cid", "typ"]},
     )
     if payload.get("typ") != "access":
         raise jwt.InvalidTokenError("tipo de token inválido")

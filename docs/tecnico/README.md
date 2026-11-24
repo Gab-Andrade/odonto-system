@@ -8,7 +8,7 @@ Cada módulo tem um documento próprio, gerado e atualizado pela skill `document
 
 | Módulo | Resumo |
 |---|---|
-| [identidade](identidade.md) | Clínicas, usuários, vínculos, login (JWT) e dependências de autenticação/papéis usadas por todos os módulos |
+| [identidade](identidade.md) | Clínicas, usuários, vínculos, login (JWT), cadastro de equipe só pelo admin (senha provisória, convites com código, pedidos para mudar admin) e dependências de autenticação/papéis usadas por todos os módulos |
 | [auditoria](auditoria.md) | Consulta do log de auditoria (LGPD) da clínica |
 | [precificacao](precificacao.md) | Tabelas de preço versionadas com herança, atribuição por escopo, resolução com memória de cálculo, snapshots, importação de planilhas e tabelas calculadas por fórmula (fichas técnicas, variáveis; publicação com confirmação de erros de cálculo) |
 | [estoque](estoque.md) | Materiais, lotes com validade, movimentos append-only, estoque mínimo, custo médio ponderado e baixa automática FEFO pela ficha técnica ao realizar item do plano; rastreio por paciente |

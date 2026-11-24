@@ -12,6 +12,7 @@ import {
   type Papel,
 } from "../auth/sessao";
 import { useQueryClient } from "@tanstack/react-query";
+import TrocarSenha from "../components/TrocarSenha";
 import { type Tema, useTema } from "../lib/tema";
 
 interface ItemMenu {
@@ -44,6 +45,7 @@ export default function AppLayout() {
   const local = useLocation();
   const cliente = useQueryClient();
   const [menuAberto, setMenuAberto] = useState(false);
+  const [trocandoSenha, setTrocandoSenha] = useState(false);
   const [tema, setTema] = useTema();
 
   if (!sessaoValida(sessao)) {
@@ -116,6 +118,16 @@ export default function AppLayout() {
           <p className="truncate px-3 text-xs text-texto-suave">{sessao.usuario?.nome}</p>
           <button
             type="button"
+            onClick={() => {
+              setMenuAberto(false);
+              setTrocandoSenha(true);
+            }}
+            className="mt-1 flex min-h-11 w-full items-center rounded-lg px-3 text-sm font-semibold text-texto hover:bg-fundo"
+          >
+            Trocar senha
+          </button>
+          <button
+            type="button"
             onClick={sair}
             className="mt-1 flex min-h-11 w-full items-center rounded-lg px-3 text-sm font-semibold text-perigo hover:bg-perigo-suave"
           >
@@ -148,6 +160,7 @@ export default function AppLayout() {
           <Outlet />
         </main>
       </div>
+      {trocandoSenha && <TrocarSenha aoFechar={() => setTrocandoSenha(false)} />}
     </div>
   );
 }
