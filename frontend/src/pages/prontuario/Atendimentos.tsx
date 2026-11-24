@@ -93,6 +93,7 @@ export default function Atendimentos({ paciente }: { paciente: Paciente }) {
           dentista={nomeMembro(equipe.data, a.dentist_id)}
           autorNome={(id) => nomeMembro(equipe.data, id)}
           meu={a.dentist_id === usuario?.id}
+          euId={usuario?.id}
           aoMudar={atualizar}
         />
       ))}
@@ -110,6 +111,7 @@ function Atendimento({
   dentista,
   autorNome,
   meu,
+  euId,
   aoMudar,
 }: {
   atendimento: Schemas["EncounterSummary"];
@@ -117,6 +119,8 @@ function Atendimento({
   dentista: string;
   autorNome: (id: string) => string;
   meu: boolean;
+  /** Só o autor da evolução faz adendo (o backend recusa os outros). */
+  euId: string | undefined;
   aoMudar: () => void;
 }) {
   const [texto, setTexto] = useState("");
@@ -177,7 +181,7 @@ function Atendimento({
                 <Registro nota={ad} autor={autorNome(ad.author_id)} adendo />
               </div>
             ))}
-            {meu && <Adendo nota={n} aoSalvar={aoMudar} />}
+            {n.author_id === euId && <Adendo nota={n} aoSalvar={aoMudar} />}
           </li>
         ))}
       </ul>
