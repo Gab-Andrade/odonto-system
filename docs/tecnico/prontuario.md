@@ -1,6 +1,6 @@
 ---
 modulo: prontuario
-atualizado_em: c0f87a0
+atualizado_em: 3afacea
 ---
 # Prontuário
 
@@ -117,6 +117,15 @@ Erros: `ProntuarioError` vira 404 (`NotFound`), **403** (`Forbidden`, só no ate
 - Conteúdo: não vazio após strip e até 20.000 caracteres (`evolucao.MAX_CONTENT`, aplicado em `schemas.NoteContent`).
 - Linha do tempo do paciente ordena por `performed_at desc, created_at desc, id`; a do atendimento, por `created_at, id`.
 
+### Frontend: editor de modelos de anamnese
+
+Tela Configurações (`/configuracoes`, só admin/gestor, o mesmo GERIR do backend) com `frontend/src/pages/config/ModelosAnamnese.tsx`. Não há rota nova; a tela só consome as rotas de `/anamnese/modelos` e `/anamnese/versoes`.
+
+- Fluxo: lista de modelos, novo modelo (POST com `questions: []`), detalhe. O detalhe edita o rascunho se existir; sem rascunho, mostra a publicada em prévia somente leitura e oferece "Criar rascunho" (POST `/rascunho`).
+- Botões do editor (`Editor`): Salvar rascunho = PUT; Publicar = POST `/publicar`; Descartar = DELETE; Desativar/Reativar o modelo = PATCH `active`. Publicar chama o PUT antes se houver alteração local, em duas requisições separadas.
+- A prévia ("Ver como fica", `Previa`) reutiliza `CampoPergunta` e o tipo `Pergunta`, exportados por `frontend/src/pages/prontuario/Anamnese.tsx`. Mudar esse componente muda a prévia e o preenchimento ao mesmo tempo.
+- `paraApi` converte o estado de edição para o formato da API: mantém o `id` de perguntas existentes e gera `id` por slug do texto (até 34 caracteres, sufixo `_2`, `_3` em colisão) só para perguntas novas. Opções vêm de texto, uma por linha, sem repetição; `alert_options` é filtrado para opções ainda existentes.
+
 ## Tenancy e auditoria
 
 - Todas as rotas usam `get_tenant_db`. Registro de outra clínica aparece como 404 pelo RLS (sem filtro manual de `clinic_id`); isso inclui atendimento, evolução e o agendamento informado ao abrir.
@@ -187,4 +196,6 @@ Ler modelos e versões de anamnese (sem dado de paciente) não é auditado. A mu
 - `add_addendum` usa a data atual como `performed_at` e não passa pela janela de 7 dias; o adendo pode vir meses depois da evolução.
 - A assinatura `simples` é só "usuário autenticado": o hash garante integridade do que está no banco, não identidade forte nem carimbo de tempo confiável.
 - A paginação de `list_encounters` ordena por `started_at desc`, e a de `patient_notes` por `performed_at desc`; com `offset` alto e inserções concorrentes, itens podem repetir ou pular entre páginas.
+- Editor de modelos (frontend): "Descartar" só aparece quando já existe versão publicada (`temPublicada`); um modelo novo, com só o rascunho nº 1, não pode ser descartado pela tela (a API permitiria). O slug do `id` de pergunta nova nasce do texto no momento do primeiro salvamento e depois não muda, mesmo que o texto seja editado.
+- Editor de modelos (frontend): a validação local só exige texto e pelo menos 2 opções nas perguntas de lista; os limites de 50 opções e 150 perguntas só são checados pelo backend (422 exibido como aviso). Se o PUT do "Publicar" passa e o POST falha, o rascunho fica salvo sem publicar.
 - A janela de 7 dias vale também para `started_at`: não é possível abrir, por esta API, um atendimento mais antigo que isso, mesmo a partir de um agendamento antigo ainda não marcado como atendido.

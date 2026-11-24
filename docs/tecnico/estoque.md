@@ -1,6 +1,6 @@
 ---
 modulo: estoque
-atualizado_em: b9f3f9e
+atualizado_em: 3afacea
 ---
 # Estoque
 
@@ -52,6 +52,20 @@ Dois routers com o mesmo prefixo `/estoque`: `router.py` (materiais) e `lotes_ro
 | GET | `/estoque/pacientes/{id}/rastreio` | admin, gestor, dentista, asb | Materiais e lotes usados no paciente |
 
 Respostas fora do padrão: toda `StockError` que não seja `NotFound` vira 409 (`RuleViolation`). Qualquer `IntegrityError` não tratado (inclusive `check_violation` dos gatilhos) também vira 409 pelo handler global de `main.py`, não 500.
+
+## Frontend e demo
+
+Tela em `frontend/src/pages/estoque/Estoque.tsx`, rota `/estoque` (`App.tsx`, carregada com `lazy`), item de menu visível aos papéis `CLINICOS` (admin, gestor, dentista, asb) em `layout/AppLayout.tsx`.
+
+- **Quem vê o quê:** a tela escolhe pelo papel da sessão, espelhando as regras da API.
+  - Dentista: só a aba "Saldos e lotes", em leitura (sem botões de ação, sem custo).
+  - ASB: a mesma aba, com "+ Entrada" e "Saída" por lote. Não vê a coluna de custo, o formulário de entrada não pede custo (envia `unit_cost: null`) e não há "Inventário".
+  - Admin e gestor (`GESTAO`): três abas (Saldos e lotes, Materiais, Movimentos), coluna de custo, custo obrigatório na entrada e "Inventário" (ajuste).
+- **Rotas consumidas:** `GET /estoque/saldos` (filtro `somente_alertas`), `GET /estoque/materiais` (`incluir_inativos`), `POST /estoque/materiais`, `PATCH /estoque/materiais/{id}`, `POST /estoque/entradas`, `/saidas`, `/ajustes` e `GET /estoque/movimentos` (limite 200, filtro por material). O rastreio por paciente não é usado nesta tela.
+- Após qualquer mutação invalida a query `["estoque"]`; salvar material invalida também `["precificacao"]`, porque o custo alimenta a ficha técnica.
+- Na tela de saída de lote vencido, o motivo vem pré-preenchido com "Lote vencido". O campo Motivo é obrigatório em saída e inventário (espelha o CHECK `manual_has_reason`).
+- Desativar/reativar material usa o PATCH apenas com `active`.
+- **Demo** (`backend/app/demo.py`: `MATERIALS` e `_stock`): cria 4 materiais com lotes usando `estoque.create_material` e `estoque_lotes.register_entry(..., can_set_cost=True)`. Cobre os alertas: resina abaixo do mínimo e vencendo (lote com 20 dias), anestésico com um lote já vencido (-10 dias), lima sem validade. É idempotente por checagem: se já existe qualquer material, não faz nada.
 
 ## Regras de negócio e invariantes
 
@@ -115,4 +129,6 @@ Respostas fora do padrão: toda `StockError` que não seja `NotFound` vira 409 (
 - **Erro de saldo em corrida** chega como 409 genérico (IntegrityError via handler global), sem a mensagem amigável do service.
 - **Dois routers sob `/estoque`:** rotas novas devem ir ao arquivo certo (materiais em `router.py`, o resto em `lotes_router.py`) e cada um define seus próprios conjuntos de papéis (`READ`, `MANAGE`, `MOVE`), duplicados entre os arquivos.
 - **Ajuste sem diferença** responde 200 com corpo `null`, sem auditoria.
+- **Tela: `FormMaterial` envia `unit_cost` no PATCH** de edição (corpo completo), então salvar outros campos regrava o custo exibido, que pode ser a média atual; a edição de custo segue sujeita à regra de sobrescrita na próxima entrada.
+- **Tela: movimentos mostram "—" no nome/unidade** de materiais que não vieram da lista (a aba usa `useMateriais(true)`, que inclui inativos, então só falha se a lista não carregou).
 - `odonto_app` nunca teve `TRUNCATE`, então o revoke da migração não o cobre; a limpeza dos testes usa o role dono.

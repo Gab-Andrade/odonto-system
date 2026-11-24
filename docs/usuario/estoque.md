@@ -1,6 +1,6 @@
 ---
 modulo: estoque
-atualizado_em: b9f3f9e
+atualizado_em: 3afacea
 ---
 # Estoque de materiais
 
@@ -19,7 +19,7 @@ atualizado_em: b9f3f9e
 ## O que dá para fazer
 
 ### Cadastrar um material
-*Tela em construção.*
+Onde: menu Estoque, aba Materiais, botão **+ Novo material**.
 
 Só Administrador e Gestor cadastram materiais. Informe:
 1. O nome do material (até 150 letras).
@@ -31,7 +31,7 @@ Só Administrador e Gestor cadastram materiais. Informe:
 O sistema não aceita dois materiais com o mesmo nome. Não faz diferença entre letras maiúsculas e minúsculas, então "Luva" e "luva" são o mesmo nome.
 
 ### Consultar a lista de materiais
-*Tela em construção.*
+Onde: menu Estoque, aba Materiais (só Administrador e Gestor). Marque **Mostrar desativados** para ver também os inativos. Os demais perfis veem os materiais pela aba Saldos e lotes.
 
 Todos os perfis, exceto a Recepção, veem a lista de materiais em ordem de nome.
 - Por padrão, a lista mostra só os materiais ativos.
@@ -39,26 +39,25 @@ Todos os perfis, exceto a Recepção, veem a lista de materiais em ordem de nome
 - O custo aparece só para Administrador e Gestor. Para os outros perfis, a lista mostra nome, unidade, categoria, estoque mínimo e se o material está ativo.
 
 ### Ver os dados de um material
-*Tela em construção.*
 
 Todos os perfis, exceto a Recepção, abrem um material da lista para ver os seus dados. O custo segue a mesma regra da lista: só Administrador e Gestor o veem.
 
 Se o material não existir na sua clínica, o sistema avisa que ele não foi encontrado.
 
 ### Alterar um material
-*Tela em construção.*
+Onde: menu Estoque, aba Materiais, botão **Editar** na linha do material.
 
 Só Administrador e Gestor alteram um material. É possível mudar o nome, a unidade, a categoria, o custo, o estoque mínimo (inclusive retirá-lo) e a situação (ativo ou inativo). Você muda só o que precisa. O restante continua como está.
 
 As mesmas regras do cadastro valem para a alteração. Por exemplo, você não consegue dar a um material um nome que já existe em outro.
 
 ### Desativar ou reativar um material
-*Tela em construção.*
+Onde: menu Estoque, aba Materiais, **Editar** e depois **Desativar** (ou **Reativar**, com **Mostrar desativados** marcado).
 
 Em vez de apagar, o sistema desativa o material. Para isso, Administrador ou Gestor altera a situação do material para inativo. Para voltar a usá-lo, basta mudar para ativo.
 
 ### Dar entrada de materiais (compra ou reposição)
-*Tela em construção.*
+Onde: menu Estoque, aba Saldos e lotes, botão **+ Entrada de material** no topo, ou **Entrada** no cartão do material (já vem com ele escolhido). O campo de custo só aparece para Administrador e Gestor.
 
 Administrador, Gestor e ASB dão entrada. Cada entrada cria um **lote**, que é um conjunto do mesmo material que chegou junto. Informe:
 1. O material. Ele precisa estar ativo.
@@ -71,7 +70,7 @@ Sem data de validade, o lote sai por último nos procedimentos.
 **Custo médio.** Quando Administrador ou Gestor dá entrada, o custo do material passa a ser a média dos custos de todos os lotes com saldo, pesada pela quantidade de cada um. Exemplo: se você tem 10 unidades a R$ 2,00 e recebe mais 10 a R$ 3,00, o custo passa a ser R$ 2,50.
 
 ### Dar saída de materiais (perda, vencido ou uso fora de procedimento)
-*Tela em construção.*
+Onde: menu Estoque, aba Saldos e lotes, botão **Saída** na linha do lote.
 
 Administrador, Gestor e ASB dão saída. Informe:
 1. O lote de onde o material saiu.
@@ -81,12 +80,12 @@ Administrador, Gestor e ASB dão saída. Informe:
 Um lote vencido aceita saída. É assim que você tira do saldo o material que venceu.
 
 ### Fazer inventário (acertar o saldo de um lote)
-*Tela em construção.*
+Onde: menu Estoque, aba Saldos e lotes, botão **Inventário** na linha do lote.
 
 Só Administrador e Gestor fazem inventário. Informe a quantidade que você contou no lote e o motivo. O sistema calcula a diferença e a registra como ajuste. Se a contagem bater com o saldo, nada é registrado.
 
 ### Ver saldos e alertas
-*Tela em construção.*
+Onde: menu Estoque, aba Saldos e lotes. Use **Buscar material** para achar pelo nome e marque **Só o que pede atenção** para ver apenas os materiais com alerta. Os alertas aparecem como etiquetas no cartão: *abaixo do mínimo*, *lote vencido* ou *vence em breve*.
 
 Todos os perfis, exceto a Recepção, veem o saldo de cada material. Para cada um, aparecem o saldo total, o estoque mínimo, se está abaixo do mínimo e os lotes com saldo.
 
@@ -105,7 +104,7 @@ Você pode pedir só os materiais com alerta. Por padrão, a lista mostra só os
 O custo de cada lote aparece só para Administrador e Gestor.
 
 ### Ver o histórico de movimentos
-*Tela em construção.*
+Onde: menu Estoque, aba Movimentos. Escolha um material para filtrar, ou deixe em *Todos* para ver os 200 mais recentes.
 
 Só Administrador e Gestor veem o histórico. Ele lista entradas, saídas, ajustes e baixas por procedimento, do mais recente para o mais antigo. Você pode filtrar por material ou por lote. Por padrão, mostra os 200 movimentos mais recentes (no máximo 500 de uma vez).
 
@@ -119,7 +118,6 @@ Administrador, Gestor, Dentista e ASB consultam o rastreio de um paciente. Ele m
 Cada consulta ao rastreio fica registrada no [histórico de ações](auditoria.md).
 
 ### Baixa automática ao realizar um procedimento
-*Tela em construção.*
 
 Você não dá baixa à parte. Quando o dentista do atendimento marca um item do [plano de tratamento](tratamento.md) como realizado, o sistema:
 1. Lê a ficha técnica do procedimento, que diz quais materiais e quantidades ele usa. A ficha é definida na [precificação](precificacao.md). Se o procedimento não tiver ficha, nada sai do estoque.

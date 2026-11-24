@@ -1,6 +1,6 @@
 ---
 modulo: odontograma
-atualizado_em: e2f4840
+atualizado_em: 3afacea
 ---
 # Odontograma
 

@@ -1,6 +1,6 @@
 ---
 modulo: pacientes
-atualizado_em: a86b581
+atualizado_em: 3afacea
 ---
 # Cadastro de pacientes
 
@@ -18,17 +18,20 @@ O cadastro é igual para toda a equipe. O conteúdo clínico tem regras própria
 
 ### Buscar um paciente
 
-1. Digite parte do nome, o nome social, o CPF ou o telefone.
-2. Confira a lista. Cada linha mostra nome, nome social, data de nascimento, telefone e só uma parte do CPF (por exemplo, ***.456.789-**).
+**Onde:** menu **Pacientes**, campo **Buscar**.
+
+1. Digite parte do nome, o nome social, o CPF ou o telefone. A lista muda enquanto você digita.
+2. Confira a lista. Cada linha mostra nome, nome social, idade, data de nascimento, telefone e só uma parte do CPF (por exemplo, ***.456.789-**).
+3. Clique no paciente para abrir a ficha.
 
 - **Por nome:** basta um trecho. Não importam acentos nem letras maiúsculas, e todas as palavras digitadas precisam aparecer no nome.
 - **Por CPF ou telefone:** digite só os números, com pelo menos 4 dígitos. O CPF precisa ser digitado por inteiro. O telefone pode ser achado pelos últimos números.
-- **Pacientes inativos** não aparecem na busca, a não ser que você peça para incluí-los.
-- A busca traz até 100 pacientes por vez. A lista vem em páginas de 20.
-
-*Tela em construção.*
+- **Pacientes inativos** não aparecem na busca, a não ser que você marque **Incluir inativos**.
+- A tela mostra até 50 pacientes por busca.
 
 ### Cadastrar um paciente
+
+**Onde:** menu **Pacientes**, botão **+ Novo paciente**. Ao salvar, o sistema abre a ficha do paciente criado.
 
 Informe pelo menos o nome completo e o telefone. Os outros dados são opcionais:
 
@@ -41,38 +44,34 @@ Informe pelo menos o nome completo e o telefone. Os outros dados são opcionais:
 
 Os telefones devem ter de 8 a 15 números. Você pode digitá-los com parênteses ou traços: o sistema guarda só os números.
 
-*Tela em construção.*
-
 ### Alterar a ficha
+
+**Onde:** abra o paciente (menu **Pacientes**) e entre na aba **Cadastro**. Clique em **Editar**, no cartão **Dados do paciente**.
 
 - Altere só o que precisa. Os outros dados continuam como estavam.
 - Para apagar um dado opcional (por exemplo, o e-mail), deixe o campo vazio e salve.
 - Nome completo e telefone não podem ficar vazios.
-- Para tirar um paciente das buscas comuns, marque-o como inativo. A ficha continua guardada. Para voltar, marque-o como ativo.
+- Para tirar um paciente das buscas comuns, marque-o como inativo. A ficha continua guardada. Para voltar, marque-o como ativo. *Tela em construção: a tela de edição ainda não tem a opção Ativo.*
 - Ao salvar, o sistema registra quais dados foram alterados, mas não guarda os valores antigos nem os novos.
 
-*Tela em construção.*
-
 ### Ver e registrar consentimentos
+
+**Onde:** abra o paciente (menu **Pacientes**), entre na aba **Cadastro** e veja o cartão **Consentimentos (LGPD)**.
 
 As finalidades são três:
 - **Tratamento de dados:** uso dos dados pessoais e de saúde para o atendimento.
 - **Comunicação:** lembretes e contato por WhatsApp ou e-mail.
 - **Uso de imagem:** fotos para divulgação.
 
-**Ver:** a tela mostra a situação atual de cada finalidade (concedido, revogado ou sem registro) e o histórico completo, do mais recente para o mais antigo.
+**Ver:** a tela mostra a situação atual de cada finalidade: *Dado* (com a data e quem deu), *Revogado* ou *Nunca registrado*. *Tela em construção: o histórico completo de cada finalidade ainda não aparece na tela.*
 
-**Registrar:** escolha a finalidade e informe se o paciente concedeu ou revogou (retirou) o consentimento. Você também informa:
+**Registrar:** em cada finalidade, clique em **Registrar** para dar o consentimento, ou em **Revogar** para retirá-lo. A tela preenche sozinha quem deu o consentimento: o responsável, se o paciente tem responsável cadastrado; caso contrário, o próprio paciente.
 
-- Quem deu o consentimento: o próprio paciente ou o responsável.
-- Versão do termo (opcional).
-- Observação (opcional, até 500 caracteres).
+*Tela em construção: a escolha da versão do termo e a observação ainda não aparecem na tela.*
 
 Cada registro é um novo evento no histórico. Um registro não pode ser apagado pelo sistema.
 
 Para paciente menor de 18 anos, o consentimento é dado pelo responsável, que precisa estar cadastrado.
-
-*Tela em construção.*
 
 ## Bom saber
 
@@ -87,10 +86,10 @@ Para paciente menor de 18 anos, o consentimento é dado pelo responsável, que p
 ## Perguntas frequentes
 
 **Posso apagar um paciente cadastrado por engano?**
-Pelo sistema, não. Para tirar o paciente das buscas, marque-o como inativo.
+Não pelo sistema. A ficha fica guardada. Para tirar o paciente das buscas, marque-o como inativo (a tela de edição ainda não tem essa opção).
 
 **Por que a busca não encontra um paciente?**
 Confira se ele não está inativo. Para CPF, digite os 11 números. Para telefone, digite pelo menos 4 números.
 
 **Registrei um consentimento errado. Como corrijo?**
-Não é possível apagar o registro. Registre um novo evento com a situação correta. O histórico mostra os dois, e a situação atual é a do registro mais recente.
+Não é possível apagar o registro. Registre um novo evento com a situação correta, clicando em **Revogar** ou **Registrar**. O histórico mostra os dois, e a situação atual é a do registro mais recente.

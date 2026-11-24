@@ -1,6 +1,6 @@
 ---
 modulo: tratamento
-atualizado_em: f320bfa
+atualizado_em: 3afacea
 ---
 # Tratamento (plano de tratamento e orçamento)
 
@@ -17,6 +17,7 @@ Fica fora:
 - Cálculo e versionamento de preços: `precificacao` (`pricing.resolve` e `pricing.freeze`). Este módulo só guarda o `price_snapshot_id` e uma cópia do valor.
 - Legenda e histórico do odontograma: `odontograma` (`odonto_service.record_events`, `current_marks`).
 - Atendimento/evolução: `prontuario`. Aqui só se lê o `Encounter` para validar e travar.
+- Lotes, saldo e baixa de material: [estoque](estoque.md) (`lotes_service.consume_for_procedure`). Este módulo só a aciona ao realizar item.
 - Cobrança, parcelas e pagamento: não existem ainda.
 
 ## Modelo de dados
@@ -29,6 +30,7 @@ Fica fora:
 
 Restrições que não são óbvias pelo model (migração `0013_tratamento.py`):
 - FKs compostas com `clinic_id` em tudo (paciente, snapshot, itens da legenda, atendimento). Item referencia `(plan_id, patient_id, clinic_id)`: o paciente do item é sempre o do plano, e o atendimento tem de ser do mesmo paciente.
+- `uq_treatment_plan_items_id_clinic` (`id`+`clinic_id`, no model e criada na migração `0015_estoque_lotes.py`) existe só como alvo da FK composta de `stock_movements.plan_item_id` (liga o consumo de estoque ao item que o gerou). Essa FK é `RESTRICT`: item com movimento de consumo não pode ser apagado.
 - A migração cria `uq_price_snapshots_id_clinic` em `price_snapshots` (também declarado no model de `precificacao`) para servir de alvo da FK.
 - CHECKs do plano: `draft_not_issued` (rascunho nunca tem `issued_at`) e `issued_when_not_draft` (fora rascunho/cancelado, `issued_at` é obrigatório). Cancelado pode ser um rascunho sem emissão.
 - CHECKs do item: `price_with_snapshot` (`unit_price` e `price_snapshot_id` nascem juntos), `performed_has_encounter`, `tooth_fdi`, `faces_valid`.
@@ -56,7 +58,7 @@ Prefixo `/tratamento`. Papéis: `PLAN` = admin, dentista; `SELL` = admin, gestor
 | POST | `/planos/{id}/decisao` | SELL | itens listados aprovados, demais recusados |
 | POST | `/planos/{id}/cancelar` | SELL | cancela rascunho ou emitido |
 | POST | `/planos/{id}/duplicar` | PLAN | novo rascunho com os mesmos itens |
-| POST | `/itens/{id}/realizar` | PLAN | realiza item aprovado em atendimento aberto |
+| POST | `/itens/{id}/realizar` | PLAN | realiza item aprovado em atendimento aberto, atualiza o odontograma e baixa o estoque; faltas voltam em `warnings` |
 | POST | `/itens/{id}/cancelar` | admin, gestor, dentista | cancela item aprovado e não realizado |
 
 Códigos: `TreatmentError` vira 404 (`NotFound`), 403 (`Forbidden`) ou 409 (`RuleViolation`, qualquer regra de negócio) em `router.py:_http`. Violação de constraint/gatilho não tratada cai no handler global de `IntegrityError` em `app/main.py` e também vira **409** genérico, não 500.
@@ -71,7 +73,8 @@ Códigos: `TreatmentError` vira 404 (`NotFound`), 403 (`Forbidden`) ou 409 (`Rul
 - Totais (`regras.totals`): `approved_subtotal` soma itens `aprovado` e `realizado`; desconto arredondado half-up em centavos. Itens recusados ou cancelados saem do total.
 - Decisão: `decide` marca todos os itens (listados = aprovado, demais = recusado). Nenhum aprovado → plano `recusado`; senão `aprovado` (`regras.plan_after_decision`).
 - Concluído: plano `aprovado` vira `concluido` quando não resta item `aprovado` e há ao menos um `realizado` (`regras.plan_is_done`, chamado em `perform_item` e `cancel_item`).
-- Realizar item (`service.py:perform_item`): item `aprovado`; atendimento travado com `FOR UPDATE`, do mesmo paciente, `aberto`, e `encounter.dentist_id == user.user_id` (senão 403, mesmo admin). Se o item tem dente e itens de legenda, gera eventos: `remover` do "a fazer" (se marcado) e `marcar` do "feito" (se ainda não marcado e legenda ativa), por face quando o escopo é de face.
+- Realizar item (`service.py:perform_item`): item `aprovado`; atendimento travado com `FOR UPDATE`, do mesmo paciente, `aberto`, e `encounter.dentist_id == user.user_id` (senão 403, mesmo admin). Se o item tem dente e itens de legenda, gera eventos: `remover` do "a fazer" (se marcado) e `marcar` do "feito" (se ainda não marcado e legenda ativa), por face quando o escopo é de face. Depois, baixa os materiais da ficha técnica do `procedure_code` via `estoque.lotes_service.consume_for_procedure` (FEFO, sem lote vencido), ligando cada movimento ao paciente e ao item.
+- Falta de estoque **não impede** a realização: baixa-se o que houver e cada falta vira uma string em `PlanOut.warnings` (`Estoque insuficiente de X: faltou N.`), montada em `service.py:perform_item`. Ele devolve `(eventos_odontograma, avisos)` e o router injeta os avisos com `model_copy` sobre o resultado de `_plan_out`. Procedimento sem ficha técnica não baixa nada e não avisa.
 - Ligação com o odontograma (`_check_statuses`): exige dente; legenda de escopo face exige faces; `done_status_id` precisa ser do tipo `realizado`.
 - `sort_order` é opcional: omitido na inclusão, vai depois do último em passos de 10 (começa em 0) (`_next_sort_order`). No `PUT` do item, `sort_order` nulo mantém a posição atual. Na duplicação, a ordem é copiada.
 - Dente FDI e faces normalizadas (`regras.normalize_faces` → ordem M, D, O, V, L; faces exigem dente) são validados no schema e repetidos como CHECK no banco.
@@ -82,7 +85,7 @@ Códigos: `TreatmentError` vira 404 (`NotFound`), 403 (`Forbidden`) ou 409 (`Rul
 - Todas as rotas usam `get_tenant_db`; não há consulta com `clinic_id` manual. Plano de outra clínica responde 404 (RLS). Com `FORCE`, o `odonto_app` nunca vê outra clínica.
 - Chamadas cruzadas (`pacientes_service.get_patient`, `pricing`, `odonto_service`, `active_role`) usam a mesma sessão de tenant.
 - Commit só no router; `service` apenas faz `flush`.
-- Ações em `audit.record` (prefixo `tratamento.`): `configuracao_alterada`, `plano_criado` (inclui duplicação, com `duplicado_de`), `planos_listados`, `plano_lido`, `plano_alterado` (só se algo mudou), `desconto_definido`, `item_incluido`, `item_alterado`, `item_removido`, `orcamento_emitido`, `decisao_registrada`, `plano_cancelado`, `item_realizado` (com atendimento e nº de eventos no odontograma), `item_cancelado`. Leituras são auditadas por LGPD.
+- Ações em `audit.record` (prefixo `tratamento.`): `configuracao_alterada`, `plano_criado` (inclui duplicação, com `duplicado_de`), `planos_listados`, `plano_lido`, `plano_alterado` (só se algo mudou), `desconto_definido`, `item_incluido`, `item_alterado`, `item_removido`, `orcamento_emitido`, `decisao_registrada`, `plano_cancelado`, `item_realizado` (com atendimento, nº de eventos no odontograma e `faltas_estoque`, a quantidade de avisos; o consumo não tem `audit.record` próprio), `item_cancelado`. Leituras são auditadas por LGPD.
 
 ## Decisões
 
@@ -95,6 +98,7 @@ Códigos: `TreatmentError` vira 404 (`NotFound`), 403 (`Forbidden`) ou 409 (`Rul
 | Plano não se apaga, só cancela | histórico financeiro/clínico; DELETE revogado do `odonto_app` |
 | Orçamento vencido não é reaberto: duplica-se | garante preço atualizado, já que preço congela na emissão |
 | Realizar exige o dentista do atendimento | o procedimento é ato clínico atribuído a quem atende |
+| Baixa de estoque na mesma transação, mas falta só avisa | o ato clínico já ocorreu; bloquear o registro por saldo desatualizado atrapalharia mais que ajudaria |
 | Odontograma atualizado na mesma transação da realização | item realizado e marcação não divergem; falha no odontograma aborta tudo (`RuleViolation "Odontograma: ..."`) |
 
 ## Como estender
@@ -113,6 +117,15 @@ Códigos: `TreatmentError` vira 404 (`NotFound`), 403 (`Forbidden`) ou 409 (`Rul
 - `perform_item` rejeita admin que não seja o dentista do atendimento (403), mesmo admin.
 - `perform_item` exige legenda ativa para `marcar`; legenda inativada é ignorada em silêncio (sem erro, sem evento), e `remover` de marca inexistente também é ignorado.
 - `cancel_item` só cancela item `aprovado`; cancelar item de plano `emitido`/`rascunho` não é possível (remova o item no rascunho ou cancele o plano). Plano `aprovado` sem item cancelável restante fica assim até todos serem realizados/cancelados; se todos forem cancelados e nenhum realizado, o plano vira `cancelado` (`regras.plan_after_items`, com motivo automático).
+- `PlanOut.warnings` é só de resposta: vem preenchido apenas em `realizar`, não está no model e as demais rotas devolvem `[]`. `router.py:_plan_out` o exclui da cópia de campos do model (fix `4b4e9d9`; sem isso toda rota de plano dava `AttributeError`). Ao criar outro campo só de resposta em `PlanOut`, exclua-o ali também.
+- A baixa de estoque está na mesma transação da realização: só a **falta** é tolerada. Outro erro na baixa (ex.: gatilho de saldo negativo, que vira 409 genérico) desfaz item e odontograma.
 - Violação de gatilho/CHECK que escapa do service vira 409 genérico ("Conflito com dados existentes"), sem a mensagem do gatilho.
 - `duplicate` não reaproveita preço: itens voltam sem snapshot e são reprecificados na nova emissão.
 - `PlanSummary` na listagem não traz totais nem itens.
+
+## Tela e demo
+
+- Tela na aba "Planos e orçamentos" do paciente (`frontend/src/pages/pacientes/Paciente.tsx`, carga lazy de `frontend/src/pages/tratamento/Planos.tsx`): lista os planos e abre `Plano.tsx` (itens, desconto, emitir, decisão, parcelar, duplicar, cancelar). `status.ts` guarda nomes e tons dos status.
+- Os botões espelham os papéis da API: montar e realizar para admin e dentista; emitir, desconto, decisão e cancelar também para gestor e recepção. "Realizado" fica desabilitado sem atendimento aberto do próprio usuário, coerente com o 403 do backend.
+- `Plano.tsx:aplicar` guarda `warnings` da resposta em estado local e invalida o odontograma do paciente. Os avisos de falta de estoque somem na próxima ação ou ao sair da tela (o `GET` não os traz).
+- Demo (`backend/app/demo.py:_cadu_plan`, `_plan_for_adult`): cria planos pelo `service`, emitidos e decididos; o adulto ganha ainda um segundo orçamento emitido, aguardando resposta. Idempotente por paciente: se já houver plano, não faz nada.

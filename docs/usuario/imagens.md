@@ -1,6 +1,6 @@
 ---
 modulo: imagens
-atualizado_em: 1ee64af
+atualizado_em: 3afacea
 ---
 # Exames de imagem (raio-X)
 
@@ -19,18 +19,18 @@ atualizado_em: 1ee64af
 ## O que dá para fazer
 
 ### Enviar um exame para o paciente
-1. Escolha o paciente.
-2. Envie o arquivo DICOM (.dcm) de uma imagem. Cada envio traz um exame.
-3. Confira o tipo, os dentes e a data que o sistema sugeriu, e ajuste se precisar.
-4. Confirme. O sistema guarda o arquivo e registra quem enviou.
+1. Abra o paciente e vá para a aba **Raio-X**.
+2. Escolha o arquivo DICOM (.dcm) de uma imagem. Cada envio traz um exame.
+3. Se quiser, escolha o tipo e informe os dentes. Se não escolher o tipo, o sistema sugere um.
+4. Clique em **Enviar**. O sistema guarda o arquivo e registra quem enviou.
 
-O sistema sugere o tipo pelo aparelho que gerou a imagem: panorâmica, tomografia ou periapical. Se o aparelho não for reconhecido, o tipo fica como "Outro". A data do exame vem do próprio arquivo, se você não informar outra. Você também pode:
+O sistema sugere o tipo pelo aparelho que gerou a imagem: panorâmica, tomografia ou periapical. Se o aparelho não for reconhecido, o tipo fica como "Outro". A data do exame vem do próprio arquivo. Você também pode:
 
 - Informar os dentes pelo número FDI, separados por vírgula (ex.: 36,37).
 - Ligar o exame a um atendimento do mesmo paciente.
 - Escrever uma observação de até 1000 caracteres.
 
-*Tela em construção.*
+**Onde:** aba **Raio-X** da ficha do paciente. O envio aparece só para Administrador, Dentista e ASB; o Gestor vê os exames, mas não envia. Pela tela atual, a data vem do arquivo e não dá para ligar o exame a um atendimento.
 
 ### Classificar ou corrigir um exame
 1. Escolha o exame.
@@ -42,16 +42,16 @@ A classificação pode ser corrigida quantas vezes for preciso. O arquivo em si 
 *Tela em construção.*
 
 ### Ver a lista de exames do paciente
-A lista mostra os exames mais recentes primeiro. Cada exame mostra o tipo, os dentes, a data, a modalidade, a descrição do estudo, o tamanho, quem enviou e o nome do paciente gravado no arquivo. Esse nome ajuda a conferir se o exame é mesmo daquele paciente.
+A lista mostra os exames mais recentes primeiro. Cada exame mostra o tipo, os dentes, a data, a modalidade, a descrição do estudo, o tamanho e o nome do paciente gravado no arquivo. Esse nome ajuda a conferir se o exame é mesmo daquele paciente.
 
-Os exames invalidados ficam escondidos, a menos que você peça para incluí-los.
+Os exames invalidados ficam escondidos, a menos que você peça para incluí-los. Marque **Mostrar invalidados** para vê-los na lista.
 
-*Tela em construção.*
+**Onde:** aba **Raio-X** da ficha do paciente, na lista de exames.
 
 ### Baixar o arquivo original
 Você pode baixar o arquivo DICOM como foi enviado, para abri-lo em um visualizador de imagens no computador. Cada download fica registrado no histórico.
 
-*Tela em construção.*
+**Onde:** na lista de exames, botão **Baixar .dcm** de cada exame. Quem vê os exames também pode baixar. Ver a imagem dentro do sistema: *Tela em construção.*
 
 ### Invalidar um exame enviado por engano
 Quem pode fazer isso são o Administrador e o Dentista.
@@ -62,7 +62,7 @@ Quem pode fazer isso são o Administrador e o Dentista.
 
 O exame sai da lista padrão e não pode mais ser alterado, mas continua guardado. Hoje o sistema não tem opção para apagar um exame nem para desfazer a invalidação.
 
-*Tela em construção.*
+**Onde:** na lista de exames, botão **Invalidar**. Ele aparece só para Administrador e Dentista, e só nos exames que ainda não foram invalidados. Uma caixa pede o motivo.
 
 ## Bom saber
 
@@ -71,6 +71,7 @@ O exame sai da lista padrão e não pode mais ser alterado, mas continua guardad
 - Cada envio é um arquivo. Tomografia com várias fatias num só exame está prevista.
 - O sistema recusa o arquivo se ele não for DICOM, se estiver danificado ou vazio, se o tamanho passar do limite (a mensagem informa o limite), se trouxer dente fora da numeração FDI ou repetido, ou se o mesmo arquivo já foi enviado para este paciente.
 - Não é possível enviar exames de um paciente inativo. Reative o cadastro antes.
+- Se o armazenamento dos arquivos estiver fora do ar, o sistema mostra uma mensagem. Nesse caso o envio não é gravado, e o download não acontece. Tente de novo mais tarde.
 - O sistema mostra o nome gravado no arquivo, mas não impede o envio se ele for diferente do nome do paciente. Confira antes de enviar.
 - Os exames de uma clínica não aparecem para outra clínica.
 - Toda consulta, envio, alteração, download e invalidação de exame fica registrada no Histórico de ações.

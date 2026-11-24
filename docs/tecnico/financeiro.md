@@ -1,6 +1,6 @@
 ---
 modulo: financeiro
-atualizado_em: 1d37523
+atualizado_em: 3afacea
 ---
 # Financeiro
 
@@ -79,6 +79,14 @@ Respostas fora do padrão:
 - Status é derivado (`regras.receivable_status`). "Vencida" compara o vencimento com o dia no fuso `clinic_timezone` (`service.today`), não com o UTC.
 - Liberação do dentista: `service.dentist_can_view` lê a linha da clínica (isolada pelo RLS). `service.save_settings` faz upsert (`ON CONFLICT (clinic_id)`): a primeira gravação cria a linha e as seguintes atualizam. Liberar o extrato não libera o caixa: `/receber` e `/pagar` seguem 403 para o dentista.
 - Dinheiro usa `Decimal` com 2 casas e `ROUND_HALF_UP` (`regras.money`).
+
+## Tela e demo
+
+- Rota `/financeiro` (`frontend/src/pages/financeiro/Financeiro.tsx`) tem duas abas: contas a pagar (`ContasPagar.tsx`) e repasse (`Repasse.tsx`). Quem não é gestão vê só "Meu repasse", sem abas; a aba de contas a pagar nem é montada para eles, coerente com o 403 de `/pagar`.
+- `ContasPagar.tsx` filtra por mês de vencimento e situação usando `vencimento_de`, `vencimento_ate` e `situacao` de `GET /pagar` (limit 500). Os totais "Em aberto", "Pago" e "Em atraso" são somados no cliente sobre a lista já filtrada, então refletem só o mês escolhido.
+- Uma segunda query busca as contas abertas com `overdue` de qualquer mês, para o aviso de atraso não sumir ao trocar de mês. Ela é limitada a 500 e usa `overdue` calculado no servidor (`router.py`, fuso da clínica).
+- `frontend/src/lib/pagamento.ts:METODOS` é a lista de meios de pagamento da tela, compartilhada com `FinanceiroPaciente.tsx`. Ao adicionar um meio no backend (ver "Como estender"), inclua-o aqui também.
+- Demo (`backend/app/demo.py:_payables`): cria 3 contas a pagar (paga, em atraso, a vencer) passando pelo `service`, não por insert direto. É idempotente por existência: se já houver qualquer conta a pagar na clínica, não faz nada.
 
 ## Tenancy e auditoria
 

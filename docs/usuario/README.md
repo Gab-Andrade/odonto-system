@@ -4,7 +4,7 @@ O Odonto System é um sistema de gestão para clínicas odontológicas, feito pa
 
 Este guia explica, em linguagem simples, o que cada parte do sistema faz e quem pode usá-la. Ele cresce à medida que novas partes ficam prontas.
 
-> O sistema está em construção. Hoje estão prontas as bases de acesso e segurança, e as telas ainda estão sendo desenvolvidas.
+> O sistema ainda é um modelo em desenvolvimento. A maior parte das telas já existe; onde uma função ainda não tem tela, o guia avisa com *Tela em construção.*
 
 ## Partes do sistema
 

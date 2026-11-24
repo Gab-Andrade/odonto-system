@@ -1,6 +1,6 @@
 ---
 modulo: repasse
-atualizado_em: 89d842f
+atualizado_em: 3afacea
 ---
 # Repasse
 
@@ -71,6 +71,13 @@ Respostas fora do padrão: violações de regra de negócio (`RuleViolation`) vi
 - **Novo tipo de regra:** incluir em `RuleKind`, no CHECK `kind_valid` (nova migração), em `regras.py:compute_line` e em `service.py:compute` (montagem de `regras.Rule`).
 - **Nova dedução:** coluna booleana na regra (migração), campo em `RuleIn`, `regras.Rule` e `compute_line`, e coluna em `commission_lines` para guardar o valor.
 - **Pagar o repasse:** criar conta a pagar no financeiro a partir do fechamento; hoje não existe vínculo.
+
+## Tela e demo
+
+- **Tela:** aba Repasse de `/financeiro` (`frontend/src/pages/financeiro/Repasse.tsx`). Gestão (`GESTAO`) escolhe o dentista (padrão: o primeiro da lista), cria regras e fecha; o dentista vê só o próprio ("Meu repasse"), sem botões de criar regra nem de fechar. O isolamento real é do backend, a tela só esconde os controles.
+- Blocos: prévia (data "Até" limitada a hoje; o botão de fechar só aparece com gestão e com linhas), regras (ordenadas por `valid_from` desc.), fechamentos (detalhe em modal, com impressão via `window.print()`). `missing_rule` da prévia vira aviso. Fechar invalida todo o cache `["repasse"]`.
+- Na regra nova, as flags de dedução só são enviadas quando `kind` é percentual (fixas vão `false`), alinhado a `compute_line`, que as ignora no fixo.
+- **Demo** (`backend/app/demo.py:_commission`): idempotente (sai se já existe qualquer `CommissionRule`). Cria regra geral percentual com taxa e material descontados, vigente há 60 dias: 40% (Beatriz), 35% (Rafael) e 45% (Giovanna). No "Plano inicial" do paciente adulto, parcela 940,00 em 3x, paga só a entrada em PIX, e realiza o item `DEMO-PROF` (profilaxia) para a prévia do dentista ter linha a mostrar. Se o plano ou o atendimento aberto não existirem, só as regras são criadas.
 
 ## Armadilhas
 

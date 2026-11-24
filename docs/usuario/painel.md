@@ -1,6 +1,6 @@
 ---
 modulo: painel
-atualizado_em: 1ee64af
+atualizado_em: 3afacea
 ---
 # Painel do gestor
 
@@ -19,9 +19,11 @@ atualizado_em: 1ee64af
 ## O que dá para fazer
 
 ### Ver a visão geral da clínica
-*Tela em construção.*
+Onde: **Gestão**, aba **Visão geral**. Só Administrador e Gestor veem essa aba.
 
-Administrador e Gestor veem os números da clínica inteira. Você pode escolher o mês. Se não escolher, o painel mostra o mês atual. O "hoje" do painel é o dia de hoje no fuso horário da clínica.
+Administrador e Gestor veem os números da clínica inteira. Você pode escolher o mês no campo **Mês**, no topo da tela. Se não escolher, o painel mostra o mês atual. O "hoje" do painel é o dia de hoje no fuso horário da clínica.
+
+Na tela **Início**, o cartão **Alertas** mostra o total de alertas ativos. Administrador e Gestor também veem um atalho para **Gestão**.
 
 Cada bloco abaixo diz de onde vem o número.
 
@@ -29,10 +31,11 @@ Cada bloco abaixo diz de onde vem o número.
 - Conta só as consultas que começam hoje. Bloqueios de horário não entram.
 - Separa as consultas em: total, agendadas (ainda sem confirmação), confirmadas, atendidas, faltas e canceladas.
 - Os números mudam conforme a recepção confirma e a equipe registra cada atendimento na [agenda](agenda.md).
+- Na tela, aparece só o total de consultas de hoje. Ao passar o mouse sobre o indicador, aparecem as confirmadas e as sem confirmação.
 
 #### Recebido e previsto no mês
 - **Recebido:** soma dos pagamentos com data no mês, já descontados os estornos.
-- **Recebido líquido:** o recebido menos as taxas de cartão.
+- **Recebido líquido:** o recebido menos as taxas de cartão. Ainda não aparece na tela.
 - **Previsto:** soma do valor total das contas a receber com vencimento no mês. Contas canceladas não entram. O previsto não desconta o que já foi pago.
 
 Por isso, recebido e previsto não se comparam diretamente. O previsto mostra quanto deveria entrar no mês. O recebido mostra quanto já entrou. Detalhes em [Financeiro](financeiro.md).
@@ -71,6 +74,8 @@ Detalhes em [Estoque de materiais](estoque.md).
 Produção é o valor do que foi feito no mês. Não é o dinheiro que entrou. Para o dinheiro, veja o bloco de recebido.
 
 #### Indicadores do mês e comparação com o mês anterior
+Na visão geral aparecem só o recebido e o valor aprovado, com a variação. Os demais indicadores ficam na aba **Equipe** (por dentista) e na aba **Tendências** (mês a mês). Novos pacientes ainda não aparece em nenhuma tela de Gestão.
+
 - **Recebido:** o mesmo número do bloco de recebido.
 - **Produção:** valor dos procedimentos realizados no mês, com o desconto do plano.
 - **Procedimentos:** quantidade de procedimentos realizados no mês.
@@ -92,13 +97,13 @@ Ao lado de cada número que pode ser comparado, o painel mostra a variação em 
 
 #### Alertas ativos
 - Mostra só a quantidade de alertas ativos, por tipo de regra.
-- Para ver quais são os alertas e com quem eles se relacionam, use a área de alertas (Inteligência).
+- Para ver quais são os alertas e com quem eles se relacionam, use a tela **Alertas**, no menu.
 
 ### Ver a equipe lado a lado
-*Tela em construção.*
+Onde: **Gestão**, aba **Equipe**. Só Administrador e Gestor veem essa aba.
 
 Administrador e Gestor veem, para o mês escolhido, uma linha por dentista. Cada linha mostra:
-- os mesmos indicadores do mês (produção, procedimentos, valor aprovado, conversão, ticket médio, consultas, faltas, atendimentos);
+- os mesmos indicadores do mês (produção, procedimentos, atendimentos, conversão, ticket médio, consultas e faltas);
 - as metas daquele dentista, com o realizado e a porcentagem.
 
 Entram os dentistas e administradores ativos da clínica. Se um dentista saiu da clínica mas teve produção no mês, ele continua na lista, com o nome "(sem vínculo)".
@@ -106,36 +111,38 @@ Entram os dentistas e administradores ativos da clínica. Se um dentista saiu da
 Recebido e novos pacientes não aparecem por dentista, porque não são atribuídos a um profissional.
 
 ### Acompanhar a evolução mês a mês
-*Tela em construção.*
+Onde: **Gestão**, aba **Tendências** (Administrador e Gestor). O dentista vê a própria evolução em **Gestão**, aba **Meu desempenho**, logo abaixo dos números.
 
-Você escolhe até qual mês quer ver e quantos meses mostrar. O padrão é de 6 meses, e o máximo é de 24. Para cada mês aparecem os mesmos indicadores do mês e a variação contra o mês anterior.
+A tela mostra 6 meses, terminando no mês escolhido no campo **Mês** do topo. Para cada mês aparecem gráficos dos indicadores do mês, com a variação contra o mês anterior. O botão **Ver como tabela** mostra os mesmos números em tabela. Recebido aparece só na visão da clínica. Trocar a quantidade de meses ainda não está na tela.
 
-- **Administrador e Gestor:** veem a clínica inteira. Também podem escolher um dentista para ver a evolução só dele.
+- **Administrador e Gestor:** veem a clínica inteira. Também podem escolher um dentista no campo **Dentista** para ver a evolução só dele.
 - **Dentista:** vê a própria evolução. Administrador também vê a própria, como dentista.
 
 ### Ver o meu desempenho
-*Tela em construção.*
+Onde: **Gestão**, aba **Meu desempenho**. Dentista e Administrador veem essa aba. Gestor não vê.
 
-Dentista e Administrador veem só os próprios números. Você também pode escolher o mês. Se não escolher, o painel mostra o mês atual.
+Dentista e Administrador veem só os próprios números. Você também pode escolher o mês no campo **Mês** do topo. Se não escolher, o painel mostra o mês atual.
 
-- **Agenda de hoje:** suas consultas de hoje, com a mesma contagem da visão geral.
+- **Consultas hoje:** quantas consultas você tem hoje.
 - **Atendimentos no mês:** quantos atendimentos você abriu no mês.
 - **Produção no mês:** quantos procedimentos você realizou e o valor deles, já com o desconto do plano. Se não houve nenhum, aparece zero.
-- **Orçamentos sob sua responsabilidade:** os mesmos números de orçamentos da visão geral, mas só dos planos em que você é o dentista responsável.
-- **Indicadores do mês e comparação:** os mesmos indicadores da visão geral, só com os seus números, e a variação contra o mês anterior.
+- **Orçamentos sob sua responsabilidade:** aguardando e aprovado no mês, só dos planos em que você é o dentista responsável.
+- **Indicadores do mês e comparação:** só com os seus números. Na tela, aparecem produção, procedimentos e atendimentos, com a variação contra o mês anterior.
+- **Evolução:** os últimos 6 meses, com os mesmos gráficos da aba Tendências (veja "Acompanhar a evolução mês a mês" acima).
 - **Minhas metas:** as metas definidas para você no mês, com o realizado e a porcentagem.
 - **Alertas:** quantos alertas ativos estão em casos sob sua responsabilidade.
 - **Último repasse fechado:** a data final do período e o total do último fechamento de repasse seu. Se ainda não houve fechamento, este item fica vazio. Veja [Repasse de dentistas](repasse.md).
 
 ### Definir uma meta
-*Tela em construção.*
+Onde: **Gestão**, aba **Metas**, bloco **Definir meta**. Só Administrador e Gestor. O mês é o do campo **Mês** do topo.
 
 Administrador e Gestor podem criar uma meta ou trocar o valor de uma meta que já existe. Cada mês tem, no máximo, uma meta por indicador para a clínica e uma por indicador para cada dentista.
 
-1. Escolha o mês.
-2. Escolha o indicador: **recebido**, **produção**, **procedimentos** ou **aprovado**.
-3. Escolha o dentista, ou deixe em branco para a meta da clínica.
-4. Informe o valor da meta. Ele precisa ser maior que zero.
+1. Confira o mês no topo da tela.
+2. Escolha o indicador: **recebido**, **produção**, **procedimentos** ou **aprovado** (na tela, aparecem como Recebido, Produção, Procedimentos e Valor aprovado).
+3. Escolha o dentista em **De quem**, ou deixe em **Clínica** para a meta da clínica.
+4. Informe o valor em **Valor (R$)**. Para procedimentos, informe a **Quantidade**. O valor precisa ser maior que zero.
+5. Clique em **Salvar meta**.
 
 Regras:
 - Meta de **recebido** é só da clínica. Recebimento não é atribuído a dentista.
@@ -145,7 +152,7 @@ Regras:
 - Se já existir meta para o mesmo mês, indicador e dentista, o valor é substituído.
 
 ### Apagar uma meta
-*Tela em construção.*
+Onde: **Gestão**, aba **Metas**, na lista **Metas do mês**, botão **Remover** ao lado da meta.
 
 Administrador e Gestor podem apagar uma meta. O painel deixa de mostrar o progresso dela. Os números do mês continuam iguais.
 

@@ -1,6 +1,6 @@
 ---
 modulo: precificacao
-atualizado_em: 59c8187
+atualizado_em: 3afacea
 ---
 # Tabelas de preço
 
@@ -25,7 +25,9 @@ atualizado_em: 59c8187
 2. Escolha uma tabela para ver os dados dela e suas versões.
 3. Escolha uma versão para ver os procedimentos e preços dela.
 
-Todos os perfis com acesso ao módulo podem ver. *Tela em construção.*
+Todos os perfis com acesso ao módulo podem ver.
+
+*Onde:* menu **Precificação**, aba **Tabelas de preço**. Clique na tabela e escolha a versão no campo **Versão**. O item do menu aparece só para Administrador e Gestor.
 
 ### Criar uma tabela de preço
 1. Dê um nome para a tabela e, se quiser, uma descrição. Não pode haver duas tabelas com o mesmo nome, mesmo que mudem as letras maiúsculas.
@@ -41,7 +43,9 @@ Regras:
 - Tabela calculada não herda de outra e não tem percentual de ajuste.
 - A tabela de origem e o dentista de referência só são escolhidos na criação.
 
-Só o Administrador e o Gestor podem criar tabelas. *Tela em construção.*
+*Onde:* aba **Tabelas de preço**, botão **+ Nova tabela**. Preencha o nome e o tipo. Se for preço fixo, escolha a tabela de origem e o ajuste, se houver. *Observação:* a tela ainda não tem campo para o dentista de referência da tabela calculada.
+
+Só o Administrador e o Gestor podem criar tabelas.
 
 ### Alterar os dados de uma tabela
 1. Abra a tabela.
@@ -65,7 +69,11 @@ Cada versão está em uma de duas situações:
 
 Os preços não mudam direto na versão publicada. As versões antigas continuam guardadas.
 
-Só o Administrador e o Gestor podem abrir rascunhos. *Tela em construção.*
+*Onde:* aba **Tabelas de preço**, escolha a tabela e clique em **Nova versão (rascunho)**. O botão só aparece se a tabela estiver ativa e não houver rascunho aberto.
+
+Ajustar o percentual do rascunho ainda não tem tela. *Tela em construção.*
+
+Só o Administrador e o Gestor podem abrir rascunhos.
 
 ### Informar ou trocar os preços do rascunho
 1. Abra o rascunho.
@@ -80,7 +88,9 @@ Regras:
 - A lista pode ter até 5.000 procedimentos.
 - Em tabela calculada não se digita preço à mão. Os preços vêm do recálculo.
 
-Só o Administrador e o Gestor podem fazer isso. *Tela em construção.*
+*Onde:* aba **Tabelas de preço**, escolha a tabela e o rascunho. Na lista de itens, use **+ Linha** para incluir e **Salvar itens** para gravar. A lista só é editável em rascunho de tabela de preço fixo.
+
+Só o Administrador e o Gestor podem fazer isso.
 
 ### Publicar uma versão
 1. Escolha o rascunho.
@@ -96,7 +106,11 @@ Regras:
 
 Depois de publicada, a versão não pode mais ser alterada. Ela passa a valer nos novos cálculos e orçamentos, a partir da data escolhida.
 
-Só o Administrador e o Gestor podem publicar. *Tela em construção.*
+*Onde:* aba **Tabelas de preço**, escolha a tabela e o rascunho, depois clique em **Publicar**. Se o sistema pedir confirmação por procedimentos com erro, aparece o botão **Publicar mesmo assim**. A lista desses procedimentos aparece no relatório do **Recalcular preços**. A tela de publicação mostra só o aviso.
+
+*Observação:* a tela ainda não tem campo de data. Ela publica com vigência a partir de hoje.
+
+Só o Administrador e o Gestor podem publicar.
 
 ### Importar uma planilha de preços
 Use esta opção quando a clínica já tem os preços em uma planilha. Não serve para tabela calculada nem para tabela arquivada.
@@ -117,15 +131,19 @@ Regras:
 
 Nas etapas de leitura e conferência, nada muda na tabela. Só a etapa de aplicar grava os preços, e grava no rascunho.
 
-Você também pode ver as importações feitas antes, com as primeiras linhas lidas de cada uma.
+*Onde:* aba **Tabelas de preço**, escolha a tabela e o rascunho, depois clique em **Importar planilha**. Envie o arquivo e clique em **Ler arquivo**. Confira o mapeamento de colunas e clique em **Validar e ver diferenças**. Para gravar, use **Aplicar no rascunho**. Se houver linhas com erro, use **Aplicar só as linhas válidas**. Nada é gravado antes de aplicar. *Observação:* a tela ainda não tem campo para escolher a aba do Excel; o sistema usa a primeira.
 
-Só o Administrador e o Gestor podem importar. *Tela em construção.*
+Você também pode ver as importações feitas antes, com as primeiras linhas lidas de cada uma. *Tela em construção.*
+
+Só o Administrador e o Gestor podem importar.
 
 ### Baixar a planilha-modelo
 1. Baixe a planilha-modelo. Ela traz as colunas esperadas e exemplos.
 2. Preencha a planilha e use-a na importação.
 
-Só o Administrador e o Gestor podem baixar o modelo. *Tela em construção.*
+*Onde:* na janela **Importar planilha** (veja "Importar uma planilha de preços"), botão **Baixar planilha-modelo**.
+
+Só o Administrador e o Gestor podem baixar o modelo.
 
 ### Salvar um perfil de importação
 Um perfil guarda a relação entre as colunas da sua planilha e os campos do sistema, para você não precisar refazer a mesma ligação toda vez.
@@ -145,7 +163,9 @@ Só o Administrador e o Gestor podem salvar ou apagar perfis. *Tela em construç
 
 O arquivo sai no mesmo formato aceito pela importação. Assim você pode editar e enviar de volta.
 
-Todos os perfis com acesso ao módulo podem baixar. *Tela em construção.*
+*Onde:* aba **Tabelas de preço**, escolha a tabela e a versão no campo **Versão**, depois clique em **Exportar .xlsx**.
+
+Todos os perfis com acesso ao módulo podem baixar.
 
 ### Dizer a quem uma tabela se aplica
 1. Escolha a tabela.
@@ -160,7 +180,9 @@ Todos os perfis com acesso ao módulo podem baixar. *Tela em construção.*
 
 Uma mesma tabela pode ser atribuída a vários alcances, mas não duas vezes ao mesmo alcance. Para mudar a prioridade de uma atribuição, remova a atribuição e crie outra. Tabela arquivada não pode ser atribuída.
 
-Só o Administrador e o Gestor podem atribuir ou remover. Todos os perfis com acesso ao módulo podem ver as atribuições. *Tela em construção.*
+*Onde:* aba **Quem usa cada tabela**. Escolha a tabela e **Para** (a clínica toda ou um dentista). Se for um dentista, escolha-o. Informe a prioridade, se quiser, e clique em **Atribuir**. Para tirar uma atribuição, clique em **Remover** na lista. *Observação:* a tela ainda não oferece o alcance de convênio.
+
+Só o Administrador e o Gestor podem atribuir ou remover. Todos os perfis com acesso ao módulo podem ver as atribuições.
 
 ### Cadastrar fichas técnicas
 A ficha técnica diz quanto tempo um procedimento leva e quais materiais ele usa. Os materiais vêm do estoque, e o custo de cada um também. Esse é o ponto de partida das tabelas calculadas.
@@ -211,6 +233,8 @@ Só o Administrador e o Gestor podem fazer isso. *Tela em construção.*
 5. Confira o relatório do recálculo: quantos preços foram gerados e quais procedimentos deram erro, com o motivo.
 6. Publique a versão.
 
+*Onde:* criar a tabela em **+ Nova tabela** (tipo **Calculada por fórmula**), depois **Recalcular preços** no rascunho, que mostra o relatório, e **Publicar**, na aba **Tabelas de preço**. Fichas técnicas, variáveis e fórmula ainda não têm tela. *Tela em construção.*
+
 Regras:
 - Se faltar alguma variável que a fórmula usa, o recálculo não roda. O sistema diz quais faltam.
 - Sem nenhuma ficha técnica, o recálculo não roda.
@@ -218,7 +242,7 @@ Regras:
 - Recalcular substitui os preços do rascunho.
 - Ao mudar a fórmula, o sistema marca o cálculo como desatualizado. Você precisa recalcular antes de publicar.
 
-Só o Administrador e o Gestor podem fazer isso. *Tela em construção.*
+Só o Administrador e o Gestor podem fazer isso.
 
 ### Ajustar a fórmula de uma tabela calculada
 Só é possível mudar a fórmula em rascunho de tabela calculada.
@@ -279,7 +303,9 @@ Essa consulta não grava nada. Serve para simular.
 
 Se nenhuma tabela tiver o procedimento, o sistema avisa que o preço não foi encontrado e mostra por quais tabelas passou. Se não houver nenhuma tabela atribuída ao caso, ele avisa isso.
 
-Todos os perfis com acesso ao módulo podem consultar. *Tela em construção.*
+*Onde:* menu **Precificação**, aba **Simular preço**. Digite o código do procedimento (a tela sugere os cadastrados), escolha o dentista se quiser e clique em **Simular**. Aparecem o preço, a descrição e a **Memória de cálculo**. *Observação:* a tela ainda não tem campos para convênio e data. A consulta usa a clínica ou o dentista escolhido e o dia de hoje.
+
+Todos os perfis com acesso ao módulo podem consultar.
 
 ### Congelar o preço para um orçamento
 1. Faça a consulta do procedimento, como acima.

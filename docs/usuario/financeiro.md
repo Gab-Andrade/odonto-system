@@ -1,6 +1,6 @@
 ---
 modulo: financeiro
-atualizado_em: 1d37523
+atualizado_em: 3afacea
 ---
 # Financeiro
 
@@ -19,7 +19,7 @@ atualizado_em: 1d37523
 ## O que dá para fazer
 
 ### Parcelar um orçamento aprovado
-*Tela em construção.*
+Onde: ficha do paciente, aba Planos e orçamentos, botão **Parcelar** no plano aprovado.
 
 1. Só é possível parcelar orçamento aprovado (ou concluído). Os valores vêm do orçamento, já com o desconto aplicado.
 2. Informe a entrada, se houver. A entrada pode ser zero, mas não pode ser maior que o total.
@@ -37,7 +37,7 @@ atualizado_em: 1d37523
 2. Escolha o paciente, escreva a descrição (até 200 caracteres), informe a data de vencimento e o valor. O valor precisa ser maior que zero.
 
 ### Registrar um recebimento
-*Tela em construção.*
+Onde: ficha do paciente, aba Financeiro, botão **Receber** na conta.
 
 1. Abra a conta a receber. Contas canceladas não recebem pagamento.
 2. Informe o valor recebido e a forma de pagamento (dinheiro, Pix, cartão de débito, cartão de crédito, boleto ou transferência). O valor não pode passar do saldo da conta.
@@ -66,7 +66,7 @@ atualizado_em: 1d37523
 5. Contas canceladas saem da lista normal. Para vê-las, peça para incluir as canceladas. Elas também não entram no total do extrato.
 
 ### Ver as contas a receber
-*Tela em construção.*
+Onde: ficha do paciente, aba Financeiro, quadro Contas a receber (as contas daquele paciente). A lista geral, com filtro por período, ainda não tem tela.
 
 1. Filtre por paciente, por período de vencimento e, se quiser, inclua as canceladas.
 2. A lista mostra, no máximo, 200 contas por vez. O limite máximo é de 500.
@@ -78,7 +78,7 @@ atualizado_em: 1d37523
    - **cancelada**: foi cancelada.
 
 ### Ver o extrato do paciente
-*Tela em construção.*
+Onde: ficha do paciente, aba Financeiro. Os quatro valores aparecem no topo como Total, Pago, Em aberto e Vencido.
 
 1. O extrato reúne, para um paciente, as contas e os recebimentos.
 2. Ele mostra quatro valores:
@@ -90,41 +90,38 @@ atualizado_em: 1d37523
 4. O Administrador, o Gestor e a Recepção sempre veem o extrato. O Dentista só vê se a clínica tiver liberado (veja "Liberar o extrato para dentistas").
 
 ### Liberar o extrato para dentistas
-*Tela em construção.*
+Onde: menu Gestão, aba Configurações, quadro Financeiro.
 
-1. Só o Administrador e o Gestor podem mudar esta opção. Ela fica em Gestão → Configurações.
+1. Só o Administrador e o Gestor podem mudar esta opção. Ela fica em Gestão, aba Configurações.
 2. Ligue a opção para que os dentistas possam ver o extrato do paciente. Desligue para voltar ao padrão.
 3. A opção vem desligada em todas as clínicas. Enquanto estiver desligada, o dentista que tentar abrir o extrato recebe a mensagem de que o financeiro não está liberado para dentistas.
 4. Liberar o extrato não dá ao dentista nenhum outro acesso. Ele não registra recebimento, não estorna, não parcela e não cancela conta.
 5. Cada troca de opção fica registrada no histórico de ações, com quem fez e quando.
 
 ### Registrar uma conta a pagar
-*Tela em construção.*
-
-1. Só o Administrador e o Gestor podem usar as contas a pagar.
+1. Na aba Contas a pagar, da tela Financeiro, clique em **+ Nova conta**. Só o Administrador e o Gestor podem usar as contas a pagar.
 2. Informe o fornecedor (obrigatório, até 150 caracteres).
 3. Você pode informar a categoria (até 80 caracteres) e uma descrição (até 300 caracteres).
 4. Informe a data de vencimento e o valor, maior que zero.
 
 ### Pagar uma conta a pagar
-*Tela em construção.*
-
-1. Só é possível pagar conta que esteja em aberto.
+1. Na aba Contas a pagar, da tela Financeiro, escolha a conta que está em aberto e registre o pagamento.
 2. Informe a forma de pagamento.
 3. A data do pagamento é hoje, se você não informar outra. Não é possível colocar data futura.
+4. Só é possível pagar conta que esteja em aberto. Conta já paga ou cancelada não muda mais.
 
 ### Cancelar uma conta a pagar
-*Tela em construção.*
-
-1. Só é possível cancelar conta que esteja em aberto. Conta já paga não pode ser cancelada.
+1. Na aba Contas a pagar, escolha a conta e use o cancelamento.
 2. Informe o motivo.
+3. Só é possível cancelar conta que esteja em aberto. Conta já paga não pode ser cancelada.
 
 ### Ver as contas a pagar
-*Tela em construção.*
-
-1. Filtre por período de vencimento e por situação.
-2. A lista mostra, no máximo, 200 contas por vez. O limite máximo é de 500.
-3. Uma conta em aberto com vencimento anterior a hoje aparece marcada como vencida.
+1. Abra a tela Financeiro e a aba Contas a pagar.
+2. Escolha o mês de vencimento que quer ver e, se quiser, filtre pela situação da conta.
+3. Se houver contas vencidas, de qualquer mês, a tela mostra um aviso com a quantidade e o total em atraso.
+4. A tela mostra três totais do mês escolhido: **Em aberto**, **Pago** e **Em atraso**.
+5. Uma conta em aberto com vencimento anterior a hoje aparece marcada como vencida.
+6. A lista mostra, no máximo, 200 contas por vez. O limite máximo é de 500.
 
 ## Bom saber
 
@@ -165,3 +162,9 @@ A opção de liberar o extrato para dentistas vem desligada. Peça ao Administra
 
 **Ligar a opção dá ao dentista como receber ou cobrar pelo sistema?**
 Não. O dentista só consegue ler o extrato. Recebimentos, estornos, parcelamentos e contas continuam com a Recepção, o Gestor e o Administrador.
+
+**Paguei uma conta a pagar por engano. Como desfaço?**
+Pelo sistema, não. Uma conta paga não volta para aberto. Procure o Administrador ou o Gestor para registrar a correção pela clínica.
+
+**Por que a conta a pagar não aparece na lista?**
+Confira o mês de vencimento e a situação escolhidos nos filtros. A lista mostra só as contas do filtro selecionado.

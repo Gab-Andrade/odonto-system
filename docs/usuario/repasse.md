@@ -1,6 +1,6 @@
 ---
 modulo: repasse
-atualizado_em: 89d842f
+atualizado_em: 3afacea
 ---
 # Repasse de dentistas
 
@@ -12,14 +12,14 @@ atualizado_em: 89d842f
 |---|---|
 | Administrador | Cadastrar as regras de repasse de cada dentista, ver a prévia de qualquer dentista, fechar o repasse e consultar os fechamentos de todos |
 | Gestor | Tudo o que o Administrador faz neste módulo |
-| Dentista | Ver as próprias regras, a própria prévia e os próprios fechamentos. Não vê o repasse de outros dentistas |
+| Dentista | Na aba Repasse, vê só o painel "Meu repasse": as próprias regras, a própria prévia e os próprios fechamentos. Não vê o repasse de outros dentistas |
 
 Recepção e ASB não acessam o repasse.
 
 ## O que dá para fazer
 
 ### Cadastrar a regra de repasse de um dentista
-*Tela em construção.*
+Na tela Financeiro, aba Repasse.
 
 1. Escolha o dentista.
 2. Escolha o tipo de regra:
@@ -33,7 +33,7 @@ Recepção e ASB não acessam o repasse.
 6. Salve. A regra fica registrada no histórico de ações, com quem cadastrou e quando.
 
 ### Ver a prévia do repasse
-*Tela em construção.*
+Na tela Financeiro, aba Repasse.
 
 1. Escolha o dentista e a data até a qual quer calcular. O dentista não escolhe nada: a prévia é sempre a dele.
 2. O sistema mostra:
@@ -44,7 +44,7 @@ Recepção e ASB não acessam o repasse.
 3. A prévia não grava nada. Você pode consultá-la quantas vezes quiser.
 
 ### Fechar o repasse de um dentista
-*Tela em construção.*
+Na tela Financeiro, aba Repasse.
 
 1. Escolha o dentista e a data até a qual o repasse será fechado. A data não pode ser futura: o máximo é hoje.
 2. A data precisa ser posterior ao último fechamento desse dentista. Se já houver fechamento até essa data ou depois, o sistema recusa e mostra até quando já foi fechado.
@@ -53,7 +53,7 @@ Recepção e ASB não acessam o repasse.
 5. O fechamento paga só a diferença em relação ao que já foi fechado antes. Nada é pago duas vezes.
 
 ### Consultar os fechamentos
-*Tela em construção.*
+Na tela Financeiro, aba Repasse.
 
 1. O Administrador e o Gestor veem os fechamentos de todos os dentistas, ou de um dentista escolhido.
 2. O Dentista vê só os próprios fechamentos.
